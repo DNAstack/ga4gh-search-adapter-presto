@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.ga4gh.discovery.search</groupId>
-    <artifactId>ga4gh-discovery-search-sql-source</artifactId>
+    <artifactId>ga4gh-discovery-search-presto-source</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <properties>
@@ -10,18 +10,23 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-    <name>ga4gh-discovery-search-sql-source</name>
+    <name>ga4gh-discovery-search-presto-source</name>
     <dependencies>
         <dependency>
             <groupId>org.ga4gh.discovery.search</groupId>
             <artifactId>ga4gh-discovery-search-data-models</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.6</version>
+            <groupId>io.prestosql</groupId>
+            <artifactId>presto-jdbc</artifactId>
+            <version>303</version>
+          </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <version>5.0.9.RELEASE</version>
+            <type>jar</type>
         </dependency>
     </dependencies>
 </project>
