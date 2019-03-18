@@ -13,6 +13,21 @@ import java.util.List;
  */
 public class ResultRow {
     
-    List<ResultValue> values;
+    private List<ResultValue> values;
+    
+    public ResultRow() {}
+
+    public ResultRow(List<ResultValue> values) {
+        this.values = values;
+    }
+
+    public List<ResultValue> getValues() {
+        return values;
+    }
+
+    public void setValues(List<ResultValue> values) {
+        this.values = values;
+    }
+ 
     
 }

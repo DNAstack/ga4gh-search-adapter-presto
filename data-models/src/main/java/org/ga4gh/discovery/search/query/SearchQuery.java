@@ -13,13 +13,43 @@ import java.util.List;
  */
 public class SearchQuery extends QueryRuleSet {
     
-    public SearchQuery(QueryCondition condition, List<QueryRule> rules) {
+    private String select;
+    private String from;
+    private int limit;
+    
+     public SearchQuery(QueryCondition condition, List<QueryRule> rules) {
         super(condition, rules);
+        select = "*";
     }
 
+    public String getFrom() {
+        return from;
+    }
+
+    public void setFrom(String from) {
+        this.from = from;
+    }
+
+    public String getSelect() {
+        return select;
+    }
+
+    public void setSelect(String select) {
+        this.select = select;
+    }
+
+    public int getLimit() {
+        return limit;
+    }
+
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+    
+    
     @Override
     public String toString() {
-        return super.toString();
+        return "SearchQuery{" + "seelect=" + select + "from=" + from + " " + super.toString() + "limit=" + limit + '}';
     }
 
 }

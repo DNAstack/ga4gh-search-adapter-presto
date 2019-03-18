@@ -3,6 +3,7 @@ package org.ga4gh.discovery.search;
 public class Field {
 
     private final String id;
+    
     private final String name;
     private final Type type;
     private final String[] operators;
