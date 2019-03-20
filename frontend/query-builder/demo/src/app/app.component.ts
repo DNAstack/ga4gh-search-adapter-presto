@@ -17,7 +17,9 @@ export class AppComponent implements OnInit {
     rules : []
   };
 
-  public config = {};
+  public config = {
+    fields : {}
+  };
 
   @ViewChild('jsonEditor')
   jsonEditor: JsonEditorComponent;
@@ -65,8 +67,7 @@ export class AppComponent implements OnInit {
     this.apiService
       .getFields()
       .subscribe((fields: Field[]) => {
-            var normalized = this.normalizeArray(fields,'id');
-            this.config.fields = normalized;
+            this.config.fields = this.normalizeArray(fields,'id');
         },
         (err) => console.log('Error', err));
   }
