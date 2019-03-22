@@ -1,3 +1,5 @@
+frontend/node_installation
+node_modules/
 *.sw?
 .#*
 *#

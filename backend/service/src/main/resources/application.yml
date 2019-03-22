@@ -1,0 +1,9 @@
+endpoint:
+  health:
+    enabled: true
+    id: health
+    sensitive: false
+spring:
+  security:
+    user:
+      password: FpmJj24y9RRRYQnpXXOHEIEJK6lwPjnY09
