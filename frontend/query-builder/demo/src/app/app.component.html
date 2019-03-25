@@ -31,8 +31,8 @@
                     </div>
                   </div>
                   <div class="mat-cell" matTooltip="{{field.value.operators}}">
-                    <span *ngFor="let operator of field.value.operators">
-                      {{operator}}{{$last ? '' : ', '}}
+                    <span *ngFor="let operator of field.value.operators; let last = last">
+                      {{operator}}{{last ? '' : ', '}}
                     </span>
                   </div>
                 </div>
