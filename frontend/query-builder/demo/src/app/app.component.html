@@ -26,9 +26,9 @@
                   <div class="mat-cell" matTooltip="{{field.value.type}}">{{field.value.type}}</div>
                   <div class="mat-cell" matTooltip="{{field.value.spec}}"><a href="{{field.value.spec}}">{{field.value.spec}}</a></div>
                   <div class="mat-cell" matTooltip="{{field.value.options}}">
-                    <div *ngFor="let option of field.value.options | keyvalue">
-                      {{option.value.name}}
-                    </div>
+                    <span *ngFor="let option of field.value.options | keyvalue; let last = last">
+                      {{option.value.name}}{{last ? '' : ', '}}
+                    </span>
                   </div>
                   <div class="mat-cell" matTooltip="{{field.value.operators}}">
                     <span *ngFor="let operator of field.value.operators; let last = last">
