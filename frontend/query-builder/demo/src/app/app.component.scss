@@ -32,6 +32,10 @@
   height: 300px;
 }
 
+.m-b-lg {
+  margin-bottom: 30px;
+}
+
 .m-b-sm {
   margin-bottom: 10px;
 }
@@ -89,3 +93,18 @@
   font-size:14px;
 }
 
+// Truncate text in tables with ellipsis
+.no-wrap {
+    .mat-header-cell,
+    .mat-header-cell button,
+    .mat-cell {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+.mat-row:hover {
+  background-color: #f9f9f9;
+}

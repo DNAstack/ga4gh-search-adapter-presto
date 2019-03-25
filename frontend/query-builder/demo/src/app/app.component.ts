@@ -18,8 +18,15 @@ export class AppComponent implements OnInit {
   };
 
   public config = {
-    fields : {}
+    fields : undefined
   };
+
+  public view = {
+    wrapFieldTableCells : true,
+    wrapResultTableCells : true
+  }
+
+  public results = null;
 
   @ViewChild('jsonEditor')
   jsonEditor: JsonEditorComponent;
@@ -40,7 +47,10 @@ export class AppComponent implements OnInit {
 
   public doQuery(event,query) {
     this.apiService.doQuery(query).subscribe(
-      (dto) => { console.log(dto); },
+      (dto) => {
+          console.log(dto);
+          this.results = dto;
+       },
       (err) => console.log('Error', err));
   }
 
