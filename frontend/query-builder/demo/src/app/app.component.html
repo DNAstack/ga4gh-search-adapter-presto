@@ -50,7 +50,7 @@
               </mat-button-toggle-group>
 
               <div class="pull-right">
-                <button mat-raised-button color="primary" (click)="doQuery($event,query)" >Search</button>
+                <button mat-raised-button color="primary" (click)="doQuery($event,query)" [disabled]="view.isQuerying">Search</button>
               </div>
               </div>
               <div class="clearfix"></div>

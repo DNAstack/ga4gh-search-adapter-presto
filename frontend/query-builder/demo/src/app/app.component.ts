@@ -23,7 +23,8 @@ export class AppComponent implements OnInit {
 
   public view = {
     wrapFieldTableCells : true,
-    wrapResultTableCells : true
+    wrapResultTableCells : true,
+    isQuerying : false
   }
 
   public results = null;
@@ -46,12 +47,17 @@ export class AppComponent implements OnInit {
   }
 
   public doQuery(event,query) {
+    this.view.isQuerying = true;
     this.apiService.doQuery(query).subscribe(
       (dto) => {
           console.log(dto);
           this.results = dto;
+          this.view.isQuerying = false;
        },
-      (err) => console.log('Error', err));
+      (err) => {
+        console.log('Error', err)
+        this.view.isQuerying = false;
+      });
   }
 
   updateJsonEditor($event) {
