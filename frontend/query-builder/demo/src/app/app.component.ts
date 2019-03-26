@@ -24,7 +24,8 @@ export class AppComponent implements OnInit {
   public view = {
     wrapFieldTableCells : true,
     wrapResultTableCells : true,
-    isQuerying : false
+    isQuerying : false,
+    selectedTabIndex : 0
   }
 
   public results = null;
@@ -53,6 +54,7 @@ export class AppComponent implements OnInit {
           console.log(dto);
           this.results = dto;
           this.view.isQuerying = false;
+          this.view.selectedTabIndex = 2;
        },
       (err) => {
         console.log('Error', err)
@@ -84,7 +86,9 @@ export class AppComponent implements OnInit {
       .getFields()
       .subscribe((fields: Field[]) => {
             this.config.fields = this.normalizeArray(fields,'id');
+            this.view.selectedTabIndex = 0;
         },
         (err) => console.log('Error', err));
   }
+
 }

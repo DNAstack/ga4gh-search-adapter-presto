@@ -3,43 +3,7 @@
 </mat-toolbar>
 <div class="m-a">
   <div class="m-v">
-    <mat-tab-group>
-
-          <mat-tab label="Fields">
-            <div class="m-v">
-              <div class="pull-right">
-                <mat-checkbox [(ngModel)]="view.wrapFieldTableCells">Wrap</mat-checkbox>
-              </div>
-              <div class="clearfix"></div>
-              <div class="mat-table" [ngClass]="{ 'no-wrap' : view.wrapFieldTableCells }">
-                <div class="mat-header-row">
-                  <div class="mat-header-cell">Name</div>
-                  <div class="mat-header-cell">ID</div>
-                  <div class="mat-header-cell">Type</div>
-                  <div class="mat-header-cell">Specification</div>
-                  <div class="mat-header-cell">Options</div>
-                  <div class="mat-header-cell">Operators</div>
-                </div>
-                <div class="mat-row" *ngFor="let field of config.fields | keyvalue">
-                  <div class="mat-cell" matTooltip="{{field.value.name}}">{{field.value.name}}</div>
-                  <div class="mat-cell" matTooltip="{{field.value.id}}">{{field.value.id}}</div>
-                  <div class="mat-cell" matTooltip="{{field.value.type}}">{{field.value.type}}</div>
-                  <div class="mat-cell" matTooltip="{{field.value.spec}}"><a href="{{field.value.spec}}">{{field.value.spec}}</a></div>
-                  <div class="mat-cell" matTooltip="{{field.value.options}}">
-                    <span *ngFor="let option of field.value.options | keyvalue; let last = last">
-                      {{option.value.name}}{{last ? '' : ', '}}
-                    </span>
-                  </div>
-                  <div class="mat-cell" matTooltip="{{field.value.operators}}">
-                    <span *ngFor="let operator of field.value.operators; let last = last">
-                      {{operator}}{{last ? '' : ', '}}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </mat-tab>
-
+    <mat-tab-group [(selectedIndex)]="view.selectedTabIndex">
           <mat-tab label="Query" *ngIf="config.fields">
             <div class="m-v">
 
@@ -185,7 +149,42 @@
                     </div>
                   </div>
                 </div>
-              </mat-tab>
+          </mat-tab>
+          <mat-tab label="Fields">
+            <div class="m-v">
+              <div class="pull-right">
+                <mat-checkbox [(ngModel)]="view.wrapFieldTableCells">Wrap</mat-checkbox>
+              </div>
+              <div class="clearfix"></div>
+              <div class="mat-table" [ngClass]="{ 'no-wrap' : view.wrapFieldTableCells }">
+                <div class="mat-header-row">
+                  <div class="mat-header-cell">Name</div>
+                  <div class="mat-header-cell">ID</div>
+                  <div class="mat-header-cell">Type</div>
+                  <div class="mat-header-cell">Specification</div>
+                  <div class="mat-header-cell">Options</div>
+                  <div class="mat-header-cell">Operators</div>
+                </div>
+                <div class="mat-row" *ngFor="let field of config.fields | keyvalue">
+                  <div class="mat-cell" matTooltip="{{field.value.name}}">{{field.value.name}}</div>
+                  <div class="mat-cell" matTooltip="{{field.value.id}}">{{field.value.id}}</div>
+                  <div class="mat-cell" matTooltip="{{field.value.type}}">{{field.value.type}}</div>
+                  <div class="mat-cell" matTooltip="{{field.value.spec}}"><a href="{{field.value.spec}}">{{field.value.spec}}</a></div>
+                  <div class="mat-cell" matTooltip="{{field.value.options}}">
+                    <span *ngFor="let option of field.value.options | keyvalue; let last = last">
+                      {{option.value.name}}{{last ? '' : ', '}}
+                    </span>
+                  </div>
+                  <div class="mat-cell" matTooltip="{{field.value.operators}}">
+                    <span *ngFor="let operator of field.value.operators; let last = last">
+                      {{operator}}{{last ? '' : ', '}}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-tab>
+
 
           <!--<mat-tab label="JSON">
             <div class="m-v">
