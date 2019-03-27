@@ -1,23 +1,24 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Field } from './model/search/field';
-import { environment } from '../environments/environment';
+import {Injectable} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {AppConfigService} from './app-config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private apiURL = environment.apiURL;
 
-  constructor(private httpClient: HttpClient) {
+  private readonly apiUrl;
 
+  constructor(private httpClient: HttpClient,
+              private app: AppConfigService) {
+    this.apiUrl = app.config.apiUrl;
   }
 
   getFields() {
-    return this.httpClient.get(`${this.apiURL}/fields`);
+    return this.httpClient.get(`${this.apiUrl}/fields`);
   }
 
   doQuery(query) {
-    return this.httpClient.post(`${this.apiURL}/search`, query);
+    return this.httpClient.post(`${this.apiUrl}/search`, query);
   }
 }
