@@ -87,7 +87,11 @@ public class ApplicationConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**").allowedOrigins(parseCorsUrls()).allowCredentials(true);
+                registry.addMapping("/**")
+                        .allowedOrigins(parseCorsUrls())
+                        .allowCredentials(true)
+                        .allowedHeaders("*")
+                        .allowedMethods("*");
             }
         };
     }
