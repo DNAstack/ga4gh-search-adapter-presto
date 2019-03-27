@@ -15,7 +15,6 @@
 	<properties>
 		<angular.project.location>demo</angular.project.location>
 		<angular.project.nodeinstallation>node_installation</angular.project.nodeinstallation>
-		<angular.build.command>run build</angular.build.command>
 	</properties>
 
 	<dependencyManagement>
@@ -88,25 +87,13 @@
 							<goal>npm</goal>
 						</goals>
 						<configuration>
-							<arguments>${angular.build.command}</arguments>
+							<arguments>run build</arguments>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 		</plugins>
 	</build>
-
-	<profiles>
-		<profile>
-			<id>prod</id>
-			<activation>
-				<activeByDefault>false</activeByDefault>
-			</activation>
-			<properties>
-				<angular.build.command>run build:prod</angular.build.command>
-			</properties>
-		</profile>
-	</profiles>
 
 	<repositories>
 		<repository>

@@ -50,5 +50,6 @@ ARG APP_NAME
 ARG APP_VERSION
 
 COPY --from=0 /build/backend/service/target/ga4gh-discovery-search-service-*.jar /app.jar
+ADD entrypoint.sh /entrypoint.sh
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["entrypoint.sh"]

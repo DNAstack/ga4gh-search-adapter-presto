@@ -114,7 +114,12 @@
 							<outputDirectory>${project.build.directory}/classes/static/</outputDirectory>
 							<resources>
 								<resource>
-									<directory>../../frontend/demo/dist/</directory>
+									<directory>../../frontend/demo/dist/ga4gh-search-app/</directory>
+									<targetPath>demo</targetPath>
+								</resource>
+								<resource>
+									<directory>../../frontend/demo/dist</directory>
+									<include>index.html</include>
 								</resource>
 							</resources>
 						</configuration>
