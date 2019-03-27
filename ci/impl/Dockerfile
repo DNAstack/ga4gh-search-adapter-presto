@@ -21,8 +21,8 @@ ADD target/backend/data-sources/sql-source/pom.xml /build/backend/data-sources/s
 ADD target/backend/data-models/pom.xml /build/backend/data-models/pom.xml
 ADD target/frontend/pom.xml /build/frontend/pom.xml
 
-RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies -P prod
-RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION} -P prod
+RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
+RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
 
 # Now add sources, which will bust the cache.
 ADD target/backend/service/src/ /build/backend/service/src/
@@ -37,7 +37,7 @@ ADD target/frontend/demo/ /build/frontend/demo/
 #     org.apache.maven.artifact.resolver.MultipleArtifactsNotFoundException: Missing:
 # then update the version number of surefire-junit4 in pom.xml under the
 # dynamicDependencies section of go-offline-maven-plugin configuration.
-RUN ./mvnw -B -o package -P prod
+RUN ./mvnw -B -o package
 
 ##
 ## Stage 2: Package the runnable image
@@ -52,4 +52,4 @@ ARG APP_VERSION
 COPY --from=0 /build/backend/service/target/ga4gh-discovery-search-service-*.jar /app.jar
 ADD entrypoint.sh /entrypoint.sh
 EXPOSE 8080
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
