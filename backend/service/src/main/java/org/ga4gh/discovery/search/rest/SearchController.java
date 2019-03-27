@@ -14,7 +14,7 @@ public class SearchController {
 
     @Autowired SearchSource dataSource;
 
-    @RequestMapping(value = "/search", method = RequestMethod.POST)
+    @RequestMapping(value = "/api/search", method = RequestMethod.POST)
     public SearchResult search(@RequestBody SearchQuery query) {
         return dataSource.search(query);
     }

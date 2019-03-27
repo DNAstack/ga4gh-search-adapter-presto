@@ -12,7 +12,7 @@ public class FieldsController {
 
     @Autowired SearchSource dataSource;
 
-    @RequestMapping("/fields")
+    @RequestMapping("/api/fields")
     public List<Field> fields() {
         return dataSource.getFields();
     }

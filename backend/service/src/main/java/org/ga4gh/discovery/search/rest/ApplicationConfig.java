@@ -105,6 +105,16 @@ public class ApplicationConfig {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
                 http.authorizeRequests()
+                        .antMatchers("/api/**")
+                        .authenticated()
+                        .and()
+                        .httpBasic()
+                        .and()
+                        .authorizeRequests()
+                        .antMatchers("/actuator/health", "/actuator/info")
+                        .permitAll()
+                        .and()
+                        .authorizeRequests()
                         .anyRequest()
                         .authenticated()
                         .and()
