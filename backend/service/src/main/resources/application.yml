@@ -7,3 +7,7 @@ spring:
   security:
     user:
       password: FpmJj24y9RRRYQnpXXOHEIEJK6lwPjnY09
+server:
+  tomcat:
+    remote-ip-header: "x-forwarded-for"
+    protocol-header: "x-forwarded-proto"
