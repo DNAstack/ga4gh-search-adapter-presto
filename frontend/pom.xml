@@ -15,6 +15,7 @@
 	<properties>
 		<angular.project.location>demo</angular.project.location>
 		<angular.project.nodeinstallation>node_installation</angular.project.nodeinstallation>
+		<angular.build.command>run build</angular.build.command>
 	</properties>
 
 	<dependencyManagement>
@@ -50,6 +51,48 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>com.github.eirslett</groupId>
+				<artifactId>frontend-maven-plugin</artifactId>
+				<version>1.0</version>
+				<configuration>
+					<workingDirectory>${angular.project.location}</workingDirectory>
+					<installDirectory>${angular.project.nodeinstallation}</installDirectory>
+				</configuration>
+				<executions>
+					<execution>
+						<id>install node and npm</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>install-node-and-npm</goal>
+						</goals>
+						<configuration>
+							<nodeVersion>v8.15.1</nodeVersion>
+							<npmVersion>6.5.0</npmVersion>
+						</configuration>
+					</execution>
+					<execution>
+						<id>npm install</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>install</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>npm build</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>${angular.build.command}</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -59,52 +102,9 @@
 			<activation>
 				<activeByDefault>false</activeByDefault>
 			</activation>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>com.github.eirslett</groupId>
-						<artifactId>frontend-maven-plugin</artifactId>
-						<version>1.0</version>
-						<configuration>
-							<workingDirectory>${angular.project.location}</workingDirectory>
-							<installDirectory>${angular.project.nodeinstallation}</installDirectory>
-						</configuration>
-						<executions>
-							<execution>
-								<id>install node and npm</id>
-								<phase>initialize</phase>
-								<goals>
-									<goal>install-node-and-npm</goal>
-								</goals>
-								<configuration>
-									<nodeVersion>v8.15.1</nodeVersion>
-									<npmVersion>6.5.0</npmVersion>
-								</configuration>
-							</execution>
-							<execution>
-								<id>npm install</id>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>npm</goal>
-								</goals>
-								<configuration>
-									<arguments>install</arguments>
-								</configuration>
-							</execution>
-							<execution>
-								<id>npm build</id>
-								<phase>generate-resources</phase>
-								<goals>
-									<goal>npm</goal>
-								</goals>
-								<configuration>
-									<arguments>run build:prod</arguments>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
+			<properties>
+				<angular.build.command>run build:prod</angular.build.command>
+			</properties>
 		</profile>
 	</profiles>
 
