@@ -1,6 +1,6 @@
 #!/bin/sh
 
-config_path=BOOT-INF/classes/static/demo/assets
+config_path=BOOT-INF/classes/static/assets
 mkdir -p ${config_path}
 
 echo "{
