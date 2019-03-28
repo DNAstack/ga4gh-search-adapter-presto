@@ -2,11 +2,12 @@ package org.ga4gh.discovery.search.rest;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import java.sql.SQLException;
-import org.ga4gh.discovery.search.query.QueryRule;
+import org.ga4gh.discovery.search.query.Predicate;
 import org.ga4gh.discovery.search.query.SearchQuery;
-import org.ga4gh.discovery.search.rest.serialize.QueryRuleDeserializer;
-import org.ga4gh.discovery.search.rest.serialize.SearchQueryDeserializer;
+import org.ga4gh.discovery.search.serde.PredicateDeserializer;
+import org.ga4gh.discovery.search.serde.SearchQueryDeserializer;
 import org.ga4gh.discovery.search.source.SearchSource;
+import org.ga4gh.discovery.search.source.presto.PrestoAdapterImpl;
 import org.ga4gh.discovery.search.source.presto.PrestoSearchSource;
 import org.ga4gh.discovery.search.source.sql.SQLSearchSource;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,14 +74,15 @@ public class ApplicationConfig {
 
     private SearchSource getPrestoSearchSource() {
         return new PrestoSearchSource(
-                prestoDatasourceUrl, prestoDatasourceUsername, prestoDatasourcePassword);
+                new PrestoAdapterImpl(
+                        prestoDatasourceUrl, prestoDatasourceUsername, prestoDatasourcePassword));
     }
 
     @Bean
     public Jackson2ObjectMapperBuilder objectMapperBuilder() {
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
         builder.deserializerByType(SearchQuery.class, new SearchQueryDeserializer());
-        builder.deserializerByType(QueryRule.class, new QueryRuleDeserializer());
+        builder.deserializerByType(Predicate.class, new PredicateDeserializer());
         return builder;
     }
 

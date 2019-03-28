@@ -14,15 +14,14 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.ga4gh.discovery.search.Field;
+import org.ga4gh.discovery.search.Table;
+import org.ga4gh.discovery.search.Type;
 import org.ga4gh.discovery.search.query.SearchQuery;
 import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 
-/**
- *
- * @author mfiume
- */
+/** @author mfiume */
 public class SQLSearchSource implements SearchSource {
 
     private final String driverClassName;
@@ -37,30 +36,32 @@ public class SQLSearchSource implements SearchSource {
         this.password = password;
         this.driverClassName = driverClassName;
     }
-    
+
+    @Override
+    public List<Table> getTables() {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
     private List<Field> updateFields() {
         try {
             List<Field> fields = new ArrayList<Field>();
-              
+
             Class.forName(driverClassName);
-            Connection connection = DriverManager.getConnection(
-                    url,
-                    username,
-                    password);
+            Connection connection = DriverManager.getConnection(url, username, password);
             Statement stmt = connection.createStatement();
-            ResultSet rs=stmt.executeQuery("DESC subject");  
-            while(rs.next()) {
-                String fieldId = rs.getString("field"); 
-                Field.Type fieldType = sqlToPrimativeType(rs.getString("type"));
-               
-                fields.add(new Field(
-                        fieldId,
-                        fieldId,
-                        fieldType,
-                        operatorsForType(fieldType), 
-                        new String[0],
-                        "subject"
-                ));
+            ResultSet rs = stmt.executeQuery("DESC subject");
+            while (rs.next()) {
+                String fieldId = rs.getString("field");
+                Type fieldType = sqlToPrimativeType(rs.getString("type"));
+
+                fields.add(
+                        new Field(
+                                fieldId,
+                                fieldId,
+                                fieldType,
+                                operatorsForType(fieldType),
+                                new String[0],
+                                "subject"));
             }
             connection.close();
             return fields;
@@ -69,10 +70,12 @@ public class SQLSearchSource implements SearchSource {
             return null;
         }
     }
-    
+
     @Override
-    public List<Field> getFields() {
-        if (fields == null) { // todo: should also check if the table schema has been altered since last call to this method
+    public List<Field> getFields(String table) {
+        if (fields
+                == null) { // todo: should also check if the table schema has been altered since
+                           // last call to this method
             fields = updateFields();
         }
         return fields;
@@ -81,32 +84,27 @@ public class SQLSearchSource implements SearchSource {
     @Override
     public SearchResult search(SearchQuery query) {
         List<ResultRow> results = new ArrayList<ResultRow>();
-        SearchResult searchResult = new SearchResult(getFields(),results);
+        SearchResult searchResult = new SearchResult(getFields(null), results);
         return searchResult;
     }
-    
-    
 
-    private Field.Type sqlToPrimativeType(String sqlType) {
+    private Type sqlToPrimativeType(String sqlType) {
         if (sqlType.startsWith("int")) {
-            return Field.Type.NUMBER;
+            return Type.NUMBER;
         } else if (sqlType.startsWith("varchar")) {
-            return Field.Type.STRING;
+            return Type.STRING;
         }
         throw new RuntimeException("Unknown mapping for SQL field type " + sqlType);
     }
-    
-    private String[] operatorsForType(Field.Type type) {
+
+    private String[] operatorsForType(Type type) {
         switch (type) {
             case NUMBER:
-                return new String[] { "=", "!=", "<", "<=", ">", ">=" };
+                return new String[] {"=", "!=", "<", "<=", ">", ">="};
             case STRING:
-                return new String[] { "=", "!=", "contains", "like" };
-            default :
+                return new String[] {"=", "!=", "contains", "like"};
+            default:
                 return new String[0];
         }
     }
-    
-    
-    
 }

@@ -15,7 +15,7 @@ export class ApiService {
   }
 
   getFields() {
-    return this.httpClient.get(`${this.apiUrl}/fields`);
+    return this.httpClient.get(`${this.apiUrl}/fields?table=demo_view`);
   }
 
   doQuery(query) {

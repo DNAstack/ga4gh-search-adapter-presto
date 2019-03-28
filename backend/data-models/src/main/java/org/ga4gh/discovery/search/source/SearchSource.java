@@ -7,17 +7,16 @@ package org.ga4gh.discovery.search.source;
 
 import java.util.List;
 import org.ga4gh.discovery.search.Field;
+import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.query.SearchQuery;
 import org.ga4gh.discovery.search.result.SearchResult;
 
-/**
- * 
- * @author mfiume
- */
+/** @author mfiume */
 public interface SearchSource {
 
-    public List<Field> getFields();
+    List<Table> getTables();
 
-    public SearchResult search(SearchQuery query);
-    
+    List<Field> getFields(String table);
+
+    SearchResult search(SearchQuery query);
 }

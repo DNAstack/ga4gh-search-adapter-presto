@@ -1,8 +1,9 @@
-import {FormBuilder, FormControl} from '@angular/forms';
-import {Component, OnInit, ViewChild} from '@angular/core';
-import {JsonEditorComponent, JsonEditorOptions} from 'ang-jsoneditor';
+import { FormBuilder, FormControl } from '@angular/forms';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
+import { Rule, RuleSet } from 'angular2-query-builder';
 
 @Component({
   selector: 'app-root',
@@ -13,19 +14,19 @@ export class AppComponent implements OnInit {
   public queryCtrl: FormControl;
 
   public query = {
-    condition : 'and',
-    rules : []
+    condition: 'and',
+    rules: []
   };
 
   public config = {
-    fields : undefined
+    fields: undefined
   };
 
   public view = {
-    wrapFieldTableCells : true,
-    wrapResultTableCells : true,
-    isQuerying : false,
-    selectedTabIndex : 0
+    wrapFieldTableCells: true,
+    wrapResultTableCells: true,
+    isQuerying: false,
+    selectedTabIndex: 0
   }
 
   public results = null;
@@ -47,15 +48,105 @@ export class AppComponent implements OnInit {
     this.editorOptions.statusBar = false;
   }
 
-  public doQuery(event,query) {
+  transformRule(rule: RuleSet | Rule) {
+    if ('condition' in rule) {
+      return this.transformCondition(rule)
+    } else if ('operator' in rule) {
+      return this.transformOperator(rule)
+    } else {
+      throw new Error('Unknown rule format');
+    }
+  }
+
+  transformCondition(rule: RuleSet) {
+    var predicates = []
+    for (let subrule of rule.rules) {
+      predicates.push(this.transformRule(subrule))
+    }
+    return {
+      'p': rule.condition,
+      'predicates': predicates
+    }
+  }
+
+  transformOperator(rule: Rule) {
+    var p = {
+      'p': rule.operator,
+      'rfield': rule.field
+    }
+    p[this.valueKey(rule.field)] = rule.value
+    return p
+  }
+
+  valueKey(fieldName:string):string {
+    var field:Field = this.config.fields[fieldName]
+    if (field.type == 'string') {
+      return 'lstring'
+    } else if (field.type == 'number') {
+      return 'lnumber'
+    } else if (field.type == 'boolean') {
+      return 'lboolean'
+    } else {
+      return 'lvalue'
+    }
+  }
+
+  transformQuery(query: RuleSet) {
+    // we're hardcoding select clause here for demo purposes
+    // the flexible thing is the rule built by query builder
+    return {
+      'select': [
+        {
+          "field": "participant_id"
+        },
+        {
+          "field": "chromosome"
+        },
+        {
+          "field": "start_position"
+        },
+        {
+          "field": "reference_base"
+        },
+        {
+          "field": "alternate_base"
+        },
+        {
+          "field": "vcf_size"
+        },
+        {
+          "field": "vcf_urls"
+        },
+        {
+          "field": "category"
+        },
+        {
+          "field": "key"
+        },
+        {
+          "field": "raw_value",
+          "alias": "value"
+        }],
+      'from': [{
+        'table': 'demo_view'
+      }],
+      'where': this.transformRule(query),
+      'limit':100
+    }
+  }
+
+  public doQuery(event, query) {
     this.view.isQuerying = true;
-    this.apiService.doQuery(query).subscribe(
+    console.log("Original query\n" + JSON.stringify(query, null, 2))
+    var transformedQuery = this.transformQuery(query)
+    console.log("Transformed query\n" + JSON.stringify(transformedQuery, null, 2))
+    this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {
-          console.log(dto);
-          this.results = dto;
-          this.view.isQuerying = false;
-          this.view.selectedTabIndex = 2;
-       },
+        console.log(dto);
+        this.results = dto;
+        this.view.isQuerying = false;
+        this.view.selectedTabIndex = 2;
+      },
       (err) => {
         console.log('Error', err)
         this.view.isQuerying = false;
@@ -67,13 +158,13 @@ export class AppComponent implements OnInit {
   }
 
   normalizeArray<T>(array: Array<T>, indexKey: keyof T) {
-     const normalizedObject: any = {}
-     for (let i = 0; i < array.length; i++) {
-          const key = array[i][indexKey]
-          normalizedObject[key] = array[i]
-     }
-     return normalizedObject as { [key: string]: T }
-   }
+    const normalizedObject: any = {}
+    for (let i = 0; i < array.length; i++) {
+      const key = array[i][indexKey]
+      normalizedObject[key] = array[i]
+    }
+    return normalizedObject as { [key: string]: T }
+  }
 
 
   ngOnInit(): void {
@@ -85,9 +176,9 @@ export class AppComponent implements OnInit {
     this.apiService
       .getFields()
       .subscribe((fields: Field[]) => {
-            this.config.fields = this.normalizeArray(fields,'id');
-            this.view.selectedTabIndex = 0;
-        },
+        this.config.fields = this.normalizeArray(fields, 'id');
+        this.view.selectedTabIndex = 0;
+      },
         (err) => console.log('Error', err));
   }
 

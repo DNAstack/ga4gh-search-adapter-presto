@@ -3,14 +3,14 @@ package org.ga4gh.discovery.search;
 public class Field {
 
     private final String id;
-    
     private final String name;
     private final Type type;
     private final String[] operators;
     private final String[] options;
     private final String table;
-    
-    public Field(String id, String name, Type type, String[] operators, String[] options, String table) {
+
+    public Field(
+            String id, String name, Type type, String[] operators, String[] options, String table) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -45,46 +45,21 @@ public class Field {
 
     @Override
     public String toString() {
-        return "Field{" + "id=" + id + ", name=" + name + ", type=" + type + ", operators=" + operators + ", options=" + options + ", table=" + table + '}';
+        return "Field{"
+                + "id="
+                + id
+                + ", name="
+                + name
+                + ", type="
+                + type
+                + ", operators="
+                + operators
+                + ", options="
+                + options
+                + ", table="
+                + table
+                + '}';
     }
 
-    public static enum Type {
-        BOOLEAN {
-            @Override
-            public String toString() {
-                return "boolean";
-            }
-        },
-        NUMBER {
-            @Override
-            public String toString() {
-                return "number";
-            }
-        },
-        STRING {
-            @Override
-            public String toString() {
-                return "string";
-            }
-        },
-        STRING_ARRAY {
-            @Override
-            public String toString() {
-                return "string[]";
-            }
-        },
-        JSON {
-            @Override
-            public String toString() {
-                return "json";
-            }
-        }, 
-        DATE {
-            @Override
-            public String toString() {
-                return "date";
-            }
-        }
-    }
-    
+
 }

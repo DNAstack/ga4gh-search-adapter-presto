@@ -1,3 +1,7 @@
+# Intro
+
+This branch implements proposals from [Search API Confluence doc](https://dnastack.atlassian.net/wiki/spaces/DISCO/pages/394690561/Search+API)
+
 # Running
 
 ```

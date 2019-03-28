@@ -1,0 +1,15 @@
+{
+	"p": "and",
+	"predicates": [
+		{
+			"p": ">",
+			"lfield": "files.size",
+			"rvalue": "1000"
+		},
+		{
+			"p": "like",
+			"lfield": "files.name",
+			"rvalue": "PGPC%"
+		}
+	]
+}

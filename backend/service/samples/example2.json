@@ -1,0 +1,15 @@
+{
+	"p": "and",
+	"predicates": [
+		{
+			"p": "=",
+			"lfield": "files.id",
+			"rfield": "facts.raw_value"
+		},
+		{
+			"p": "=",
+			"lfield": "facts.key",
+			"rvalue": "Source VCF object ID"
+		}
+	]
+}
