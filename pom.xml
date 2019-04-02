@@ -14,6 +14,7 @@
 		<java.version>1.8</java.version>
 		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
 		<maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
+		<maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
 		<spring-cloud.version>Greenwich.RC2</spring-cloud.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
@@ -121,7 +122,7 @@
 							<DynamicDependency>
 								<groupId>org.apache.maven.surefire</groupId>
 								<artifactId>surefire-junit4</artifactId>
-								<version>2.22.1</version>
+								<version>${maven-surefire-plugin.version}</version>
 								<repositoryType>PLUGIN</repositoryType>
 							</DynamicDependency>
 						</dynamicDependencies>
