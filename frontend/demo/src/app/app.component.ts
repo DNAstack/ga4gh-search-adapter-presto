@@ -15,7 +15,28 @@ export class AppComponent implements OnInit {
 
   public query = {
     condition: 'and',
-    rules: []
+    rules: [
+      {
+        "field": "demo_view.chromosome",
+        "operator": "=",
+        "value": "chr1"
+      },
+      {
+        "field": "demo_view.start_position",
+        "operator": "=",
+        "value": 5087263
+      },
+      {
+        "field": "demo_view.reference_base",
+        "operator": "=",
+        "value": "A"
+      },
+      {
+        "field": "demo_view.alternate_base",
+        "operator": "=",
+        "value": "G"
+      }
+    ]
   };
 
   public config = {
@@ -78,8 +99,8 @@ export class AppComponent implements OnInit {
     return p
   }
 
-  valueKey(fieldName:string):string {
-    var field:Field = this.config.fields[fieldName]
+  valueKey(fieldName: string): string {
+    var field: Field = this.config.fields[fieldName]
     if (field.type == 'string') {
       return 'lstring'
     } else if (field.type == 'number') {
@@ -131,7 +152,7 @@ export class AppComponent implements OnInit {
         'table': 'demo_view'
       }],
       'where': this.transformRule(query),
-      'limit':100
+      'limit': 100
     }
   }
 
