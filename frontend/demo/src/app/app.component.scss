@@ -108,3 +108,7 @@
 .mat-row:hover {
   background-color: #f9f9f9;
 }
+
+/deep/ .error-snack {
+  color: red;
+}

@@ -21,6 +21,7 @@ import {
   MatRadioModule,
   MatSelectModule,
   MatSlideToggleModule,
+  MatSnackBarModule,
   MatTabsModule,
   MatToolbarModule,
   MatTooltipModule
@@ -55,7 +56,8 @@ import {AppConfigService} from './app-config.service';
     MatNativeDateModule,
     MatRadioModule,
     MatIconModule,
-    MatCardModule
+    MatCardModule,
+    MatSnackBarModule
   ],
   providers: [
     AppConfigService,
