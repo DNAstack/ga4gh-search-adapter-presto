@@ -74,10 +74,10 @@ public class SearchQueryTransformerTest {
                                 + "AND \"f_var\".\"participant_id\" = \"fac\".\"participant_id\" "
                                 + "AND \"f_var\".\"raw_value\" = \"var\".\"call_name\" "
                                 + "AND \"drs\".\"id\" = \"f_drs\".\"raw_value\" "
-                                + "AND \"f_drs\".\"key\" = \"Source VCF object ID\" "
-                                + "AND \"f_drs\".\"category\" = \"Profile\" "
-                                + "AND \"f_var\".\"key\" = \"Variant call name\" "
-                                + "AND \"f_var\".\"category\" = \"Profile\""));
+                                + "AND \"f_drs\".\"key\" = 'Source VCF object ID' "
+                                + "AND \"f_drs\".\"category\" = 'Profile' "
+                                + "AND \"f_var\".\"key\" = 'Variant call name' "
+                                + "AND \"f_var\".\"category\" = 'Profile'"));
     }
 
     private void givenQuery(
