@@ -19,7 +19,7 @@ public class FieldsE2eTest extends BaseE2eTest {
                         .auth()
                         .basic(requiredEnv("E2E_BASIC_USERNAME"), requiredEnv("E2E_BASIC_PASSWORD"))
                         .when()
-                        .get("/api/fields")
+                        .get("/api/fields?table=demo_view")
                         .then()
                         .log()
                         .ifValidationFails()
