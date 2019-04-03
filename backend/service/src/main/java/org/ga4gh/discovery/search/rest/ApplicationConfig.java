@@ -55,6 +55,9 @@ public class ApplicationConfig {
     @Value("${cors.urls}")
     private String corsUrls;
 
+    @Value("${security.enabled:true}")
+    private String securityEnabled;
+
     @Bean
     public SearchSource searchSource() throws ClassNotFoundException, SQLException {
         checkArgument(
@@ -103,29 +106,38 @@ public class ApplicationConfig {
 
     @Bean
     public WebSecurityConfigurerAdapter securityConfigurer() {
-        return new WebSecurityConfigurerAdapter() {
-            @Override
-            protected void configure(HttpSecurity http) throws Exception {
-                http.authorizeRequests()
-                        .antMatchers("/api/**")
-                        .authenticated()
-                        .and()
-                        .httpBasic()
-                        .and()
-                        .authorizeRequests()
-                        .antMatchers("/actuator/health", "/actuator/info")
-                        .permitAll()
-                        .and()
-                        .authorizeRequests()
-                        .anyRequest()
-                        .authenticated()
-                        .and()
-                        .formLogin()
-                        .and()
-                        .csrf()
-                        .disable();
-            }
-        };
+        if ("false".equals(securityEnabled)) {
+            return new WebSecurityConfigurerAdapter() {
+                @Override
+                protected void configure(HttpSecurity http) throws Exception {
+                    http.authorizeRequests().anyRequest().permitAll().and().csrf().disable();
+                }
+            };
+        } else {
+            return new WebSecurityConfigurerAdapter() {
+                @Override
+                protected void configure(HttpSecurity http) throws Exception {
+                    http.authorizeRequests()
+                            .antMatchers("/api/**")
+                            .authenticated()
+                            .and()
+                            .httpBasic()
+                            .and()
+                            .authorizeRequests()
+                            .antMatchers("/actuator/health", "/actuator/info")
+                            .permitAll()
+                            .and()
+                            .authorizeRequests()
+                            .anyRequest()
+                            .authenticated()
+                            .and()
+                            .formLogin()
+                            .and()
+                            .csrf()
+                            .disable();
+                }
+            };
+        }
     }
 
     private String[] parseCorsUrls() {
