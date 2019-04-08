@@ -1,10 +1,10 @@
 import { FormBuilder, FormControl } from '@angular/forms';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
-import { MatDialog, MatDialogRef } from '@angular/material';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
 import { FieldsDialog } from './dialog/fields/fields-dialog';
 
 @Component({
@@ -169,14 +169,15 @@ export class AppComponent implements OnInit {
         'table': 'demo_view'
       }],
       'where': this.transformRule(query),
-      'limit': query.limit
+      'limit': 10
       /*,'offset': query.offset*/ // trying to get offsets to work
     }
   }
 
   public showFields(): void {
-    this.fieldsDialogRef = this.dialog.open('fields-dialog', {
-      width: '250px'
+    this.fieldsDialogRef = this.dialog.open(FieldsDialog, {
+      width: '528px',
+      data: {foo: 'bar'}
     });
   }
 
@@ -228,5 +229,4 @@ export class AppComponent implements OnInit {
       },
         (err) => console.log('Error', err));
   }
-
 }

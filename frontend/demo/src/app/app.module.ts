@@ -15,6 +15,7 @@ import {
   MatCardModule,
   MatCheckboxModule,
   MatDatepickerModule,
+  MatDialogModule,
   MatIconModule,
   MatInputModule,
   MatNativeDateModule,
@@ -30,10 +31,15 @@ import {
   MatSidenavModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
+import { FieldsDialog } from './dialog/fields/fields-dialog';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    FieldsDialog
+  ],
+  entryComponents: [
+    FieldsDialog
   ],
   imports: [
     BrowserModule,
@@ -55,6 +61,7 @@ import {AppConfigService} from './app-config.service';
     MatSelectModule,
     MatInputModule,
     MatDatepickerModule,
+    MatDialogModule,
     MatNativeDateModule,
     MatRadioModule,
     MatIconModule,
