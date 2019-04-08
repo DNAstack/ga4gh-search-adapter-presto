@@ -24,7 +24,7 @@ export class JsonDialog {
     this.editorOptions.mode = 'tree';
     this.editorOptions.mainMenuBar = false;
     this.editorOptions.navigationBar = false;
-    this.editorOptions.statusBar = false;
+    this.editorOptions.statusBar = false;    
   }
 
   ngOnInit() {

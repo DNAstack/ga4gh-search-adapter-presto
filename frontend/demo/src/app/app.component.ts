@@ -19,29 +19,33 @@ export class AppComponent implements OnInit {
   opened: boolean;
 
   public query = {
-    condition: 'and',
-    rules: [
-      {
-        "field": "demo_view.chromosome",
-        "operator": "=",
-        "value": "chr1"
-      },
-      {
-        "field": "demo_view.start_position",
-        "operator": "=",
-        "value": 5087263
-      },
-      {
-        "field": "demo_view.reference_base",
-        "operator": "=",
-        "value": "A"
-      },
-      {
-        "field": "demo_view.alternate_base",
-        "operator": "=",
-        "value": "G"
-      }
-    ],
+    select : null,
+    from : null,
+    where : {
+      condition: 'and',
+      rules: [
+        {
+          "field": "demo_view.chromosome",
+          "operator": "=",
+          "value": "chr1"
+        },
+        {
+          "field": "demo_view.start_position",
+          "operator": "=",
+          "value": 5087263
+        },
+        {
+          "field": "demo_view.reference_base",
+          "operator": "=",
+          "value": "A"
+        },
+        {
+          "field": "demo_view.alternate_base",
+          "operator": "=",
+          "value": "G"
+        }
+      ]
+    },
     limit : 100,
     offset : 0
   };
@@ -67,7 +71,7 @@ export class AppComponent implements OnInit {
     private apiService: ApiService,
     private dialog: MatDialog
   ) {
-    this.queryCtrl = this.formBuilder.control(this.query);
+    this.queryCtrl = this.formBuilder.control(this.query.where);
   }
 
   transformRule(rule: RuleSet | Rule) {
@@ -120,7 +124,7 @@ export class AppComponent implements OnInit {
     /*this.doQuery(this.query);*/
   }
 
-  transformQuery(query: RuleSet) {
+  transformQuery(where: RuleSet) {
     // we're hardcoding select clause here for demo purposes
     // the flexible thing is the rule built by query builder
     return {
@@ -159,7 +163,7 @@ export class AppComponent implements OnInit {
       'from': [{
         'table': 'demo_view'
       }],
-      'where': this.transformRule(query),
+      'where': this.transformRule(where),
       'limit': 10
       /*,'offset': query.offset*/ // trying to get offsets to work
     }
@@ -184,7 +188,7 @@ export class AppComponent implements OnInit {
   public doQuery(query) {
     this.view.isQuerying = true;
     console.log("Original query\n" + JSON.stringify(query, null, 2))
-    var transformedQuery = this.transformQuery(query)
+    var transformedQuery = this.transformQuery(query.where)
     console.log("Transformed query\n" + JSON.stringify(transformedQuery, null, 2))
     this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {

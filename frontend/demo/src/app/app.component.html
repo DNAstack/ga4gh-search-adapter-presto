@@ -1,14 +1,23 @@
 
 <div class="m-a">
-  <div class="clearfix"></div>
   <mat-sidenav-container class="content-container">
     <mat-sidenav #sidenav mode="side" [(opened)]="opened">
-      <div class="m-a pull-left" style="display:inline-block">
-        <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">view_column</i></button>
-        <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query)"><i class="material-icons">code</i></button>
-      </div>
+        <mat-toolbar style="background-color: white; border-bottom: 1px solid #e0e0e0">
+            <div>Query Builder</div>
+        </mat-toolbar>
+      <mat-toolbar style="background: none">
+        <mat-toolbar-row>
+            <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">view_column</i></button>
+            <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query)"><i class="material-icons">code</i></button>
+          
+            <span class="fill-space"></span>
+            <!--button matTooltip="Show starred results" style="display:inline" mat-raised-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
+            <button matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
+            <mat-spinner [diameter]="20" class="m-l-sm" *ngIf="view.isQuerying"></mat-spinner>
+        </mat-toolbar-row>
+        </mat-toolbar>
       <div class="clearfix"></div>
-      <query-builder [ngModel]="query"
+      <query-builder [(ngModel)]="query.where"
       (ngModelChange)="queryChanged($event)"
       [config]="config" *ngIf="config.fields" style="max-width:400px" class="m-s">
 
@@ -132,16 +141,8 @@
 </mat-sidenav>
 <mat-sidenav-content>
   <mat-toolbar color="primary">
-    <div class="m-s">GA4GH Discovery Search Implementation</div>
-  </mat-toolbar>
-  <mat-toolbar style="background:none">
-    <mat-toolbar-row>
-      <button matTooltip="Toggle sidebar" class="m-r-sm" mat-raised-button (click)="sidenav.toggle()" color="{{sidenav.opened ? 'primary' : '' }}"><i class="material-icons">menu</i></button>
-      <span class="fill-space"></span>
-      <button matTooltip="Show starred results" style="display:inline" mat-raised-button (click)="showCart($event)"><i class="material-icons">star</i></button>
-      <button matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
-      <mat-spinner [diameter]="20" class="m-l-sm" *ngIf="view.isQuerying"></mat-spinner>
-    </mat-toolbar-row>
+    <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i class="material-icons">menu</i></button>
+    <div>GA4GH Discovery Search</div>
   </mat-toolbar>
   <div *ngIf="!results" style="text-align:center; color: #bdbdbd">
     <div>
