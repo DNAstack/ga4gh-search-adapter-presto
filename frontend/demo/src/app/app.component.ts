@@ -176,7 +176,7 @@ export class AppComponent implements OnInit {
 
   public showFields(): void {
     this.fieldsDialogRef = this.dialog.open(FieldsDialog, {
-      width: '528px',
+      width: '90%',
       data: {foo: 'bar'}
     });
   }
