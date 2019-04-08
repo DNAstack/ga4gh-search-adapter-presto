@@ -1,6 +1,10 @@
 
-<div class="m-a">
-  <mat-sidenav-container class="content-container">
+<div class="box-container">
+<mat-toolbar color="primary" class="box box-header">
+    <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i class="material-icons">menu</i></button>
+    <div>GA4GH Discovery Search</div>
+  </mat-toolbar>
+  <mat-sidenav-container class="box box-content">
     <mat-sidenav #sidenav mode="side" [(opened)]="opened">
         <mat-toolbar class="toolbar-white">
             <div>Query Builder</div>
@@ -139,10 +143,6 @@
           </query-builder>
 </mat-sidenav>
 <mat-sidenav-content>
-  <mat-toolbar color="primary">
-    <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i class="material-icons">menu</i></button>
-    <div>GA4GH Discovery Search</div>
-  </mat-toolbar>
   <div *ngIf="!results" class="m-v" style="text-align:center; color: #bdbdbd">
     <div>
       <i class="material-icons" style="font-size: 100px !important">not_interested</i>
