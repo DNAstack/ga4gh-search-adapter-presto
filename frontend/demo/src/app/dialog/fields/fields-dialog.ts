@@ -1,4 +1,5 @@
 import { Component, Inject, OnInit } from '@angular/core';
+import { Field } from '../../model/search/field';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 
 @Component({

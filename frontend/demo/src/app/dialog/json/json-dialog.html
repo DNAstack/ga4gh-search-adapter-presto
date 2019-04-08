@@ -1,5 +1,11 @@
 <h1 mat-dialog-title>Query</h1>
+<mat-toolbar style="background:none">
+    <mat-toolbar-row>
+      <div class="fill-space"></div>
+      <button mat-icon-button matTooltip="Copy JSON" style="display:inline" (click)="copyJson()"><mat-icon>file_copy</mat-icon></button>
+    </mat-toolbar-row>
+  </mat-toolbar>
 <div class="m-v">
-  <div id="jsonEditor">
-  </div>
+  {{query | json}}
+  <json-editor #jsonEditor [options]="editorOptions"></json-editor>
 </div>

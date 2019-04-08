@@ -1,6 +1,5 @@
 import { FormBuilder, FormControl } from '@angular/forms';
 import { Component, Inject, OnInit, ViewChild } from '@angular/core';
-import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
@@ -60,10 +59,6 @@ export class AppComponent implements OnInit {
 
   public results = null;
 
-  @ViewChild('jsonEditor')
-  jsonEditor: JsonEditorComponent;
-
-  public editorOptions = new JsonEditorOptions();
   private jsonDialogRef: MatDialogRef<JsonDialog>;
   private fieldsDialogRef: MatDialogRef<FieldsDialog>;
 
@@ -73,11 +68,6 @@ export class AppComponent implements OnInit {
     private dialog: MatDialog
   ) {
     this.queryCtrl = this.formBuilder.control(this.query);
-
-    this.editorOptions.mode = 'tree';
-    this.editorOptions.mainMenuBar = false;
-    this.editorOptions.navigationBar = false;
-    this.editorOptions.statusBar = false;
   }
 
   transformRule(rule: RuleSet | Rule) {
@@ -178,6 +168,7 @@ export class AppComponent implements OnInit {
   public showJson(): void {
     this.jsonDialogRef = this.dialog.open(JsonDialog, {
       width: '90%',
+      height: '90%',
       data: { query: this.query }
     });
   }
@@ -185,6 +176,7 @@ export class AppComponent implements OnInit {
   public showFields(): void {
     this.fieldsDialogRef = this.dialog.open(FieldsDialog, {
       width: '90%',
+      height: '90%',
       data: { fields: this.config.fields }
     });
   }
@@ -210,7 +202,6 @@ export class AppComponent implements OnInit {
 
   queryChanged($event) {
     this.view.queryChanged = true;
-    this.jsonEditor.set($event);
   }
 
   normalizeArray<T>(array: Array<T>, indexKey: keyof T) {
@@ -224,10 +215,6 @@ export class AppComponent implements OnInit {
 
 
   ngOnInit(): void {
-    if (this.jsonEditor && this.jsonEditor['editor']) {
-      //TODO: is this the best way to do this?
-      this.jsonEditor.set(JSON.parse(JSON.stringify(this.query)));
-    }
 
     this.apiService
       .getFields()
