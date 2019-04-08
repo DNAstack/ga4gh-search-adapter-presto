@@ -53,15 +53,17 @@ public class SearchQueryHelper {
                                 equals(fieldRef("f_drs.category"), literalStr("Profile")),
                                 equals(fieldRef("f_var.key"), literalStr("Variant call name")),
                                 equals(fieldRef("f_var.category"), literalStr("Profile")))),
-                noLimit());
+                noLimit(),
+                noOffset());
     }
 
     public static SearchQuery query(
             List<SearchQueryField> select,
             List<SearchQueryTable> from,
             Optional<Predicate> where,
-            OptionalLong limit) {
-        return new SearchQuery(select, from, where, limit);
+            OptionalLong limit,
+            OptionalLong offset) {
+        return new SearchQuery(select, from, where, limit, offset);
     }
 
     public static LiteralExpression literalStr(String value) {
@@ -121,6 +123,10 @@ public class SearchQueryHelper {
     }
 
     public static OptionalLong noLimit() {
+        return OptionalLong.empty();
+    }
+    
+    public static OptionalLong noOffset() {
         return OptionalLong.empty();
     }
 }

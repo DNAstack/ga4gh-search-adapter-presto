@@ -24,7 +24,10 @@ import {
   MatSnackBarModule,
   MatTabsModule,
   MatToolbarModule,
-  MatTooltipModule
+  MatTooltipModule,
+  MatProgressSpinnerModule,
+  MatPaginatorModule,
+  MatSidenavModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
 
@@ -41,7 +44,6 @@ import {AppConfigService} from './app-config.service';
     FormsModule,
     ReactiveFormsModule,
     QueryBuilderModule,
-    NoopAnimationsModule,
     HttpClientModule,
     MatToolbarModule,
     MatTooltipModule,
@@ -57,7 +59,10 @@ import {AppConfigService} from './app-config.service';
     MatRadioModule,
     MatIconModule,
     MatCardModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    MatPaginatorModule,
+    MatSidenavModule
   ],
   providers: [
     AppConfigService,

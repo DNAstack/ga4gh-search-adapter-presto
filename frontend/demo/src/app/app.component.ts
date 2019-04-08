@@ -4,6 +4,8 @@ import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
+import { MatDialog, MatDialogRef } from '@angular/material';
+import { FieldsDialog } from './dialog/fields/fields-dialog';
 
 @Component({
   selector: 'app-root',
@@ -12,6 +14,9 @@ import { Rule, RuleSet } from 'angular2-query-builder';
 })
 export class AppComponent implements OnInit {
   public queryCtrl: FormControl;
+
+  events: string[] = [];
+  opened: boolean;
 
   public query = {
     condition: 'and',
@@ -36,7 +41,9 @@ export class AppComponent implements OnInit {
         "operator": "=",
         "value": "G"
       }
-    ]
+    ],
+    limit : 100,
+    offset : 0
   };
 
   public config = {
@@ -47,7 +54,8 @@ export class AppComponent implements OnInit {
     wrapFieldTableCells: true,
     wrapResultTableCells: true,
     isQuerying: false,
-    selectedTabIndex: 0
+    selectedTabIndex: 0,
+    queryChanged : false
   }
 
   public results = null;
@@ -56,10 +64,12 @@ export class AppComponent implements OnInit {
   jsonEditor: JsonEditorComponent;
 
   public editorOptions = new JsonEditorOptions();
+  private fieldsDialogRef: MatDialogRef<FieldsDialog>;
 
   constructor(
     private formBuilder: FormBuilder,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private dialog: MatDialog
   ) {
     this.queryCtrl = this.formBuilder.control(this.query);
 
@@ -112,6 +122,13 @@ export class AppComponent implements OnInit {
     }
   }
 
+  paginationChanged(event) {
+    this.query.limit = event.pageSize;
+    this.query.offset = event.pageSize * event.pageIndex;
+    this.view.queryChanged = true;
+    /*this.doQuery(this.query);*/
+  }
+
   transformQuery(query: RuleSet) {
     // we're hardcoding select clause here for demo purposes
     // the flexible thing is the rule built by query builder
@@ -152,11 +169,18 @@ export class AppComponent implements OnInit {
         'table': 'demo_view'
       }],
       'where': this.transformRule(query),
-      'limit': 100
+      'limit': query.limit
+      /*,'offset': query.offset*/ // trying to get offsets to work
     }
   }
 
-  public doQuery(event, query) {
+  public showFields(): void {
+    this.fieldsDialogRef = this.dialog.open('fields-dialog', {
+      width: '250px'
+    });
+  }
+
+  public doQuery(query) {
     this.view.isQuerying = true;
     console.log("Original query\n" + JSON.stringify(query, null, 2))
     var transformedQuery = this.transformQuery(query)
@@ -164,6 +188,7 @@ export class AppComponent implements OnInit {
     this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {
         console.log(dto);
+        this.view.queryChanged = false;
         this.results = dto;
         this.view.isQuerying = false;
         this.view.selectedTabIndex = 2;
@@ -174,7 +199,8 @@ export class AppComponent implements OnInit {
       });
   }
 
-  updateJsonEditor($event) {
+  queryChanged($event) {
+    this.view.queryChanged = true;
     this.jsonEditor.set($event);
   }
 

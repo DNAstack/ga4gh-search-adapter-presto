@@ -37,7 +37,11 @@ public class SearchQueryDeserializer extends JsonDeserializer<SearchQuery> {
                 node.has("limit")
                         ? OptionalLong.of(node.get("limit").asLong())
                         : OptionalLong.empty();
-        return new SearchQuery(select, from, predicate, limit);
+        OptionalLong offset =
+                node.has("offset")
+                        ? OptionalLong.of(node.get("offset").asLong())
+                        : OptionalLong.empty();
+        return new SearchQuery(select, from, predicate, limit, offset);
     }
 
     private List<SearchQueryField> parseSelectClause(JsonNode selectNode) {

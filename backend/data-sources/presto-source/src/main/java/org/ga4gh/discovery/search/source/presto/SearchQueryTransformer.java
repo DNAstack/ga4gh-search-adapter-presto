@@ -64,6 +64,13 @@ public class SearchQueryTransformer {
                             sql.append("\nLIMIT ");
                             sql.append(Long.toString(limit));
                         });
+        
+        query.getOffset()
+                .ifPresent(
+                        offset -> {
+                            sql.append("\nOFFSET ");
+                            sql.append(Long.toString(offset));
+                        });
 
         return sql.toString();
     }
