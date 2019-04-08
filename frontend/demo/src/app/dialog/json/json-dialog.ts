@@ -2,22 +2,19 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 
 @Component({
-  selector: 'fields-dialog',
-  templateUrl: './fields-dialog.html'
+  selector: 'json-dialog',
+  templateUrl: './json-dialog.html'
 })
-export class FieldsDialog {
+export class JsonDialog {
 
-  fields: Field[];
-
-  public view = {
-    wrapFieldTableCells: true,
-  }
+  query: any;
 
   constructor(
     private dialogRef: MatDialogRef<FieldsDialog>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
-    this.fields = data.fields;
+    this.query = data.query;
+    this.jsonEditor.set(JSON.parse(JSON.stringify(this.query)));
   }
 
   ngOnInit() {

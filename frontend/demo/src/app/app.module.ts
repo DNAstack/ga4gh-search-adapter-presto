@@ -31,14 +31,17 @@ import {
   MatSidenavModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
+import { JsonDialog } from './dialog/json/json-dialog';
 import { FieldsDialog } from './dialog/fields/fields-dialog';
 
 @NgModule({
   declarations: [
     AppComponent,
+    JsonDialog,
     FieldsDialog
   ],
   entryComponents: [
+    JsonDialog,
     FieldsDialog
   ],
   imports: [

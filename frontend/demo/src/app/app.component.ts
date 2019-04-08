@@ -5,6 +5,7 @@ import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
+import { JsonDialog } from './dialog/json/json-dialog';
 import { FieldsDialog } from './dialog/fields/fields-dialog';
 
 @Component({
@@ -51,7 +52,6 @@ export class AppComponent implements OnInit {
   };
 
   public view = {
-    wrapFieldTableCells: true,
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
@@ -64,6 +64,7 @@ export class AppComponent implements OnInit {
   jsonEditor: JsonEditorComponent;
 
   public editorOptions = new JsonEditorOptions();
+  private jsonDialogRef: MatDialogRef<JsonDialog>;
   private fieldsDialogRef: MatDialogRef<FieldsDialog>;
 
   constructor(
@@ -174,10 +175,17 @@ export class AppComponent implements OnInit {
     }
   }
 
+  public showJson(): void {
+    this.jsonDialogRef = this.dialog.open(JsonDialog, {
+      width: '90%',
+      data: { query: this.query }
+    });
+  }
+
   public showFields(): void {
     this.fieldsDialogRef = this.dialog.open(FieldsDialog, {
       width: '90%',
-      data: {foo: 'bar'}
+      data: { fields: this.config.fields }
     });
   }
 

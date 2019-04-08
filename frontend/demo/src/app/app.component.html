@@ -5,7 +5,7 @@
     <mat-sidenav #sidenav mode="side" [(opened)]="opened">
       <div class="m-a pull-left" style="display:inline-block">
         <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">view_column</i></button>
-        <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJSONQuery($event,query)"><i class="material-icons">code</i></button>
+        <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query)"><i class="material-icons">code</i></button>
       </div>
       <div class="clearfix"></div>
       <query-builder [ngModel]="query"

@@ -1,7 +1,36 @@
 <h1 mat-dialog-title>Fields</h1>
+<div class="m-v">
+  <mat-toolbar style="background:none">
+    <mat-toolbar-row>
+      <span class="fill-space"></span>
+      <button mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapFieldTableCells = !view.wrapFieldTableCells" color="{{view.wrapFieldTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
+    </mat-toolbar-row>
+  </mat-toolbar>
 
-<img src="https://media.giphy.com/media/l0HUldzuCa0S16SkM/giphy.gif">
-
-<p>
-  {{foo}}
-</p>
+  <div class="mat-table" [ngClass]="{ 'no-wrap' : view.wrapFieldTableCells }">
+    <div class="mat-header-row">
+      <div class="mat-header-cell">Name</div>
+      <div class="mat-header-cell">ID</div>
+      <div class="mat-header-cell">Type</div>
+      <div class="mat-header-cell">Specification</div>
+      <div class="mat-header-cell">Options</div>
+      <div class="mat-header-cell">Operators</div>
+    </div>
+    <div class="mat-row" *ngFor="let field of fields | keyvalue">
+      <div class="mat-cell" matTooltip="{{field.value.name}}">{{field.value.name}}</div>
+      <div class="mat-cell" matTooltip="{{field.value.id}}">{{field.value.id}}</div>
+      <div class="mat-cell" matTooltip="{{field.value.type}}">{{field.value.type}}</div>
+      <div class="mat-cell" matTooltip="{{field.value.spec}}"><a href="{{field.value.spec}}">{{field.value.spec}}</a></div>
+      <div class="mat-cell" matTooltip="{{field.value.options}}">
+        <span *ngFor="let option of field.value.options | keyvalue; let last = last">
+          {{option.value.name}}{{last ? '' : ', '}}
+        </span>
+      </div>
+      <div class="mat-cell" matTooltip="{{field.value.operators}}">
+        <span *ngFor="let operator of field.value.operators; let last = last">
+          {{operator}}{{last ? '' : ', '}}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
