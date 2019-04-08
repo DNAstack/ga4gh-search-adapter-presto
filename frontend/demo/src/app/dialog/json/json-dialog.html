@@ -6,6 +6,5 @@
     </mat-toolbar-row>
   </mat-toolbar>
 <div class="m-v">
-  {{query | json}}
-  <json-editor #jsonEditor [options]="editorOptions"></json-editor>
+  <json-editor #jsonEditor [data]="query" [options]="editorOptions"></json-editor>
 </div>

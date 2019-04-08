@@ -28,16 +28,6 @@ export class JsonDialog {
   }
 
   ngOnInit() {
-    console.log("Query");
-    console.log(this.query);
-    console.log("Editor");
-    console.log(this.jsonEditor);
-    console.log(this.jsonEditor['editor']);
-    if (this.jsonEditor && this.jsonEditor['editor']) {
-      //TODO: is this the best way to do this?
-      this.jsonEditor.set(JSON.parse(JSON.stringify(this.query)));
-    } else {
-      console.log("Not setting JSON Editor!");
-    }
+    
   }
 }

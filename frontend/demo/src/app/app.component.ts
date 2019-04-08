@@ -1,5 +1,5 @@
 import { FormBuilder, FormControl } from '@angular/forms';
-import { Component, Inject, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
