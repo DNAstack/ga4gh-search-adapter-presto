@@ -143,20 +143,13 @@
           </query-builder>
 </mat-sidenav>
 <mat-sidenav-content>
-  <div *ngIf="!results" class="m-v" style="text-align:center; color: #bdbdbd">
-    <div>
-      <i class="material-icons" style="font-size: 100px !important">not_interested</i>
-    </div>
-    <div style="font-size: 16px !important">
-      No search results
-    </div>
-  </div>
-  <div *ngIf="results">
-      <mat-toolbar style="background:none">
+  
+      <mat-toolbar class="toolbar-white" style="max-height: 63px">
         <mat-toolbar-row>
+          <div>Search Results</div>
           <span class="fill-space"></span>
-          <button mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
-          <mat-paginator #paginator
+          <button mat-icon-button *ngIf="results" matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
+          <mat-paginator *ngIf="results" #paginator
           [length]="1000"
           [pageSize]="query.limit"
           [pageSizeOptions]="[10, 50, 100]"
@@ -165,6 +158,16 @@
         </mat-toolbar-row>
       </mat-toolbar>
 
+      <div *ngIf="!results" class="m-v" style="text-align:center; color: #bdbdbd">
+          <div>
+            <i class="material-icons" style="font-size: 100px !important">not_interested</i>
+          </div>
+          <div style="font-size: 16px !important">
+            No search results
+          </div>
+        </div>
+
+    <div *ngIf="results" class="m-v">
     <div id="results" class="mat-table m-s mat-elevation-z1" [ngClass]="{ 'no-wrap' : view.wrapResultTableCells }">
       <div class="mat-header-row">
         <div class="mat-header-cell" *ngFor="let field of results.fields">{{field.name}}</div>
