@@ -2,14 +2,13 @@
 <div class="m-a">
   <mat-sidenav-container class="content-container">
     <mat-sidenav #sidenav mode="side" [(opened)]="opened">
-        <mat-toolbar style="background-color: white; border-bottom: 1px solid #e0e0e0">
+        <mat-toolbar class="toolbar-white">
             <div>Query Builder</div>
         </mat-toolbar>
       <mat-toolbar style="background: none">
         <mat-toolbar-row>
-            <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">view_column</i></button>
+            <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
             <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query)"><i class="material-icons">code</i></button>
-          
             <span class="fill-space"></span>
             <!--button matTooltip="Show starred results" style="display:inline" mat-raised-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
             <button matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
@@ -144,7 +143,7 @@
     <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i class="material-icons">menu</i></button>
     <div>GA4GH Discovery Search</div>
   </mat-toolbar>
-  <div *ngIf="!results" style="text-align:center; color: #bdbdbd">
+  <div *ngIf="!results" class="m-v" style="text-align:center; color: #bdbdbd">
     <div>
       <i class="material-icons" style="font-size: 100px !important">not_interested</i>
     </div>
