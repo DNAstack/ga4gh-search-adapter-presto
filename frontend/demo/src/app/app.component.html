@@ -1,14 +1,18 @@
 
-<div class="box-container">
-<mat-toolbar color="primary" class="box box-header">
+<div class="box-container full-page">
+<mat-toolbar color="primary" class="box-header">
     <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i class="material-icons">menu</i></button>
     <div>GA4GH Discovery Search</div>
   </mat-toolbar>
-  <mat-sidenav-container class="box box-content">
+  <mat-sidenav-container class="box-content">
     <mat-sidenav #sidenav mode="side" [(opened)]="view.sidebarOpened">
+        <div class="box-container">
+          <div class="box-header">
         <mat-toolbar class="toolbar-white">
             <div>Query</div>
         </mat-toolbar>
+      </div>
+      <div class="box-content">
       <mat-toolbar style="background: none">
         <mat-toolbar-row>
             <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
@@ -20,6 +24,7 @@
         </mat-toolbar-row>
         </mat-toolbar>
       <div class="clearfix"></div>
+    
       <mat-accordion>
           <mat-expansion-panel>
             <mat-expansion-panel-header>
@@ -207,6 +212,11 @@
             </div>
           </mat-expansion-panel>
         </mat-accordion>
+      </div>
+      <div class="box-footer b-t">
+        <div class="m-a"><a href="https://github.com/DNAstack/ga4gh-search" target="_blank"><span class="fa fa-fw fa-github"></span>GitHub</a></div>
+      </div>
+  </div>
 </mat-sidenav>
 <mat-sidenav-content>
   
