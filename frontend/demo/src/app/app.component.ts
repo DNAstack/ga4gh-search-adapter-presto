@@ -162,7 +162,7 @@ export class AppComponent implements OnInit {
     return false;
   }
 
-  toggleFieldSelection(event, field) {
+  toggleFieldSelection(event, field : Field) {
     var fieldName = field.name;
     var checked = event.checked;
     if (checked) { 
@@ -178,7 +178,7 @@ export class AppComponent implements OnInit {
     this.view.queryChanged = true;
   }
 
-  selectAllFields(b) {
+  selectAllFields(b: boolean) {
     if (b) {
       var newSelect = [];
       for (var index in this.config.fields) {

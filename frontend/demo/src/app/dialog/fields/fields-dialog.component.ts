@@ -9,7 +9,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 export class FieldsDialogComponent {
 
   dataTable: Field[];
-  displayedColumns: string[] = ['id', 'name', 'type', 'value', 'operators'];
+  displayedColumns: string[] = ['id', 'name', 'type', 'value', 'operators', 'specification'];
 
   constructor(
     private dialogRef: MatDialogRef<FieldsDialogComponent>,

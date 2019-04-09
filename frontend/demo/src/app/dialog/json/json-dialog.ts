@@ -4,7 +4,8 @@ import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
 
 @Component({
   selector: 'json-dialog',
-  templateUrl: './json-dialog.html'
+  templateUrl: './json-dialog.html',
+  styleUrls: ['./json-dialog.scss'],
 })
 export class JsonDialog {
 
@@ -21,10 +22,11 @@ export class JsonDialog {
   ) {
     this.query = data.query;
 
-    this.editorOptions.mode = 'tree';
+    this.editorOptions.mode = 'view';
     this.editorOptions.mainMenuBar = false;
     this.editorOptions.navigationBar = false;
     this.editorOptions.statusBar = false;    
+    this.editorOptions.expandAll = true;
   }
 
   ngOnInit() {
