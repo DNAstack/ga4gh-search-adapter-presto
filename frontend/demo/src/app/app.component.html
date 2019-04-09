@@ -11,11 +11,11 @@
         </mat-toolbar>
       <mat-toolbar style="background: none">
         <mat-toolbar-row>
-            <button matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
-            <button matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
+            <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
+            <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
             <span class="fill-space"></span>
             <!--button matTooltip="Show starred results" style="display:inline" mat-raised-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
-            <button matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
+            <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
             <mat-spinner [diameter]="20" class="m-l-sm" *ngIf="view.isQuerying"></mat-spinner>
         </mat-toolbar-row>
         </mat-toolbar>
@@ -29,7 +29,7 @@
             </mat-expansion-panel-header>
             <div>
                 <div class="m-b-sm">
-                  <button mat-button (click)="selectAllFields(true)" class="m-r-sm">All</button><button (click)="selectAllFields(false)" mat-button>None</button>
+                  <button tabindex="-1" mat-button (click)="selectAllFields(true)" class="m-r-sm">All</button><button tabindex="-1" (click)="selectAllFields(false)" mat-button>None</button>
                 </div>
                 <div *ngFor="let field of config.fields | keyvalue">
                     <mat-checkbox [checked]="isFieldSelected(field.value)" (change)="toggleFieldSelection($event,field.value)">{{field.value.name}}</mat-checkbox>
@@ -214,8 +214,8 @@
         <mat-toolbar-row>
           <div>Results</div>
           <span class="fill-space"></span>
-          <button matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
-          <button mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
+          <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
+          <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
           <mat-paginator #paginator
           [length]="1000"
           [pageSize]="query.limit"
