@@ -1,6 +1,7 @@
 import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material';
 import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
+import { ClipboardModule } from 'ngx-clipboard';
 
 @Component({
   selector: 'json-dialog',

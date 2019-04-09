@@ -35,6 +35,7 @@ import {
 import {AppConfigService} from './app-config.service';
 import { JsonDialog } from './dialog/json/json-dialog';
 import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
+import { ClipboardModule } from 'ngx-clipboard';
 
 @NgModule({
   declarations: [
@@ -76,7 +77,8 @@ import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
     MatProgressSpinnerModule,
     MatPaginatorModule,
     MatSidenavModule,
-    MatExpansionModule
+    MatExpansionModule,
+    ClipboardModule
   ],
   providers: [
     AppConfigService,
