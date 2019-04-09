@@ -28,7 +28,8 @@ import {
   MatTooltipModule,
   MatProgressSpinnerModule,
   MatPaginatorModule,
-  MatSidenavModule
+  MatSidenavModule,
+  MatExpansionModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
 import { JsonDialog } from './dialog/json/json-dialog';
@@ -72,7 +73,8 @@ import { FieldsDialog } from './dialog/fields/fields-dialog';
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatPaginatorModule,
-    MatSidenavModule
+    MatSidenavModule,
+    MatExpansionModule
   ],
   providers: [
     AppConfigService,

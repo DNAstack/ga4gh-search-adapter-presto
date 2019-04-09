@@ -19,8 +19,20 @@ export class AppComponent implements OnInit {
   opened: boolean;
 
   public query = {
-    select : null,
-    from : null,
+    select : [
+      {
+        "field": "participant_id"
+      },
+      {
+        "field": "category"
+      },
+      {
+        "field": "key"
+      },
+      {
+        "field": "raw_value"
+      }],
+    from : 'demo_view',
     where : {
       condition: 'and',
       rules: [
@@ -55,6 +67,7 @@ export class AppComponent implements OnInit {
   };
 
   public view = {
+    sidebarOpened: false,
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
@@ -128,45 +141,54 @@ export class AppComponent implements OnInit {
     // we're hardcoding select clause here for demo purposes
     // the flexible thing is the rule built by query builder
     return {
-      'select': [
-        {
-          "field": "participant_id"
-        },
-        {
-          "field": "chromosome"
-        },
-        {
-          "field": "start_position"
-        },
-        {
-          "field": "reference_base"
-        },
-        {
-          "field": "alternate_base"
-        },
-        {
-          "field": "vcf_size"
-        },
-        {
-          "field": "vcf_urls"
-        },
-        {
-          "field": "category"
-        },
-        {
-          "field": "key"
-        },
-        {
-          "field": "raw_value",
-          "alias": "value"
-        }],
+      'select': this.query.select,
       'from': [{
         'table': 'demo_view'
       }],
       'where': this.transformRule(where),
-      'limit': 10
+      'limit': this.query.limit
       /*,'offset': query.offset*/ // trying to get offsets to work
     }
+  }
+
+  // This is inefficient, being called a lot
+  isFieldSelected(field) {
+    var fieldName = field.name;
+    for(var i = 0; i < this.query.select.length; i++) {
+      if (this.query.select[i].field == fieldName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  toggleFieldSelection(event, field) {
+    var fieldName = field.name;
+    var checked = event.checked;
+    if (checked) { 
+      this.query.select.push({ "field" : fieldName });
+    } else {
+      for(var i = 0; i < this.query.select.length; i++) {
+          if (this.query.select[i].field == fieldName) {
+              this.query.select.splice(i,1);
+              return;
+          }
+      }
+    }
+    this.view.queryChanged = true;
+  }
+
+  selectAllFields(b) {
+    if (b) {
+      var newSelect = [];
+      for (var index in this.config.fields) {
+        newSelect.push({ "field" : this.config.fields[index].name });
+      }
+      this.query.select = newSelect;
+    } else {
+      this.query.select = [];
+    }
+    this.view.queryChanged = true;
   }
 
   public showJson(): void {
