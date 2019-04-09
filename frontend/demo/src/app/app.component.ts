@@ -5,7 +5,7 @@ import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
 import { JsonDialog } from './dialog/json/json-dialog';
-import { FieldsDialog } from './dialog/fields/fields-dialog';
+import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -77,7 +77,7 @@ export class AppComponent implements OnInit {
   public results = null;
 
   private jsonDialogRef: MatDialogRef<JsonDialog>;
-  private fieldsDialogRef: MatDialogRef<FieldsDialog>;
+  private fieldsDialogRef: MatDialogRef<FieldsDialogComponent>;
 
   constructor(
     private formBuilder: FormBuilder,
@@ -200,7 +200,7 @@ export class AppComponent implements OnInit {
   }
 
   public showFields(): void {
-    this.fieldsDialogRef = this.dialog.open(FieldsDialog, {
+    this.fieldsDialogRef = this.dialog.open(FieldsDialogComponent, {
       width: '90%',
       height: '90%',
       data: { fields: this.config.fields }

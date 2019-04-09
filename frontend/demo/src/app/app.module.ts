@@ -23,6 +23,7 @@ import {
   MatSelectModule,
   MatSlideToggleModule,
   MatSnackBarModule,
+  MatTableModule,
   MatTabsModule,
   MatToolbarModule,
   MatTooltipModule,
@@ -33,17 +34,17 @@ import {
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
 import { JsonDialog } from './dialog/json/json-dialog';
-import { FieldsDialog } from './dialog/fields/fields-dialog';
+import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     JsonDialog,
-    FieldsDialog
+    FieldsDialogComponent
   ],
   entryComponents: [
     JsonDialog,
-    FieldsDialog
+    FieldsDialogComponent
   ],
   imports: [
     BrowserModule,
@@ -57,6 +58,7 @@ import { FieldsDialog } from './dialog/fields/fields-dialog';
     HttpClientModule,
     MatToolbarModule,
     MatTooltipModule,
+    MatTableModule,
     MatTabsModule,
     MatButtonToggleModule,
     MatSlideToggleModule,
