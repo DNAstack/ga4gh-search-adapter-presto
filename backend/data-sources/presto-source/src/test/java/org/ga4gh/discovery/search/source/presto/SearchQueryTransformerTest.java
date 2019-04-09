@@ -7,6 +7,7 @@ import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.from;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.literalNum;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.literalStr;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.noLimit;
+import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.noOffset;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.select;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.tableAs;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.where;
@@ -36,7 +37,8 @@ public class SearchQueryTransformerTest {
                                         fieldRef("var.alternate_base"), literalStr("A")),
                                 SearchQueryHelper.equals(
                                         fieldRef("var.start_position"), literalNum("100")))),
-                noLimit());
+                noLimit(),
+                noOffset());
 
         assertThat(
                 transformer.toPrestoSQL(),
@@ -84,8 +86,9 @@ public class SearchQueryTransformerTest {
             List<SearchQueryField> select,
             List<SearchQueryTable> from,
             Optional<Predicate> where,
-            OptionalLong limit) {
-        givenQuery(new SearchQuery(select, from, where, limit));
+            OptionalLong limit,
+            OptionalLong offset) {
+        givenQuery(new SearchQuery(select, from, where, limit, offset));
     }
 
     private void givenQuery(SearchQuery query) {

@@ -14,4 +14,10 @@ public class SearchQuery {
     private final List<SearchQueryTable> from;
     private final Optional<Predicate> where;
     private final OptionalLong limit;
+    private final OptionalLong offset;
+
+    @Override
+    public String toString() {
+        return "SearchQuery{" + "select=" + select + ", from=" + from + ", where=" + where + ", limit=" + limit + ", offset=" + offset + '}';
+    }
 }
