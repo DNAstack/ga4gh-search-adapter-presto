@@ -1,11 +1,11 @@
 import { FormBuilder, FormControl } from '@angular/forms';
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { JsonEditorComponent, JsonEditorOptions } from 'ang-jsoneditor';
+import { Component, Inject, OnInit } from '@angular/core';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
-import { MatDialog, MatDialogRef } from '@angular/material';
-import { FieldsDialog } from './dialog/fields/fields-dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
+import { JsonDialog } from './dialog/json/json-dialog';
+import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -19,29 +19,45 @@ export class AppComponent implements OnInit {
   opened: boolean;
 
   public query = {
-    condition: 'and',
-    rules: [
+    select : [
       {
-        "field": "demo_view.chromosome",
-        "operator": "=",
-        "value": "chr1"
+        "field": "participant_id"
       },
       {
-        "field": "demo_view.start_position",
-        "operator": "=",
-        "value": 5087263
+        "field": "category"
       },
       {
-        "field": "demo_view.reference_base",
-        "operator": "=",
-        "value": "A"
+        "field": "key"
       },
       {
-        "field": "demo_view.alternate_base",
-        "operator": "=",
-        "value": "G"
-      }
-    ],
+        "field": "raw_value"
+      }],
+    from : 'demo_view',
+    where : {
+      condition: 'and',
+      rules: [
+        {
+          "field": "demo_view.chromosome",
+          "operator": "=",
+          "value": "chr1"
+        },
+        {
+          "field": "demo_view.start_position",
+          "operator": "=",
+          "value": 5087263
+        },
+        {
+          "field": "demo_view.reference_base",
+          "operator": "=",
+          "value": "A"
+        },
+        {
+          "field": "demo_view.alternate_base",
+          "operator": "=",
+          "value": "G"
+        }
+      ]
+    },
     limit : 100,
     offset : 0
   };
@@ -51,7 +67,7 @@ export class AppComponent implements OnInit {
   };
 
   public view = {
-    wrapFieldTableCells: true,
+    sidebarOpened: false,
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
@@ -60,23 +76,15 @@ export class AppComponent implements OnInit {
 
   public results = null;
 
-  @ViewChild('jsonEditor')
-  jsonEditor: JsonEditorComponent;
-
-  public editorOptions = new JsonEditorOptions();
-  private fieldsDialogRef: MatDialogRef<FieldsDialog>;
+  private jsonDialogRef: MatDialogRef<JsonDialog>;
+  private fieldsDialogRef: MatDialogRef<FieldsDialogComponent>;
 
   constructor(
     private formBuilder: FormBuilder,
     private apiService: ApiService,
     private dialog: MatDialog
   ) {
-    this.queryCtrl = this.formBuilder.control(this.query);
-
-    this.editorOptions.mode = 'tree';
-    this.editorOptions.mainMenuBar = false;
-    this.editorOptions.navigationBar = false;
-    this.editorOptions.statusBar = false;
+    this.queryCtrl = this.formBuilder.control(this.query.where);
   }
 
   transformRule(rule: RuleSet | Rule) {
@@ -129,61 +137,80 @@ export class AppComponent implements OnInit {
     /*this.doQuery(this.query);*/
   }
 
-  transformQuery(query: RuleSet) {
+  transformQuery(where: RuleSet) {
     // we're hardcoding select clause here for demo purposes
     // the flexible thing is the rule built by query builder
     return {
-      'select': [
-        {
-          "field": "participant_id"
-        },
-        {
-          "field": "chromosome"
-        },
-        {
-          "field": "start_position"
-        },
-        {
-          "field": "reference_base"
-        },
-        {
-          "field": "alternate_base"
-        },
-        {
-          "field": "vcf_size"
-        },
-        {
-          "field": "vcf_urls"
-        },
-        {
-          "field": "category"
-        },
-        {
-          "field": "key"
-        },
-        {
-          "field": "raw_value",
-          "alias": "value"
-        }],
+      'select': this.query.select,
       'from': [{
         'table': 'demo_view'
       }],
-      'where': this.transformRule(query),
-      'limit': query.limit
+      'where': this.transformRule(where),
+      'limit': this.query.limit
       /*,'offset': query.offset*/ // trying to get offsets to work
     }
   }
 
+  // This is inefficient, being called a lot
+  isFieldSelected(field) {
+    var fieldName = field.name;
+    for(var i = 0; i < this.query.select.length; i++) {
+      if (this.query.select[i].field == fieldName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  toggleFieldSelection(event, field : Field) {
+    var fieldName = field.name;
+    var checked = event.checked;
+    if (checked) { 
+      this.query.select.push({ "field" : fieldName });
+    } else {
+      for(var i = 0; i < this.query.select.length; i++) {
+          if (this.query.select[i].field == fieldName) {
+              this.query.select.splice(i,1);
+              return;
+          }
+      }
+    }
+    this.view.queryChanged = true;
+  }
+
+  selectAllFields(b: boolean) {
+    if (b) {
+      var newSelect = [];
+      for (var index in this.config.fields) {
+        newSelect.push({ "field" : this.config.fields[index].name });
+      }
+      this.query.select = newSelect;
+    } else {
+      this.query.select = [];
+    }
+    this.view.queryChanged = true;
+  }
+
+  public showJson(): void {
+    this.jsonDialogRef = this.dialog.open(JsonDialog, {
+      width: '90%',
+      height: '90%',
+      data: { query: this.query }
+    });
+  }
+
   public showFields(): void {
-    this.fieldsDialogRef = this.dialog.open('fields-dialog', {
-      width: '250px'
+    this.fieldsDialogRef = this.dialog.open(FieldsDialogComponent, {
+      width: '90%',
+      height: '90%',
+      data: { fields: this.config.fields }
     });
   }
 
   public doQuery(query) {
     this.view.isQuerying = true;
     console.log("Original query\n" + JSON.stringify(query, null, 2))
-    var transformedQuery = this.transformQuery(query)
+    var transformedQuery = this.transformQuery(query.where)
     console.log("Transformed query\n" + JSON.stringify(transformedQuery, null, 2))
     this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {
@@ -201,7 +228,6 @@ export class AppComponent implements OnInit {
 
   queryChanged($event) {
     this.view.queryChanged = true;
-    this.jsonEditor.set($event);
   }
 
   normalizeArray<T>(array: Array<T>, indexKey: keyof T) {
@@ -215,10 +241,6 @@ export class AppComponent implements OnInit {
 
 
   ngOnInit(): void {
-    if (this.jsonEditor && this.jsonEditor['editor']) {
-      //TODO: is this the best way to do this?
-      this.jsonEditor.set(JSON.parse(JSON.stringify(this.query)));
-    }
 
     this.apiService
       .getFields()
@@ -228,5 +250,4 @@ export class AppComponent implements OnInit {
       },
         (err) => console.log('Error', err));
   }
-
 }

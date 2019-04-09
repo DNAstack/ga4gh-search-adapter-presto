@@ -1,0 +1,11 @@
+
+<mat-toolbar class="toolbar-white">
+    <mat-toolbar-row>
+        <div>JSON</div>
+      <div class="fill-space"></div>
+      <button mat-icon-button matTooltip="Copy JSON" style="display:inline" (click)="copyJson()"><mat-icon>file_copy</mat-icon></button>
+    </mat-toolbar-row>
+  </mat-toolbar>
+<div class="m-v">
+  <json-editor #jsonEditor [data]="query" [options]="editorOptions"></json-editor>
+</div>

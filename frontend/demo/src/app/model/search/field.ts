@@ -5,4 +5,5 @@ export class Field{
     operators: string[];
     options: string[];
     table: string;
+    specification: string;
 }

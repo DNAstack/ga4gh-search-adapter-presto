@@ -15,6 +15,7 @@ import {
   MatCardModule,
   MatCheckboxModule,
   MatDatepickerModule,
+  MatDialogModule,
   MatIconModule,
   MatInputModule,
   MatNativeDateModule,
@@ -22,18 +23,28 @@ import {
   MatSelectModule,
   MatSlideToggleModule,
   MatSnackBarModule,
+  MatTableModule,
   MatTabsModule,
   MatToolbarModule,
   MatTooltipModule,
   MatProgressSpinnerModule,
   MatPaginatorModule,
-  MatSidenavModule
+  MatSidenavModule,
+  MatExpansionModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
+import { JsonDialog } from './dialog/json/json-dialog';
+import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    JsonDialog,
+    FieldsDialogComponent
+  ],
+  entryComponents: [
+    JsonDialog,
+    FieldsDialogComponent
   ],
   imports: [
     BrowserModule,
@@ -47,6 +58,7 @@ import {AppConfigService} from './app-config.service';
     HttpClientModule,
     MatToolbarModule,
     MatTooltipModule,
+    MatTableModule,
     MatTabsModule,
     MatButtonToggleModule,
     MatSlideToggleModule,
@@ -55,6 +67,7 @@ import {AppConfigService} from './app-config.service';
     MatSelectModule,
     MatInputModule,
     MatDatepickerModule,
+    MatDialogModule,
     MatNativeDateModule,
     MatRadioModule,
     MatIconModule,
@@ -62,7 +75,8 @@ import {AppConfigService} from './app-config.service';
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatPaginatorModule,
-    MatSidenavModule
+    MatSidenavModule,
+    MatExpansionModule
   ],
   providers: [
     AppConfigService,
