@@ -191,18 +191,18 @@ export class AppComponent implements OnInit {
     this.view.queryChanged = true;
   }
 
-  public showJson(): void {
+  public showJson(jsonObj: any, title : string): void {
     this.jsonDialogRef = this.dialog.open(JsonDialog, {
-      width: '90%',
-      height: '90%',
-      data: { query: this.query }
+      width: '80%',
+      height: '80%',
+      data: { query: jsonObj, title: title }
     });
   }
 
   public showFields(): void {
     this.fieldsDialogRef = this.dialog.open(FieldsDialogComponent, {
-      width: '90%',
-      height: '90%',
+      width: '80%',
+      height: '80%',
       data: { fields: this.config.fields }
     });
   }

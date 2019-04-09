@@ -1,6 +1,8 @@
 <mat-toolbar class="toolbar-white">
     <mat-toolbar-row>
         <div>Fields</div>
+        <span class="fill-space"></span>
+        <button matTooltip="Show Fields JSON" style="display:inline" mat-raised-button (click)="showJson(fields, 'Fields JSON')"><i class="material-icons">code</i></button>
     </mat-toolbar-row>
   </mat-toolbar>
 <table mat-table [dataSource]="dataTable" class="mat-elevation-z0">

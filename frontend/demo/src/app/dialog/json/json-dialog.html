@@ -1,9 +1,11 @@
 
 <mat-toolbar class="toolbar-white">
     <mat-toolbar-row>
-        <div>JSON</div>
+        <div>{{title}}</div>
       <div class="fill-space"></div>
-      <button mat-icon-button matTooltip="Copy JSON" style="display:inline" ngxClipboard [cbContent]="query | json"><mat-icon>file_copy</mat-icon></button>
+      <button mat-icon-button matTooltip="Expand" style="display:inline" (click)="expand(true)" class="m-r-s"><mat-icon>unfold_more</mat-icon></button>
+      <button mat-icon-button matTooltip="Collapse" style="display:inline" (click)="expand(false)" class="m-r-s"><mat-icon>unfold_less</mat-icon></button>
+      <button mat-icon-button matTooltip="Copy to clipboard" style="display:inline" ngxClipboard [cbContent]="query | json"><mat-icon>file_copy</mat-icon></button>
     </mat-toolbar-row>
   </mat-toolbar>
 <div class="m-v">
