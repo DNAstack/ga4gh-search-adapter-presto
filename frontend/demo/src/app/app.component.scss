@@ -159,8 +159,10 @@ mat-paginator {
 }
 
 .toolbar-white {
+  height: 64px;
   background-color: white; 
-  border-bottom: 1px solid #e0e0e0
+  border-bottom: 1px solid #e0e0e0;
+  z-index: 100;
 }
 
 html, body
@@ -185,7 +187,7 @@ html, body
   left: 0;
   right: 0;
   bottom: 0;
-  
+
   height: 100%;
   width: 100%;
 
@@ -211,4 +213,22 @@ a {
   &:hover {
     text-decoration: none;
   }
+}
+
+.fixed-header {
+  top: 0;
+  background: red;
+}
+
+.scrolly-content {
+  padding: 2rem auto;
+}
+
+.fixed-footer {
+  bottom: 0;
+  background: green;
+}
+
+.full-height {
+  height: 100%;
 }

@@ -1,296 +1,299 @@
-<div class="box-container full-page">
-  <mat-toolbar color="primary" class="box-header">
+<div class="full-page" style="display: flex; flex-direction: column">
+  <mat-toolbar color="primary">
     <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i
         class="material-icons">menu</i></button>
     <div>GA4GH Discovery Search</div>
   </mat-toolbar>
-  <mat-sidenav-container class="box-content">
-    <mat-sidenav #sidenav mode="side" [(opened)]="view.sidebarOpened">
-      <div class="box-container">
-        <div class="box-header">
-          <mat-toolbar class="toolbar-white">
-            <div>Query</div>
-          </mat-toolbar>
-        </div>
-        <div class="box-content">
-          <mat-toolbar style="background: none">
-            <mat-toolbar-row>
-              <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button
-                (click)="showFields()"><i class="material-icons">table_chart</i></button>
-              <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm"
-                mat-stroked-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
-              <span class="fill-space"></span>
-              <!--button matTooltip="Show starred results" style="display:inline" mat-stroked-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
-              <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-stroked-button
-                color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)"
-                [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons"
-                  *ngIf="!view.isQuerying">search</i>
-                <div *ngIf="view.isQuerying" style="width:32px; height:26px">
-                  <mat-spinner style="margin-top:7px; margin-left:6px" [diameter]="20"></mat-spinner>
-                </div>
-              </button>
-
-            </mat-toolbar-row>
-          </mat-toolbar>
-          <div class="clearfix"></div>
-
-          <mat-accordion>
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  Select
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <div>
-                <div class="m-b-sm">
-                  <button tabindex="-1" mat-button (click)="selectAllFields(true)" class="m-r-sm">All</button><button
-                    tabindex="-1" (click)="selectAllFields(false)" mat-button>None</button>
-                </div>
-                <div *ngFor="let field of config.fields | keyvalue">
-                  <mat-checkbox [checked]="isFieldSelected(field.value)"
-                    (change)="toggleFieldSelection($event,field.value)">{{field.value.name}}</mat-checkbox>
-                </div>
-              </div>
-            </mat-expansion-panel>
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  From
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <div>
-                {{query.from}}
-              </div>
-              <div class="text-muted">
-                This value is hardcoded
-              </div>
-            </mat-expansion-panel>
-            <mat-expansion-panel (opened)="panelOpenState = true" (closed)="panelOpenState = false">
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  Where
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <div>
-                <query-builder [(ngModel)]="query.where" (ngModelChange)="queryChanged($event)" [config]="config"
-                  *ngIf="config.fields" style="max-width:400px">
-
-                  <ng-container
-                    *queryButtonGroup="let ruleset; let addRule=addRule; let addRuleSet=addRuleSet; let removeRuleSet=removeRuleSet">
-                    <button type="button" matTooltip="Add Rule" mat-icon-button color="primary" (click)="addRule()">
-                      <mat-icon>add</mat-icon>
-                    </button>
-                    <button type="button" matTooltip="Add Ruleset" mat-icon-button color="primary" *ngIf="addRuleSet"
-                      (click)="addRuleSet()">
-                      <mat-icon>add_circle_outline</mat-icon>
-                    </button>
-                    <button type="button" mat-icon-button matTooltip="Remove Ruleset" color="accent"
-                      *ngIf="removeRuleSet" (click)="removeRuleSet()">
-                      <mat-icon>remove_circle_outline</mat-icon>
-                    </button>
-                  </ng-container>
-
-                  <ng-container *queryArrowIcon>
-                    <mat-icon ngClass="mat-arrow-icon">chevron_right</mat-icon>
-                  </ng-container>
-
-                  <ng-container *queryRemoveButton="let rule; let removeRule=removeRule">
-                    <button type="button" mat-icon-button matTooltip="Remove Rule" color="accent"
-                      (click)="removeRule(rule)">
-                      <mat-icon>remove</mat-icon>
-                    </button>
-                  </ng-container>
-
-                  <ng-container *querySwitchGroup="let ruleset; let onChange=onChange">
-                    <mat-radio-group *ngIf="ruleset" [(ngModel)]="ruleset.condition" (ngModelChange)="onChange($event)">
-                      <mat-radio-button [style.padding.px]="10" value="and">And</mat-radio-button>
-                      <mat-radio-button [style.padding.px]="10" value="or">Or</mat-radio-button>
-                    </mat-radio-group>
-                  </ng-container>
-
-                  <ng-container
-                    *queryField="let rule; let fields=fields; let onChange=onChange; let getFields = getFields">
-                    <mat-form-field>
-                      <mat-select [(ngModel)]="rule.field" (ngModelChange)="onChange($event, rule)">
-                        <mat-option *ngFor="let field of getFields(rule.entity)" [value]="field.value">
-                          {{ field.name }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryOperator="let rule; let operators=operators; let onChange=onChange">
-                    <mat-form-field [style.width.px]="90">
-                      <mat-select [(ngModel)]="rule.operator" (ngModelChange)="onChange()">
-                        <mat-option *ngFor="let value of operators" [value]="value">
-                          {{ value }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; type: 'phenotype'">
-                    <button mat-stroked-button>Choose HPO Term(s)</button>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; type: 'boolean'; let onChange=onChange">
-                    <mat-checkbox [(ngModel)]="rule.value" (ngModelChange)="onChange()"></mat-checkbox>
-                  </ng-container>
-
-                  <ng-container
-                    *queryInput="let rule; let field=field; let options=options; type: 'category'; let onChange=onChange">
-                    <mat-form-field>
-                      <mat-select [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                        <mat-option *ngFor="let opt of options" [value]="opt.value">
-                          {{ opt.name }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; type: 'date'; let onChange=onChange">
-                    <mat-form-field>
-                      <input matInput [matDatepicker]="picker" [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-                      <mat-datepicker #picker></mat-datepicker>
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; let options=options; type: 'multiselect'; let onChange=onChange">
-                    <mat-form-field [style.width.px]="300">
-                      <mat-select [(ngModel)]="rule.value" multiple (ngModelChange)="onChange()">
-                        <mat-option *ngFor="let opt of options" [value]="opt.value">
-                          {{ opt.name }}
-                        </mat-option>
-                      </mat-select>
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; let field=field; type: 'number'; let onChange=onChange">
-                    <mat-form-field [style.width.px]="100">
-                      <input matInput [(ngModel)]="rule.value" type="number" (ngModelChange)="onChange()">
-                    </mat-form-field>
-                    {{field.units}}
-                  </ng-container>
-
-                  <!-- TODO: Improve -->
-                  <ng-container *queryInput="let rule; let field=field; type: 'json'; let onChange=onChange">
-                    <mat-form-field>
-                      <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                    </mat-form-field>
-                  </ng-container>
-
-                  <!-- TODO: Improve -->
-                  <ng-container *queryInput="let rule; let field=field; type: 'string'; let onChange=onChange">
-                    <mat-form-field>
-                      <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; let field=field; type: 'string[]'; let onChange=onChange">
-                    <mat-form-field>
-                      <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                    </mat-form-field>
-                  </ng-container>
-
-                  <ng-container *queryInput="let rule; let field=field; type: 'textarea'; let onChange=onChange">
-                    <mat-form-field>
-                      <textarea matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
-                          </textarea>
-                    </mat-form-field>
-                  </ng-container>
-
-                </query-builder>
-              </div>
-            </mat-expansion-panel>
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  Limit
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <div>
-                {{query.limit}}
-              </div>
-              <div class="text-muted">
-                This value is changed using the paginator
-              </div>
-            </mat-expansion-panel>
-            <mat-expansion-panel>
-              <mat-expansion-panel-header>
-                <mat-panel-title>
-                  Offset
-                </mat-panel-title>
-              </mat-expansion-panel-header>
-              <div>
-                {{query.offset}}
-              </div>
-              <div class="text-muted">
-                This value is changed using the paginator
-              </div>
-            </mat-expansion-panel>
-          </mat-accordion>
-        </div>
-        <div class="box-footer b-t">
-          <div class="m-a"><a href="https://github.com/DNAstack/ga4gh-search" target="_blank"><span
-                class="fa fa-fw fa-github"></span>GitHub</a></div>
-        </div>
-      </div>
-    </mat-sidenav>
-    <mat-sidenav-content class="box-container">
-      <mat-toolbar class="toolbar-white box-header" style="max-height: 63px">
-        <mat-toolbar-row>
-          <div>Results</div>
-          <span class="fill-space"></span>
-          <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm"
-            mat-stroked-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
-          <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline"
-            (click)="view.wrapResultTableCells = !view.wrapResultTableCells"
-            color="{{view.wrapResultTableCells ? 'primary' : '' }}">
-            <mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon>
-          </button>
-          <mat-paginator #paginator [length]="1000" [pageSize]="query.limit" [pageSizeOptions]="[10, 50, 100]"
-            (page)="pageEvent = paginationChanged($event)">
-          </mat-paginator>
-        </mat-toolbar-row>
-      </mat-toolbar>
-      <div class="box-content">
-        <mat-progress-bar mode="indeterminate" *ngIf="view.isQuerying"></mat-progress-bar>
-        <div *ngIf="!results"
-          style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
+  <div style="flex:1">
+    <mat-sidenav-container style="height: 100%">
+      <mat-sidenav #sidenav mode="side" [(opened)]="view.sidebarOpened" style="">
           <div>
-            <i class="material-icons" style="font-size: 100px !important">not_interested</i>
+            <mat-toolbar class="toolbar-white" style="position: absolute; top:0; width: 100%">
+              <div>Query</div>
+            </mat-toolbar>
           </div>
-          <div style="font-size: 16px !important">
-            No search results
-          </div>
-          <div style="font-size: 16px !important" class="m-t-sm">
-            <button tabindex="-1" mat-stroked-button color="primary"
-              (click)="sidenav.toggle()">{{sidenav.opened ? 'Close' : 'Open'}} Query Builder</button>
-          </div>
-        </div>
+          <div style="margin-top: 64px; margin-bottom: 64px">
+            <mat-toolbar style="background: none">
+              <mat-toolbar-row>
+                <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button
+                  (click)="showFields()"><i class="material-icons">table_chart</i></button>
+                <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm"
+                  mat-stroked-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
+                <span class="fill-space"></span>
+                <!--button matTooltip="Show starred results" style="display:inline" mat-stroked-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
+                <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-stroked-button
+                  color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)"
+                  [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons"
+                    *ngIf="!view.isQuerying">search</i>
+                  <div *ngIf="view.isQuerying" style="width:32px; height:26px">
+                    <mat-spinner style="margin-top:7px; margin-left:6px" [diameter]="20"></mat-spinner>
+                  </div>
+                </button>
 
-        <div *ngIf="results" class="m-v">
-          <div id="results" class="mat-table m-s mat-elevation-z1"
-            [ngClass]="{ 'no-wrap' : !view.wrapResultTableCells }">
-            <div class="mat-header-row">
-              <div class="mat-header-cell" *ngFor="let field of results.fields">{{field.name}}</div>
-            </div>
-            <div class="mat-row" *ngFor="let result of results.results">
-              <div class="mat-cell" *ngFor="let value of result.values; let i = index">
-                <div *ngIf="value.field.type == 'json'">
-                  <button tabindex="-1" mat-stroked-button
-                    (click)="showJson(jsonify({'value' : value.value}), value.field.name)">JSON</button>
+              </mat-toolbar-row>
+            </mat-toolbar>
+            <div class="clearfix"></div>
+
+            <mat-accordion>
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    Select
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div>
+                  <div class="m-b-sm">
+                    <button tabindex="-1" mat-button (click)="selectAllFields(true)" class="m-r-sm">All</button><button
+                      tabindex="-1" (click)="selectAllFields(false)" mat-button>None</button>
+                  </div>
+                  <div *ngFor="let field of config.fields | keyvalue">
+                    <mat-checkbox [checked]="isFieldSelected(field.value)"
+                      (change)="toggleFieldSelection($event,field.value)">{{field.value.name}}</mat-checkbox>
+                  </div>
                 </div>
-                <div *ngIf="value.field.type != 'json'">
-                  {{value.value}}
+              </mat-expansion-panel>
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    From
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div>
+                  {{query.from}}
+                </div>
+                <div class="text-muted">
+                  This value is hardcoded
+                </div>
+              </mat-expansion-panel>
+              <mat-expansion-panel (opened)="panelOpenState = true" (closed)="panelOpenState = false">
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    Where
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div>
+                  <query-builder [(ngModel)]="query.where" (ngModelChange)="queryChanged($event)" [config]="config"
+                    *ngIf="config.fields" style="max-width:400px">
+
+                    <ng-container
+                      *queryButtonGroup="let ruleset; let addRule=addRule; let addRuleSet=addRuleSet; let removeRuleSet=removeRuleSet">
+                      <button type="button" matTooltip="Add Rule" mat-icon-button color="primary" (click)="addRule()">
+                        <mat-icon>add</mat-icon>
+                      </button>
+                      <button type="button" matTooltip="Add Ruleset" mat-icon-button color="primary" *ngIf="addRuleSet"
+                        (click)="addRuleSet()">
+                        <mat-icon>add_circle_outline</mat-icon>
+                      </button>
+                      <button type="button" mat-icon-button matTooltip="Remove Ruleset" color="accent"
+                        *ngIf="removeRuleSet" (click)="removeRuleSet()">
+                        <mat-icon>remove_circle_outline</mat-icon>
+                      </button>
+                    </ng-container>
+
+                    <ng-container *queryArrowIcon>
+                      <mat-icon ngClass="mat-arrow-icon">chevron_right</mat-icon>
+                    </ng-container>
+
+                    <ng-container *queryRemoveButton="let rule; let removeRule=removeRule">
+                      <button type="button" mat-icon-button matTooltip="Remove Rule" color="accent"
+                        (click)="removeRule(rule)">
+                        <mat-icon>remove</mat-icon>
+                      </button>
+                    </ng-container>
+
+                    <ng-container *querySwitchGroup="let ruleset; let onChange=onChange">
+                      <mat-radio-group *ngIf="ruleset" [(ngModel)]="ruleset.condition"
+                        (ngModelChange)="onChange($event)">
+                        <mat-radio-button [style.padding.px]="10" value="and">And</mat-radio-button>
+                        <mat-radio-button [style.padding.px]="10" value="or">Or</mat-radio-button>
+                      </mat-radio-group>
+                    </ng-container>
+
+                    <ng-container
+                      *queryField="let rule; let fields=fields; let onChange=onChange; let getFields = getFields">
+                      <mat-form-field>
+                        <mat-select [(ngModel)]="rule.field" (ngModelChange)="onChange($event, rule)">
+                          <mat-option *ngFor="let field of getFields(rule.entity)" [value]="field.value">
+                            {{ field.name }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryOperator="let rule; let operators=operators; let onChange=onChange">
+                      <mat-form-field [style.width.px]="90">
+                        <mat-select [(ngModel)]="rule.operator" (ngModelChange)="onChange()">
+                          <mat-option *ngFor="let value of operators" [value]="value">
+                            {{ value }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; type: 'phenotype'">
+                      <button mat-stroked-button>Choose HPO Term(s)</button>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; type: 'boolean'; let onChange=onChange">
+                      <mat-checkbox [(ngModel)]="rule.value" (ngModelChange)="onChange()"></mat-checkbox>
+                    </ng-container>
+
+                    <ng-container
+                      *queryInput="let rule; let field=field; let options=options; type: 'category'; let onChange=onChange">
+                      <mat-form-field>
+                        <mat-select [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                          <mat-option *ngFor="let opt of options" [value]="opt.value">
+                            {{ opt.name }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; type: 'date'; let onChange=onChange">
+                      <mat-form-field>
+                        <input matInput [matDatepicker]="picker" [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                        <mat-datepicker #picker></mat-datepicker>
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container
+                      *queryInput="let rule; let options=options; type: 'multiselect'; let onChange=onChange">
+                      <mat-form-field [style.width.px]="300">
+                        <mat-select [(ngModel)]="rule.value" multiple (ngModelChange)="onChange()">
+                          <mat-option *ngFor="let opt of options" [value]="opt.value">
+                            {{ opt.name }}
+                          </mat-option>
+                        </mat-select>
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; let field=field; type: 'number'; let onChange=onChange">
+                      <mat-form-field [style.width.px]="100">
+                        <input matInput [(ngModel)]="rule.value" type="number" (ngModelChange)="onChange()">
+                      </mat-form-field>
+                      {{field.units}}
+                    </ng-container>
+
+                    <!-- TODO: Improve -->
+                    <ng-container *queryInput="let rule; let field=field; type: 'json'; let onChange=onChange">
+                      <mat-form-field>
+                        <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                      </mat-form-field>
+                    </ng-container>
+
+                    <!-- TODO: Improve -->
+                    <ng-container *queryInput="let rule; let field=field; type: 'string'; let onChange=onChange">
+                      <mat-form-field>
+                        <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; let field=field; type: 'string[]'; let onChange=onChange">
+                      <mat-form-field>
+                        <input matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                      </mat-form-field>
+                    </ng-container>
+
+                    <ng-container *queryInput="let rule; let field=field; type: 'textarea'; let onChange=onChange">
+                      <mat-form-field>
+                        <textarea matInput [(ngModel)]="rule.value" (ngModelChange)="onChange()">
+                          </textarea>
+                      </mat-form-field>
+                    </ng-container>
+
+                  </query-builder>
+                </div>
+              </mat-expansion-panel>
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    Limit
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div>
+                  {{query.limit}}
+                </div>
+                <div class="text-muted">
+                  This value is changed using the paginator
+                </div>
+              </mat-expansion-panel>
+              <mat-expansion-panel>
+                <mat-expansion-panel-header>
+                  <mat-panel-title>
+                    Offset
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+                <div>
+                  {{query.offset}}
+                </div>
+                <div class="text-muted">
+                  This value is changed using the paginator
+                </div>
+              </mat-expansion-panel>
+            </mat-accordion>
+          </div>
+          <div class="b-t" style="position: absolute; bottom:0; width: 100%; z-index: 100; background-color: white">
+            <div class="m-a"><a href="https://github.com/DNAstack/ga4gh-search" target="_blank"><span
+                  class="fa fa-fw fa-github"></span>GitHub</a>
+                </div>
+          </div>
+      </mat-sidenav>
+      <mat-sidenav-content class="box-container">
+        <mat-toolbar class="toolbar-white box-header" style="max-height: 63px">
+          <mat-toolbar-row>
+            <div>Results</div>
+            <span class="fill-space"></span>
+            <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm"
+              mat-stroked-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
+            <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline"
+              (click)="view.wrapResultTableCells = !view.wrapResultTableCells"
+              color="{{view.wrapResultTableCells ? 'primary' : '' }}">
+              <mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon>
+            </button>
+            <mat-paginator #paginator [length]="1000" [pageSize]="query.limit" [pageSizeOptions]="[10, 50, 100]"
+              (page)="pageEvent = paginationChanged($event)">
+            </mat-paginator>
+          </mat-toolbar-row>
+        </mat-toolbar>
+        <div class="box-content">
+          <mat-progress-bar mode="indeterminate" *ngIf="view.isQuerying"></mat-progress-bar>
+          <div *ngIf="!results"
+            style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
+            <div>
+              <i class="material-icons" style="font-size: 100px !important">not_interested</i>
+            </div>
+            <div style="font-size: 16px !important">
+              No search results
+            </div>
+            <div style="font-size: 16px !important" class="m-t-sm">
+              <button tabindex="-1" mat-stroked-button color="primary"
+                (click)="sidenav.toggle()">{{sidenav.opened ? 'Close' : 'Open'}} Query Builder</button>
+            </div>
+          </div>
+
+          <div *ngIf="results" class="m-v">
+            <div id="results" class="mat-table m-s mat-elevation-z1"
+              [ngClass]="{ 'no-wrap' : !view.wrapResultTableCells }">
+              <div class="mat-header-row">
+                <div class="mat-header-cell" *ngFor="let field of results.fields">{{field.name}}</div>
+              </div>
+              <div class="mat-row" *ngFor="let result of results.results">
+                <div class="mat-cell" *ngFor="let value of result.values; let i = index">
+                  <div *ngIf="value.field.type == 'json'">
+                    <button tabindex="-1" mat-stroked-button
+                      (click)="showJson(jsonify({'value' : value.value}), value.field.name)">JSON</button>
+                  </div>
+                  <div *ngIf="value.field.type != 'json'">
+                    {{value.value}}
+                  </div>
                 </div>
               </div>
             </div>
+            <div class="m-b"></div>
           </div>
-          <div class="m-b"></div>
         </div>
-      </div>
-    </mat-sidenav-content>
-  </mat-sidenav-container>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+  </div>
 </div>
