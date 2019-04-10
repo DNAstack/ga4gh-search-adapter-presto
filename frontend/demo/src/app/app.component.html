@@ -255,7 +255,7 @@
       <div class="mat-row" *ngFor="let result of results.results">
         <div class="mat-cell" *ngFor="let value of result.values; let i = index">
             <div *ngIf="value.field.type == 'json'">
-                <button tabindex="-1" mat-stroked-button (click)="showJson(jsonify({'value' : value.value}), value.field.name + ' at row ' + (i+1))">JSON</button>
+                <button tabindex="-1" mat-stroked-button (click)="showJson(jsonify({'value' : value.value}), value.field.name)">JSON</button>
             </div>
             <div *ngIf="value.field.type != 'json'">
                 {{value.value}}
