@@ -1,18 +1,18 @@
 <div class="full-page" style="display: flex; flex-direction: column">
-  <mat-toolbar color="primary">
+  <mat-toolbar color="primary" style="height:64px">
     <button matTooltip="Toggle Query Builder" class="m-r-sm" mat-icon-button (click)="sidenav.toggle()"><i
         class="material-icons">menu</i></button>
     <div>GA4GH Discovery Search</div>
   </mat-toolbar>
   <div style="flex:1">
     <mat-sidenav-container style="height: 100%">
-      <mat-sidenav #sidenav mode="side" [(opened)]="view.sidebarOpened" style="">
-          <div>
+      
+      <mat-sidenav #sidenav mode="side" [(opened)]="view.sidebarOpened" style="min-width:400px">
+          <div class="display:hidden">Stuff</div>
             <mat-toolbar class="toolbar-white" style="position: absolute; top:0; width: 100%">
               <div>Query</div>
             </mat-toolbar>
-          </div>
-          <div style="margin-top: 64px; margin-bottom: 64px">
+          <div style="position:absolute; top:64px; bottom:64px; overflow-y: auto">
             <mat-toolbar style="background: none">
               <mat-toolbar-row>
                 <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button
@@ -239,8 +239,8 @@
                 </div>
           </div>
       </mat-sidenav>
-      <mat-sidenav-content class="box-container">
-        <mat-toolbar class="toolbar-white box-header" style="max-height: 63px">
+      <mat-sidenav-content style="overflow-y: auto">
+        <mat-toolbar class="toolbar-white" style="height: 64px; position:absolute; top: 0;">
           <mat-toolbar-row>
             <div>Results</div>
             <span class="fill-space"></span>
@@ -256,7 +256,7 @@
             </mat-paginator>
           </mat-toolbar-row>
         </mat-toolbar>
-        <div class="box-content">
+        <div style="position:absolute; width:100%; top:64px; overflow-y: auto">
           <mat-progress-bar mode="indeterminate" *ngIf="view.isQuerying"></mat-progress-bar>
           <div *ngIf="!results"
             style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
