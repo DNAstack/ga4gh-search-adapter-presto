@@ -15,11 +15,11 @@
       <div class="box-content">
       <mat-toolbar style="background: none">
         <mat-toolbar-row>
-            <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-raised-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
-            <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
+            <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button (click)="showFields()"><i class="material-icons">table_chart</i></button>
+            <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-stroked-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
             <span class="fill-space"></span>
-            <!--button matTooltip="Show starred results" style="display:inline" mat-raised-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
-            <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-raised-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
+            <!--button matTooltip="Show starred results" style="display:inline" mat-stroked-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
+            <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-stroked-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
             <mat-spinner [diameter]="20" class="m-l-sm" *ngIf="view.isQuerying"></mat-spinner>
         </mat-toolbar-row>
         </mat-toolbar>
@@ -113,7 +113,7 @@
                       </ng-container>
           
                       <ng-container *queryInput="let rule; type: 'phenotype'">
-                        <button mat-raised-button>Choose HPO Term(s)</button>
+                        <button mat-stroked-button>Choose HPO Term(s)</button>
                       </ng-container>
           
                       <ng-container *queryInput="let rule; type: 'boolean'; let onChange=onChange">
@@ -218,13 +218,12 @@
       </div>
   </div>
 </mat-sidenav>
-<mat-sidenav-content>
-  
-      <mat-toolbar class="toolbar-white" style="max-height: 63px">
+<mat-sidenav-content class="box-container">
+      <mat-toolbar class="toolbar-white box-header" style="max-height: 63px">
         <mat-toolbar-row>
           <div>Results</div>
           <span class="fill-space"></span>
-          <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm" mat-raised-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
+          <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm" mat-stroked-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
           <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
           <mat-paginator #paginator
           [length]="1000"
@@ -234,16 +233,19 @@
           </mat-paginator>
         </mat-toolbar-row>
       </mat-toolbar>
-
-      <div *ngIf="!results" class="m-v" style="text-align:center; color: #bdbdbd">
-          <div>
-            <i class="material-icons" style="font-size: 100px !important">not_interested</i>
-          </div>
-          <div style="font-size: 16px !important">
-            No search results
-          </div>
+      <div class="box-content">
+      <div *ngIf="!results" style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
+              <div>
+                  <i class="material-icons" style="font-size: 100px !important">not_interested</i>
+                </div>
+                <div style="font-size: 16px !important">
+                  No search results
+                </div>
+                <div style="font-size: 16px !important" class="m-t-sm">
+                    <button tabindex="-1" mat-stroked-button color="primary" (click)="sidenav.toggle()">Open Query Builder</button>
+                  </div>
         </div>
-
+      
     <div *ngIf="results" class="m-v">
     <div id="results" class="mat-table m-s mat-elevation-z1" [ngClass]="{ 'no-wrap' : view.wrapResultTableCells }">
       <div class="mat-header-row">
@@ -256,6 +258,7 @@
       </div>
     </div>
     <div class="m-b"></div>
+</div>
 </div>
 </mat-sidenav-content>
 </mat-sidenav-container>
