@@ -239,7 +239,7 @@
                 </div>
           </div>
       </mat-sidenav>
-      <mat-sidenav-content style="overflow-y: auto">
+      <mat-sidenav-content>
         <mat-toolbar class="toolbar-white" style="height: 64px; position:absolute; top: 0;">
           <mat-toolbar-row>
             <div>Results</div>
@@ -256,7 +256,7 @@
             </mat-paginator>
           </mat-toolbar-row>
         </mat-toolbar>
-        <div style="position:absolute; width:100%; top:64px; overflow-y: auto">
+        <div style="position:absolute; width:100%; top:64px; bottom:0; overflow-y: auto">
           <mat-progress-bar mode="indeterminate" *ngIf="view.isQuerying"></mat-progress-bar>
           <div *ngIf="!results"
             style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
