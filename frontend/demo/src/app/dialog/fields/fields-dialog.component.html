@@ -1,10 +1,11 @@
 <mat-toolbar class="toolbar-white">
-    <mat-toolbar-row>
-        <div>Fields</div>
-        <span class="fill-space"></span>
-        <button matTooltip="Show Fields JSON" tabindex="-1" style="display:inline" mat-stroked-button (click)="showJson(fields, 'Fields JSON')"><i class="material-icons">code</i></button>
-    </mat-toolbar-row>
-  </mat-toolbar>
+  <mat-toolbar-row>
+    <div>Fields</div>
+    <span class="fill-space"></span>
+    <button matTooltip="Show Fields JSON" tabindex="-1" style="display:inline" mat-stroked-button
+      (click)="showJson(fields, 'Fields JSON')"><i class="material-icons">code</i></button>
+  </mat-toolbar-row>
+</mat-toolbar>
 <table mat-table cdk-focus-start [dataSource]="dataTable" class="mat-elevation-z0">
   <ng-container matColumnDef="id">
     <th mat-header-cell *matHeaderCellDef> Id </th>
@@ -27,8 +28,8 @@
   </ng-container>
 
   <ng-container matColumnDef="specification">
-      <th mat-header-cell *matHeaderCellDef> Specification </th>
-      <td mat-cell *matCellDef="let element"> <a href="{element.specification}">{{element.specification}}</a> </td>
+    <th mat-header-cell *matHeaderCellDef> Specification </th>
+    <td mat-cell *matCellDef="let element"> <a href="{element.specification}">{{element.specification}}</a> </td>
   </ng-container>
 
   <ng-container matColumnDef="operators">

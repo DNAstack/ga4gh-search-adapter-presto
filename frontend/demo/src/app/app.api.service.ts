@@ -13,8 +13,8 @@ export class ApiService {
   private readonly apiUrl;
 
   constructor(private httpClient: HttpClient,
-              private app: AppConfigService,
-              private snackBar: MatSnackBar) {
+    private app: AppConfigService,
+    private snackBar: MatSnackBar) {
     this.apiUrl = app.config.apiUrl;
   }
 

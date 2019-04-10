@@ -19,7 +19,7 @@ export class AppComponent implements OnInit {
   opened: boolean;
 
   public query = {
-    select : [
+    select: [
       {
         "field": "participant_id"
       },
@@ -32,8 +32,8 @@ export class AppComponent implements OnInit {
       {
         "field": "raw_value"
       }],
-    from : 'demo_view',
-    where : {
+    from: 'demo_view',
+    where: {
       condition: 'and',
       rules: [
         {
@@ -58,8 +58,8 @@ export class AppComponent implements OnInit {
         }
       ]
     },
-    limit : 100,
-    offset : 0
+    limit: 100,
+    offset: 0
   };
 
   public config = {
@@ -71,7 +71,7 @@ export class AppComponent implements OnInit {
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
-    queryChanged : false
+    queryChanged: false
   }
 
   public results = null;
@@ -130,7 +130,7 @@ export class AppComponent implements OnInit {
     }
   }
 
-  jsonify(str : string) {
+  jsonify(str: string) {
     console.log(str);
     return JSON.parse(JSON.stringify(str));
   }
@@ -159,7 +159,7 @@ export class AppComponent implements OnInit {
   // This is inefficient, being called a lot
   isFieldSelected(field) {
     var fieldName = field.name;
-    for(var i = 0; i < this.query.select.length; i++) {
+    for (var i = 0; i < this.query.select.length; i++) {
       if (this.query.select[i].field == fieldName) {
         return true;
       }
@@ -167,17 +167,17 @@ export class AppComponent implements OnInit {
     return false;
   }
 
-  toggleFieldSelection(event, field : Field) {
+  toggleFieldSelection(event, field: Field) {
     var fieldName = field.name;
     var checked = event.checked;
-    if (checked) { 
-      this.query.select.push({ "field" : fieldName });
+    if (checked) {
+      this.query.select.push({ "field": fieldName });
     } else {
-      for(var i = 0; i < this.query.select.length; i++) {
-          if (this.query.select[i].field == fieldName) {
-              this.query.select.splice(i,1);
-              return;
-          }
+      for (var i = 0; i < this.query.select.length; i++) {
+        if (this.query.select[i].field == fieldName) {
+          this.query.select.splice(i, 1);
+          return;
+        }
       }
     }
     this.view.queryChanged = true;
@@ -187,7 +187,7 @@ export class AppComponent implements OnInit {
     if (b) {
       var newSelect = [];
       for (var index in this.config.fields) {
-        newSelect.push({ "field" : this.config.fields[index].name });
+        newSelect.push({ "field": this.config.fields[index].name });
       }
       this.query.select = newSelect;
     } else {
@@ -196,7 +196,7 @@ export class AppComponent implements OnInit {
     this.view.queryChanged = true;
   }
 
-  public showJson(jsonObj: any, title : string): void {
+  public showJson(jsonObj: any, title: string): void {
     this.jsonDialogRef = this.dialog.open(JsonDialog, {
       width: '80%',
       height: '80%',
