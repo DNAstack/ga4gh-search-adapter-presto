@@ -19,8 +19,8 @@
             <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm" mat-stroked-button (click)="showJson(query, 'Query JSON')"><i class="material-icons">code</i></button>
             <span class="fill-space"></span>
             <!--button matTooltip="Show starred results" style="display:inline" mat-stroked-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
-            <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-stroked-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons">search</i></button>
-            <mat-spinner [diameter]="20" class="m-l-sm" *ngIf="view.isQuerying"></mat-spinner>
+            <button tabindex="-1" matTooltip="Search" style="display:inline" class="m-l-sm" mat-stroked-button color="{{view.queryChanged ? 'primary' : '' }}" (click)="doQuery(query)" [disabled]="view.isQuerying || !view.queryChanged"><i class="material-icons" *ngIf="!view.isQuerying">search</i><div *ngIf="view.isQuerying" style="width:32px; height:26px"><mat-spinner style="margin-top:7px; margin-left:6px" [diameter]="20"></mat-spinner></div></button>
+            
         </mat-toolbar-row>
         </mat-toolbar>
       <div class="clearfix"></div>
@@ -224,7 +224,7 @@
           <div>Results</div>
           <span class="fill-space"></span>
           <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm" mat-stroked-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
-          <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? '' : 'primary' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
+          <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline" (click)="view.wrapResultTableCells = !view.wrapResultTableCells" color="{{view.wrapResultTableCells ? 'primary' : '' }}"><mat-icon aria-label="Example icon-button with a heart icon">wrap_text</mat-icon></button>
           <mat-paginator #paginator
           [length]="1000"
           [pageSize]="query.limit"
@@ -234,6 +234,7 @@
         </mat-toolbar-row>
       </mat-toolbar>
       <div class="box-content">
+          <mat-progress-bar mode="indeterminate" *ngIf="view.isQuerying"></mat-progress-bar>
       <div *ngIf="!results" style="height: 100%; display: flex; flex-direction:column; justify-content: center; align-items: center; color: #bdbdbd;">
               <div>
                   <i class="material-icons" style="font-size: 100px !important">not_interested</i>
@@ -242,18 +243,23 @@
                   No search results
                 </div>
                 <div style="font-size: 16px !important" class="m-t-sm">
-                    <button tabindex="-1" mat-stroked-button color="primary" (click)="sidenav.toggle()">Open Query Builder</button>
+                    <button tabindex="-1" mat-stroked-button color="primary" (click)="sidenav.toggle()">{{sidenav.opened ? 'Close' : 'Open'}} Query Builder</button>
                   </div>
         </div>
       
     <div *ngIf="results" class="m-v">
-    <div id="results" class="mat-table m-s mat-elevation-z1" [ngClass]="{ 'no-wrap' : view.wrapResultTableCells }">
+    <div id="results" class="mat-table m-s mat-elevation-z1" [ngClass]="{ 'no-wrap' : !view.wrapResultTableCells }">
       <div class="mat-header-row">
         <div class="mat-header-cell" *ngFor="let field of results.fields">{{field.name}}</div>
       </div>
       <div class="mat-row" *ngFor="let result of results.results">
-        <div class="mat-cell" *ngFor="let value of result.values" matTooltip="{{value.value}}">
-          {{value.value}}
+        <div class="mat-cell" *ngFor="let value of result.values; let i = index">
+            <div *ngIf="value.field.type == 'json'">
+                <button tabindex="-1" mat-stroked-button (click)="showJson(jsonify({'value' : value.value}), value.field.name + ' at row ' + (i+1))">JSON</button>
+            </div>
+            <div *ngIf="value.field.type != 'json'">
+                {{value.value}}
+            </div>
         </div>
       </div>
     </div>

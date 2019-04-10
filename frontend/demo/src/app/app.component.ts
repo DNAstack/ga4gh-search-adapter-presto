@@ -130,6 +130,11 @@ export class AppComponent implements OnInit {
     }
   }
 
+  jsonify(str : string) {
+    console.log(str);
+    return JSON.parse(JSON.stringify(str));
+  }
+
   paginationChanged(event) {
     this.query.limit = event.pageSize;
     this.query.offset = event.pageSize * event.pageIndex;
