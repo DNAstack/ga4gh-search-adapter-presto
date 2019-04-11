@@ -1,5 +1,6 @@
 package org.ga4gh.discovery.search.source.presto;
 
+import static org.ga4gh.discovery.search.source.presto.MockPrestoMetadata.standardMetadata;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.and;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.field;
 import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.fieldRef;
@@ -92,7 +93,7 @@ public class SearchQueryTransformerTest {
     }
 
     private void givenQuery(SearchQuery query) {
-        PrestoAdapter presto = new MockPrestoAdapter();
+        PrestoAdapter presto = new MockPrestoAdapter(standardMetadata());
         PrestoMetadata prestoMetadata = new PrestoMetadata(presto);
         Metadata metadata = new Metadata(prestoMetadata);
         QueryContext queryContext = new QueryContext(query, metadata);

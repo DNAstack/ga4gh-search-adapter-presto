@@ -1,5 +1,6 @@
 package org.ga4gh.discovery.search.source.presto;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,31 +53,39 @@ public class PrestoSearchSource implements SearchSource {
                 new SearchQueryTransformer(metadata, query, queryContext);
         String prestoSqlString = queryTransformer.toPrestoSQL();
         log.info("Transformed to SQL: {}", prestoSqlString);
+        List<Field> fields = new ArrayList<>();
         List<ResultRow> results = new ArrayList<>();
-        List<Field> resultFields = new ArrayList<>();
 
         prestoAdapter.query(
                 prestoSqlString,
                 rs -> {
                     try {
-                        List<Field> fields =
-                                queryTransformer.validateAndGetFields(rs.getMetaData());
+                        fields.addAll(queryTransformer.validateAndGetFields(rs.getMetaData()));
+
+                        long skipCount = query.getOffset().orElse(0l);
 
                         while (rs.next()) {
-                            List<ResultValue> values = new ArrayList<>();
-
-                            for (int i = 1; i <= fields.size(); i++) {
-                                values.add(new ResultValue(fields.get(i - 1), rs.getString(i)));
+                            if (skipCount > 0) {
+                                skipCount--;
+                            } else {
+                                results.add(extractRow(rs, fields));
                             }
-
-                            results.add(new ResultRow(values));
                         }
-                        resultFields.addAll(fields);
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
                 });
-        SearchResult searchResult = new SearchResult(resultFields, results);
+        SearchResult searchResult = new SearchResult(fields, results);
         return searchResult;
+    }
+
+    private ResultRow extractRow(ResultSet rs, List<Field> fields) throws SQLException {
+        List<ResultValue> values = new ArrayList<>();
+
+        for (int i = 1; i <= fields.size(); i++) {
+            values.add(new ResultValue(fields.get(i - 1), rs.getString(i)));
+        }
+
+        return new ResultRow(values);
     }
 }

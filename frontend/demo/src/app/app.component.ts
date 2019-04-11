@@ -142,17 +142,17 @@ export class AppComponent implements OnInit {
     /*this.doQuery(this.query);*/
   }
 
-  transformQuery(where: RuleSet) {
+  transformQuery() {
     // we're hardcoding select clause here for demo purposes
     // the flexible thing is the rule built by query builder
     return {
       'select': this.query.select,
       'from': [{
-        'table': 'demo_view'
+        'table': this.query.from
       }],
-      'where': this.transformRule(where),
-      'limit': this.query.limit
-      /*,'offset': query.offset*/ // trying to get offsets to work
+      'where': this.transformRule(this.query.where),
+      'limit': this.query.limit,
+      'offset': this.query.offset
     }
   }
 
@@ -215,7 +215,7 @@ export class AppComponent implements OnInit {
   public doQuery(query) {
     this.view.isQuerying = true;
     console.log("Original query\n" + JSON.stringify(query, null, 2))
-    var transformedQuery = this.transformQuery(query.where)
+    var transformedQuery = this.transformQuery()
     console.log("Transformed query\n" + JSON.stringify(transformedQuery, null, 2))
     this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {
