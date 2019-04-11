@@ -7,6 +7,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Type;
 import org.ga4gh.discovery.search.query.And;
@@ -36,6 +37,16 @@ public class SearchQueryTransformer {
         return transformer.toPrestoSQL();
     }
 
+    private OptionalLong limitAndOffset() {
+        if (query.getLimit().isPresent()) {
+            return query.getOffset().isPresent()
+                    ? OptionalLong.of(query.getOffset().getAsLong() + query.getLimit().getAsLong())
+                    : query.getLimit();
+        } else {
+            return OptionalLong.empty();
+        }
+    }
+
     public String toPrestoSQL() {
         StringBuilder sql = new StringBuilder();
 
@@ -58,18 +69,11 @@ public class SearchQueryTransformer {
                             sql.append(createTransformer(predicate).toSql());
                         });
 
-        query.getLimit()
+        limitAndOffset()
                 .ifPresent(
                         limit -> {
                             sql.append("\nLIMIT ");
                             sql.append(Long.toString(limit));
-                        });
-        
-        query.getOffset()
-                .ifPresent(
-                        offset -> {
-                            sql.append("\nOFFSET ");
-                            sql.append(Long.toString(offset));
                         });
 
         return sql.toString();

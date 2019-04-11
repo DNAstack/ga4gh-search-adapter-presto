@@ -1,0 +1,82 @@
+package org.ga4gh.discovery.search.source.presto;
+
+import static org.ga4gh.discovery.search.source.presto.MockPrestoMetadata.animalsMetadata;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import java.sql.SQLException;
+import java.util.List;
+import org.ga4gh.discovery.search.result.ResultRow;
+import org.ga4gh.discovery.search.result.SearchResult;
+import org.junit.Test;
+import com.google.common.collect.ImmutableList;
+
+public class PrestoSearchSourceTest {
+
+    private PrestoSearchSource searchSource;
+    private SearchResult searchResult;
+
+    private void givenDefaultTable() throws SQLException {
+        MockPrestoAdapter mockPresto = new MockPrestoAdapter(animalsMetadata());
+        @SuppressWarnings("resource")
+        MockResultSet resultSet =
+                new MockResultSet(
+                                ImmutableList.of("id", "name"),
+                                ImmutableList.of("integer", "varchar"))
+                        .addRow("1", "Dog")
+                        .addRow("2", "Cat")
+                        .addRow("3", "Cow")
+                        .addRow("4", "Chicken")
+                        .addRow("5", "Bird")
+                        .addRow("6", "Turtle")
+                        .addRow("7", "Lion")
+                        .addRow("8", "Zebra")
+                        .addRow("9", "Horse")
+                        .addRow("10", "Ant");
+        MockResultSet subset = resultSet.subset(0, 6);
+
+        mockPresto.addMockResults(
+                "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"", resultSet);
+        mockPresto.addMockResults(
+                "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"\nLIMIT 6",
+                subset);
+        searchSource = new PrestoSearchSource(mockPresto);
+    }
+
+    private void searchWithLimitOffset(Long limit, Long offset) {
+        searchResult = searchSource.search(TestQueries.animalsQuery(limit, offset));
+    }
+
+    private void assertIndices(int... indices) {
+        List<ResultRow> rows = searchResult.getResults();
+        assertThat(rows, is(notNullValue()));
+        assertThat(rows, hasSize(indices.length));
+        for (int i = 0; i < indices.length; i++) {
+            assertThat(
+                    rows.get(i).getValues().get(0).getValue(),
+                    is(new Integer(indices[i]).toString()));
+        }
+    }
+
+    @Test
+    public void testNoLimitNoOffset() throws SQLException {
+        givenDefaultTable();
+        searchWithLimitOffset(null, null);
+        assertIndices(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    }
+
+    @Test
+    public void testNoLimitOffset3() throws SQLException {
+        givenDefaultTable();
+        searchWithLimitOffset(null, 3l);
+        assertIndices(4, 5, 6, 7, 8, 9, 10);
+    }
+
+    @Test
+    public void testLimit3Offset3() throws SQLException {
+        givenDefaultTable();
+        searchWithLimitOffset(3l, 3l);
+        assertIndices(4, 5, 6);
+    }
+}
