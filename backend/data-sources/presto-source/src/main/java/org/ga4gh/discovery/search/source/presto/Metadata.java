@@ -18,6 +18,7 @@ import lombok.AllArgsConstructor;
 public class Metadata {
 
     public static final String FILES_TABLE = "files";
+    public static final String FILES_JSON_TABLE = "files_json";
     public static final String VARIANTS_TABLE = "variants";
     public static final String FACTS_TABLE = "facts";
     public static final String DEMO_VIEW = "demo_view";
@@ -26,6 +27,8 @@ public class Metadata {
             ImmutableMap.of(
                     FILES_TABLE,
                     new Table(FILES_TABLE, "org.ga4gh.drs.objects"),
+                    FILES_JSON_TABLE,
+                    new Table(FILES_JSON_TABLE, "org.ga4gh.drs.json_objects"),
                     VARIANTS_TABLE,
                     new Table(VARIANTS_TABLE, "com.google.variants"),
                     FACTS_TABLE,
@@ -44,9 +47,7 @@ public class Metadata {
                             field("reference_base", "varchar"),
                             field("alternate_base", "varchar"),
                             field("vcf_size", "bigint"),
-                            field(
-                                    "vcf_urls",
-                                    "array(row(url varchar, system_metadata varchar, user_metadata varchar,authorization_metadata varchar))"),
+                            field("vcf_object", "varchar"),
                             field("category", "varchar"),
                             field("key", "varchar"),
                             field("raw_value", "varchar"),
@@ -143,7 +144,7 @@ public class Metadata {
             return Type.STRING;
         } else if (prestoType.startsWith("array(varchar")) {
             return Type.STRING_ARRAY;
-        } else if (prestoType.startsWith("array(row")) {
+        } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
         }
         throw new RuntimeException("Unknown mapping for Presto field type " + prestoType);

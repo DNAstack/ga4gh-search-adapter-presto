@@ -3,6 +3,7 @@ package org.ga4gh.discovery.search.source.presto;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.ga4gh.discovery.search.source.presto.Metadata.FACTS_TABLE;
 import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_TABLE;
+import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_JSON_TABLE;
 import static org.ga4gh.discovery.search.source.presto.Metadata.VARIANTS_TABLE;
 import java.util.Map;
 import java.util.Optional;
@@ -21,6 +22,13 @@ public class PrestoMetadata {
                             "drs",
                             "org_ga4gh_drs",
                             "objects"),
+                    FILES_JSON_TABLE,
+                    new PrestoTable(
+                            FILES_JSON_TABLE,
+                            "org.ga4gh.drs.json_objects",
+                            "drs",
+                            "org_ga4gh_drs",
+                            "json_objects"),
                     VARIANTS_TABLE,
                     new PrestoTable(
                             VARIANTS_TABLE,

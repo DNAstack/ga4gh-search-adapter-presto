@@ -52,35 +52,39 @@ public class SearchQueryTransformerTest {
     @Test
     public void testDemoViewQuery() {
         givenQuery(SearchQueryHelper.demoViewQuery());
-        System.out.println(transformer.toPrestoSQL());
-        assertThat(
-                transformer.toPrestoSQL(),
-                is(
-                        "SELECT \"fac\".\"participant_id\" AS \"participant_id\", "
-                                + "\"var\".\"reference_name\" AS \"chromosome\", "
-                                + "\"var\".\"start_position\" AS \"start_position\", "
-                                + "\"var\".\"end_position\" AS \"end_position\", "
-                                + "\"var\".\"reference_base\" AS \"reference_base\", "
-                                + "\"var\".\"alternate_base\" AS \"alternate_base\", "
-                                + "\"drs\".\"size\" AS \"vcf_size\", "
-                                + "\"drs\".\"urls\" AS \"vcf_urls\", "
-                                + "\"fac\".\"category\" AS \"category\", "
-                                + "\"fac\".\"key\" AS \"key\", "
-                                + "\"fac\".\"raw_value\" AS \"raw_value\", "
-                                + "\"fac\".\"numeric_value\" AS \"numeric_value\"\n"
-                                + "FROM \"drs\".\"org_ga4gh_drs\".\"objects\" AS \"drs\", "
-                                + "\"bigquery-pgc-data\".\"pgp_variants\".\"view_variants1_beacon\" AS \"var\", "
-                                + "\"postgres\".\"public\".\"fact\" AS \"fac\", "
-                                + "\"postgres\".\"public\".\"fact\" AS \"f_drs\", "
-                                + "\"postgres\".\"public\".\"fact\" AS \"f_var\"\n"
-                                + "WHERE \"f_drs\".\"participant_id\" = \"fac\".\"participant_id\" "
-                                + "AND \"f_var\".\"participant_id\" = \"fac\".\"participant_id\" "
-                                + "AND \"f_var\".\"raw_value\" = \"var\".\"call_name\" "
-                                + "AND \"drs\".\"id\" = \"f_drs\".\"raw_value\" "
-                                + "AND \"f_drs\".\"key\" = 'Source VCF object ID' "
-                                + "AND \"f_drs\".\"category\" = 'Profile' "
-                                + "AND \"f_var\".\"key\" = 'Variant call name' "
-                                + "AND \"f_var\".\"category\" = 'Profile'"));
+        // System.out.println(transformer.toPrestoSQL());
+        String expectedSQL =
+                "SELECT \"fac\".\"participant_id\" AS \"participant_id\", "
+                        + "\"var\".\"reference_name\" AS \"chromosome\", "
+                        + "\"var\".\"start_position\" AS \"start_position\", "
+                        + "\"var\".\"end_position\" AS \"end_position\", "
+                        + "\"var\".\"reference_base\" AS \"reference_base\", "
+                        + "\"var\".\"alternate_base\" AS \"alternate_base\", "
+                        + "\"drs\".\"size\" AS \"vcf_size\", "
+                        + "\"drs2\".\"json\" AS \"vcf_object\", "
+                        + "\"fac\".\"category\" AS \"category\", "
+                        + "\"fac\".\"key\" AS \"key\", "
+                        + "\"fac\".\"raw_value\" AS \"raw_value\", "
+                        + "\"fac\".\"numeric_value\" AS \"numeric_value\"\n"
+                        + "FROM \"drs\".\"org_ga4gh_drs\".\"objects\" AS \"drs\", "
+                        + "\"drs\".\"org_ga4gh_drs\".\"json_objects\" AS \"drs2\", "
+                        + "\"bigquery-pgc-data\".\"pgp_variants\".\"view_variants1_beacon\" AS \"var\", "
+                        + "\"postgres\".\"public\".\"fact\" AS \"fac\", "
+                        + "\"postgres\".\"public\".\"fact\" AS \"f_drs\", "
+                        + "\"postgres\".\"public\".\"fact\" AS \"f_var\"\n"
+                        + "WHERE \"f_drs\".\"participant_id\" = \"fac\".\"participant_id\" "
+                        + "AND \"f_var\".\"participant_id\" = \"fac\".\"participant_id\" "
+                        + "AND \"f_var\".\"raw_value\" = \"var\".\"call_name\" "
+                        + "AND \"drs\".\"id\" = \"f_drs\".\"raw_value\" "
+                        + "AND \"drs2\".\"id\" = \"drs\".\"id\" "
+                        + "AND \"f_drs\".\"key\" = 'Source VCF object ID' "
+                        + "AND \"f_drs\".\"category\" = 'Profile' "
+                        + "AND \"f_var\".\"key\" = 'Variant call name' "
+                        + "AND \"f_var\".\"category\" = 'Profile'";
+        // System.out.println("==============");
+        // System.out.println(expectedSQL);
+
+        assertThat(transformer.toPrestoSQL(), is(expectedSQL));
     }
 
     private void givenQuery(

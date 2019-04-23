@@ -31,6 +31,9 @@ export class AppComponent implements OnInit {
       },
       {
         "field": "raw_value"
+      },
+      {
+        "field": "vcf_object"
       }],
     from: 'demo_view',
     where: {

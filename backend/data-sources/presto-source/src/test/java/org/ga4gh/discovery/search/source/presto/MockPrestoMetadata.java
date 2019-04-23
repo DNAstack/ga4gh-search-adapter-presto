@@ -14,38 +14,40 @@ public class MockPrestoMetadata {
     public static Map<String, PrestoTableMetadata> standardMetadata() {
         return ImmutableMap.of(
                 "files",
-                        metadata(
-                                "files",
-                                field("id", "varchar"),
-                                field("name", "varchar"),
-                                field("size", "bigint"),
-                                field("created", "timestamp"),
-                                field("updated", "timestamp"),
-                                field("version", "varchar"),
-                                field("mime_type", "varchar"),
-                                field("checksums", "array(row(checksum varchar, type varchar))"),
-                                field(
-                                        "urls",
-                                        "array(row(url varchar, system_metadata varchar, user_metadata varchar,authorization_metadata varchar))"),
-                                field("description", "varchar"),
-                                field("aliases", "array(varchar)")),
+                metadata(
+                        "files",
+                        field("id", "varchar"),
+                        field("name", "varchar"),
+                        field("size", "bigint"),
+                        field("created", "timestamp"),
+                        field("updated", "timestamp"),
+                        field("version", "varchar"),
+                        field("mime_type", "varchar"),
+                        field("checksums", "array(row(checksum varchar, type varchar))"),
+                        field(
+                                "urls",
+                                "array(row(url varchar, system_metadata varchar, user_metadata varchar,authorization_metadata varchar))"),
+                        field("description", "varchar"),
+                        field("aliases", "array(varchar)")),
+                "files_json",
+                metadata("files_json", field("id", "varchar"), field("json", "varchar")),
                 "variants",
-                        metadata(
-                                "variants",
-                                field("reference_name", "varchar"),
-                                field("start_position", "integer"),
-                                field("end_position", "integer"),
-                                field("reference_base", "varchar"),
-                                field("alternate_base", "varchar"),
-                                field("call_name", "varchar")),
+                metadata(
+                        "variants",
+                        field("reference_name", "varchar"),
+                        field("start_position", "integer"),
+                        field("end_position", "integer"),
+                        field("reference_base", "varchar"),
+                        field("alternate_base", "varchar"),
+                        field("call_name", "varchar")),
                 "facts",
-                        metadata(
-                                "facts",
-                                field("participant_id", "varchar"),
-                                field("category", "varchar"),
-                                field("key", "varchar"),
-                                field("raw_value", "varchar"),
-                                field("numeric_value", "double")));
+                metadata(
+                        "facts",
+                        field("participant_id", "varchar"),
+                        field("category", "varchar"),
+                        field("key", "varchar"),
+                        field("raw_value", "varchar"),
+                        field("numeric_value", "double")));
     }
 
     private static PrestoTableMetadata metadata(String table, PrestoField... fields) {
