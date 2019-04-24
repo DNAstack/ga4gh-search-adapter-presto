@@ -2,7 +2,7 @@
   <mat-toolbar-row>
     <div>Fields</div>
     <span class="fill-space"></span>
-    <button matTooltip="Show Fields JSON" tabindex="-1" style="display:inline" mat-stroked-button
+    <button [hidden]="!view.showJSONs" matTooltip="Show Fields JSON" tabindex="-1" style="display:inline" mat-stroked-button
       (click)="showJson(fields, 'Fields JSON')"><i class="material-icons">code</i></button>
   </mat-toolbar-row>
 </mat-toolbar>

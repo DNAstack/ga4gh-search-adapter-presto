@@ -17,7 +17,7 @@
               <mat-toolbar-row>
                 <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button
                   (click)="showFields()"><i class="material-icons">table_chart</i></button>
-                <button tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm"
+                <button [hidden]="!view.showJSONs" tabindex="-1" matTooltip="Show Query JSON" style="display:inline" class="m-r-sm"
                   mat-stroked-button (click)="showJson(transformQuery(), 'Query JSON')"><i class="material-icons">code</i></button>
                 <span class="fill-space"></span>
                 <!--button matTooltip="Show starred results" style="display:inline" mat-stroked-button (click)="showCart($event)"><i class="material-icons">star</i></button-->
@@ -244,7 +244,7 @@
           <mat-toolbar-row>
             <div>Results</div>
             <span class="fill-space"></span>
-            <button tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm"
+            <button [hidden]="!view.showJSONs" tabindex="-1" matTooltip="Show Results JSON" *ngIf="results" style="display:inline" class="m-r-sm"
               mat-stroked-button (click)="showJson(results, 'Results JSON')"><i class="material-icons">code</i></button>
             <button tabindex="-1" mat-icon-button matTooltip="Wrap cell content" style="display:inline"
               (click)="view.wrapResultTableCells = !view.wrapResultTableCells"

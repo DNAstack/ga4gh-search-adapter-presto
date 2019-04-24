@@ -6,6 +6,7 @@ import { Rule, RuleSet } from 'angular2-query-builder';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
 import { JsonDialog } from './dialog/json/json-dialog';
 import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
+import { AppConfigService } from './app-config.service';
 
 @Component({
   selector: 'app-root',
@@ -17,6 +18,8 @@ export class AppComponent implements OnInit {
 
   events: string[] = [];
   opened: boolean;
+
+  
 
   public query = {
     select: [
@@ -31,9 +34,6 @@ export class AppComponent implements OnInit {
       },
       {
         "field": "raw_value"
-      },
-      {
-        "field": "vcf_object"
       }],
     from: 'demo_view',
     where: {
@@ -70,12 +70,14 @@ export class AppComponent implements OnInit {
   };
 
   public view = {
+    showJSONs: false,
     sidebarOpened: false,
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
     queryChanged: false
   }
+  
 
   public results = null;
 
@@ -83,10 +85,12 @@ export class AppComponent implements OnInit {
   private fieldsDialogRef: MatDialogRef<FieldsDialogComponent>;
 
   constructor(
+    private app: AppConfigService,
     private formBuilder: FormBuilder,
     private apiService: ApiService,
     private dialog: MatDialog
   ) {
+    this.view.showJSONs = app.config.developerMode;
     this.queryCtrl = this.formBuilder.control(this.query.where);
   }
 
