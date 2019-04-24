@@ -45,7 +45,7 @@ public class SearchQueryTransformerTest {
                 transformer.toPrestoSQL(),
                 is(
                         "SELECT \"var\".\"reference_name\", \"var\".\"reference_base\"\n"
-                                + "FROM \"bigquery-pgc-data\".\"pgp_variants\".\"view_variants1_beacon\" AS \"var\"\n"
+                                + "FROM \"bigquery-pgc-data\".\"pgp_variants\".\"view_variants2_beacon\" AS \"var\"\n"
                                 + "WHERE \"var\".\"alternate_base\" = 'A' AND \"var\".\"start_position\" = 100"));
     }
 
@@ -68,7 +68,7 @@ public class SearchQueryTransformerTest {
                         + "\"fac\".\"numeric_value\" AS \"numeric_value\"\n"
                         + "FROM \"drs\".\"org_ga4gh_drs\".\"objects\" AS \"drs\", "
                         + "\"drs\".\"org_ga4gh_drs\".\"json_objects\" AS \"drs2\", "
-                        + "\"bigquery-pgc-data\".\"pgp_variants\".\"view_variants1_beacon\" AS \"var\", "
+                        + "\"bigquery-pgc-data\".\"pgp_variants\".\"view_variants2_beacon\" AS \"var\", "
                         + "\"postgres\".\"public\".\"fact\" AS \"fac\", "
                         + "\"postgres\".\"public\".\"fact\" AS \"f_drs\", "
                         + "\"postgres\".\"public\".\"fact\" AS \"f_var\"\n"

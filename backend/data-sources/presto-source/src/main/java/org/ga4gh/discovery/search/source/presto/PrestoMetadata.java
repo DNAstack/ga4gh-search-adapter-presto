@@ -35,7 +35,7 @@ public class PrestoMetadata {
                             "com.google.variants",
                             "bigquery-pgc-data",
                             "pgp_variants",
-                            "view_variants1_beacon"),
+                            "view_variants2_beacon"),
                     FACTS_TABLE,
                     new PrestoTable(
                             FACTS_TABLE,
