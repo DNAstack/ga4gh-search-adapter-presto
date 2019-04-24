@@ -75,7 +75,14 @@ export class AppComponent implements OnInit {
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
-    queryChanged: false
+    queryChanged: false,
+    displayQueryComponents : {
+      select : true,
+      from : true,
+      where : true,
+      limit : true,
+      offset : true
+    }
   }
   
 

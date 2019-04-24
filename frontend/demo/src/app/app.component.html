@@ -12,7 +12,7 @@
             <mat-toolbar class="toolbar-white" style="position: absolute; top:0; width: 100%">
               <div>Query</div>
             </mat-toolbar>
-          <div style="position:absolute; top:64px; bottom:64px; overflow-y: auto">
+          <div style="position:absolute; left:0; right:0; top:64px; bottom:64px; overflow-y: auto">
             <mat-toolbar style="background: none">
               <mat-toolbar-row>
                 <button tabindex="-1" matTooltip="Show fields" style="display:inline" class="m-r-sm" mat-stroked-button
@@ -35,7 +35,7 @@
             <div class="clearfix"></div>
 
             <mat-accordion>
-              <mat-expansion-panel>
+              <mat-expansion-panel [hidden]="!view.displayQueryComponents.select">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     Select
@@ -52,7 +52,7 @@
                   </div>
                 </div>
               </mat-expansion-panel>
-              <mat-expansion-panel>
+              <mat-expansion-panel [hidden]="!view.displayQueryComponents.from">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     From
@@ -65,7 +65,7 @@
                   This value is hardcoded
                 </div>
               </mat-expansion-panel>
-              <mat-expansion-panel (opened)="panelOpenState = true" (closed)="panelOpenState = false">
+              <mat-expansion-panel (opened)="panelOpenState = true" (closed)="panelOpenState = false" [hidden]="!view.displayQueryComponents.where">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     Where
@@ -73,7 +73,7 @@
                 </mat-expansion-panel-header>
                 <div>
                   <query-builder [(ngModel)]="query.where" (ngModelChange)="queryChanged($event)" [config]="config"
-                    *ngIf="config.fields" style="max-width:400px">
+                    *ngIf="config.fields">
 
                     <ng-container
                       *queryButtonGroup="let ruleset; let addRule=addRule; let addRuleSet=addRuleSet; let removeRuleSet=removeRuleSet">
@@ -205,7 +205,7 @@
                   </query-builder>
                 </div>
               </mat-expansion-panel>
-              <mat-expansion-panel>
+              <mat-expansion-panel [hidden]="!view.displayQueryComponents.limit">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     Limit
@@ -218,7 +218,7 @@
                   This value is changed using the paginator
                 </div>
               </mat-expansion-panel>
-              <mat-expansion-panel>
+              <mat-expansion-panel  [hidden]="!view.displayQueryComponents.offset">
                 <mat-expansion-panel-header>
                   <mat-panel-title>
                     Offset
