@@ -6,12 +6,14 @@ import static java.util.stream.Collectors.toList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.Type;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -47,7 +49,7 @@ public class Metadata {
                             field("reference_base", "varchar"),
                             field("alternate_base", "varchar"),
                             field("vcf_size", "bigint"),
-                            field("vcf_object", "varchar"),
+                            field("vcf_object", "varchar", Type.DRS_OBJECT),
                             field("category", "varchar"),
                             field("key", "varchar"),
                             field("raw_value", "varchar"),
@@ -98,7 +100,11 @@ public class Metadata {
     }
 
     private static Field toModelField(String tableName, PrestoField prestoField) {
-        Type type = prestoToPrimativeType(prestoField.getType());
+        return toModelField(tableName, prestoField, null);
+    }
+
+    private static Field toModelField(String tableName, PrestoField prestoField, Type modelType) {
+        Type type = modelType == null ? prestoToPrimitiveType(prestoField.getType()) : modelType;
         return new Field(
                 tableName + "." + prestoField.getName(),
                 prestoField.getName(),
@@ -110,6 +116,10 @@ public class Metadata {
 
     private static Field field(String name, String type) {
         return toModelField(DEMO_VIEW, new PrestoField(name, type));
+    }
+
+    private static Field field(String name, String type, Type modelType) {
+        return toModelField(DEMO_VIEW, new PrestoField(name, type), modelType);
     }
 
     static String[] operatorsForType(Type type) {
@@ -131,7 +141,28 @@ public class Metadata {
         }
     }
 
-    static Type prestoToPrimativeType(String prestoType) {
+    static Set<String> jdbcTypesFor(Type type) {
+        switch (type) {
+            case BOOLEAN:
+                return ImmutableSet.of("boolean");
+            case DATE:
+                return ImmutableSet.of("timestamp");
+            case DRS_OBJECT:
+                return ImmutableSet.of("varchar", "json");
+            case JSON:
+                return ImmutableSet.of("array", "json", "row");
+            case NUMBER:
+                return ImmutableSet.of("integer", "double", "bigint");
+            case STRING:
+                return ImmutableSet.of("varchar");
+            case STRING_ARRAY:
+                return ImmutableSet.of("array");
+            default:
+                throw new IllegalStateException("Unknown type: " + type);
+        }
+    }
+
+    static Type prestoToPrimitiveType(String prestoType) {
         if (prestoType.equals("integer")
                 || prestoType.equals("double")
                 || prestoType.equals("bigint")) {

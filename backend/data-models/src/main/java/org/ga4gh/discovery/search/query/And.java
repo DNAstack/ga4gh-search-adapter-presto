@@ -4,7 +4,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.ga4gh.discovery.search.serde.PredicateDeserializer.predicateFromNode;
 import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

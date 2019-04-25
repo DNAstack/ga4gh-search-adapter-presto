@@ -2,6 +2,7 @@ package org.ga4gh.discovery.search.source.presto;
 
 import java.util.OptionalLong;
 import org.ga4gh.discovery.search.query.SearchQuery;
+import org.ga4gh.discovery.search.query.SearchQueryHelper;
 
 public class TestQueries extends SearchQueryHelper {
 

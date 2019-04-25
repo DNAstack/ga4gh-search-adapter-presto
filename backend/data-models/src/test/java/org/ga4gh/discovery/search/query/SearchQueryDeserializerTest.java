@@ -7,12 +7,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import org.ga4gh.discovery.search.serde.PredicateDeserializer;
-import org.ga4gh.discovery.search.serde.SearchQueryDeserializer;
 import org.junit.Test;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 
 public class SearchQueryDeserializerTest {
 
@@ -65,16 +60,8 @@ public class SearchQueryDeserializerTest {
     }
 
     private SearchQuery deserializeFromFile(String file) throws IOException {
-        ObjectMapper objectMapper = new ObjectMapper();
-
         InputStream jsonStream = this.getClass().getResourceAsStream(file);
         assertThat(jsonStream, notNullValue());
-
-        SimpleModule module =
-                new SimpleModule("TestSerialization", new Version(1, 0, 0, null, null, null));
-        module.addDeserializer(Predicate.class, new PredicateDeserializer());
-        module.addDeserializer(SearchQuery.class, new SearchQueryDeserializer());
-        objectMapper.registerModule(module);
-        return objectMapper.readValue(jsonStream, SearchQuery.class);
+        return SearchQueryHelper.deserialize(jsonStream);
     }
 }

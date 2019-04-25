@@ -1,0 +1,162 @@
+[
+	{
+		"id": "demo_view.participant_id",
+		"name": "participant_id",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.chromosome",
+		"name": "chromosome",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.start_position",
+		"name": "start_position",
+		"type": "number",
+		"operators": [
+			"=",
+			"!=",
+			"<",
+			"<=",
+			">",
+			">="
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.end_position",
+		"name": "end_position",
+		"type": "number",
+		"operators": [
+			"=",
+			"!=",
+			"<",
+			"<=",
+			">",
+			">="
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.reference_base",
+		"name": "reference_base",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.alternate_base",
+		"name": "alternate_base",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.vcf_size",
+		"name": "vcf_size",
+		"type": "number",
+		"operators": [
+			"=",
+			"!=",
+			"<",
+			"<=",
+			">",
+			">="
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.vcf_object",
+		"name": "vcf_object",
+		"type": "org.ga4gh.drs",
+		"operators": [
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.category",
+		"name": "category",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.key",
+		"name": "key",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.raw_value",
+		"name": "raw_value",
+		"type": "string",
+		"operators": [
+			"=",
+			"!=",
+			"contains",
+			"like"
+		],
+		"options": null,
+		"table": "demo_view"
+	},
+	{
+		"id": "demo_view.numeric_value",
+		"name": "numeric_value",
+		"type": "number",
+		"operators": [
+			"=",
+			"!=",
+			"<",
+			"<=",
+			">",
+			">="
+		],
+		"options": null,
+		"table": "demo_view"
+	}
+]
