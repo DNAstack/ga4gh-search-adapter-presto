@@ -8,12 +8,13 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
+import java.util.Set;
 import org.ga4gh.discovery.search.Field;
-import org.ga4gh.discovery.search.Type;
 import org.ga4gh.discovery.search.query.And;
 import org.ga4gh.discovery.search.query.Predicate;
 import org.ga4gh.discovery.search.query.SearchQuery;
 import org.ga4gh.discovery.search.query.SearchQueryField;
+import org.ga4gh.discovery.search.query.SearchQueryHelper;
 import org.ga4gh.discovery.search.query.SearchQueryTable;
 import com.google.common.base.Joiner;
 import lombok.AllArgsConstructor;
@@ -115,11 +116,12 @@ public class SearchQueryTransformer {
             for (int i = 0; i < numColumns; i++) {
                 int j = i + 1;
                 String rsColumn = rsMetadata.getColumnName(j);
-                Type rsType = Metadata.prestoToPrimativeType(rsMetadata.getColumnTypeName(j));
+                String jdbcRsType = normalizeNestedTypes(rsMetadata.getColumnTypeName(j));
 
                 ResolvedColumn resolvedColumn = queryContext.getSelectColumn(i);
                 Optional<String> alias = resolvedColumn.getQueryField().getAlias();
                 Field resolvedField = resolvedColumn.getResolvedField();
+                Set<String> allowedJdbcTypes = Metadata.jdbcTypesFor(resolvedField.getType());
                 if (alias.isPresent()) {
                     checkArgument(
                             alias.get().equals(rsColumn),
@@ -132,15 +134,30 @@ public class SearchQueryTransformer {
                                     j, resolvedField.getName(), rsColumn));
                 }
                 checkArgument(
-                        resolvedField.getType().equals(rsType.toString()),
+                        allowedJdbcTypes.contains(jdbcRsType),
                         format(
-                                "Expected column %d type %s not %s",
-                                j, resolvedField.getType(), rsType.toString()));
+                                "Expected column %d type %s must have JDBC type in %s, but was %s",
+                                j,
+                                resolvedField.getType(),
+                                allowedJdbcTypes.toString(),
+                                jdbcRsType));
             }
 
             return queryContext.getSelectFields();
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private String normalizeNestedTypes(String jdbcType) {
+        if (jdbcType.startsWith("varchar(")) {
+            return "varchar";
+        } else if (jdbcType.startsWith("array(")) {
+            return "array";
+        } else if (jdbcType.startsWith("row(")) {
+            return "row";
+        } else {
+            return jdbcType;
         }
     }
 

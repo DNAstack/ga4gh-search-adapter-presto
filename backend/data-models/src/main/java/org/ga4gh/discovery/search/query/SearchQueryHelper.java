@@ -1,21 +1,39 @@
-package org.ga4gh.discovery.search.source.presto;
+package org.ga4gh.discovery.search.query;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import org.ga4gh.discovery.search.Type;
-import org.ga4gh.discovery.search.query.And;
-import org.ga4gh.discovery.search.query.Equals;
-import org.ga4gh.discovery.search.query.Expression;
-import org.ga4gh.discovery.search.query.FieldReference;
-import org.ga4gh.discovery.search.query.LiteralExpression;
-import org.ga4gh.discovery.search.query.Predicate;
-import org.ga4gh.discovery.search.query.SearchQuery;
-import org.ga4gh.discovery.search.query.SearchQueryField;
-import org.ga4gh.discovery.search.query.SearchQueryTable;
+import org.ga4gh.discovery.search.serde.PredicateDeserializer;
+import org.ga4gh.discovery.search.serde.SearchQueryDeserializer;
+import org.ga4gh.discovery.search.serde.SearchQuerySerializer;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 public class SearchQueryHelper {
+
+    public static SearchQuery exampleQuery() {
+        return query(
+                select(
+                        field("participant_id"),
+                        field("category"),
+                        field("key"),
+                        field("raw_value"),
+                        field("vcf_object")),
+                from(table("demo_view")),
+                where(
+                        and(
+                                equals(fieldRef("chromosome"), literalStr("chr1")),
+                                equals(fieldRef("start_position"), literalNum("5087263")),
+                                equals(fieldRef("reference_base"), literalStr("A")),
+                                equals(fieldRef("alternate_base"), literalStr("G")))),
+                limit(10),
+                noOffset());
+    }
 
     /** Generates the demo_view definition. */
     public static SearchQuery demoViewQuery() {
@@ -127,8 +145,29 @@ public class SearchQueryHelper {
     public static OptionalLong noLimit() {
         return OptionalLong.empty();
     }
-    
+
     public static OptionalLong noOffset() {
         return OptionalLong.empty();
+    }
+
+    public static ObjectMapper objectMapper() {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        SimpleModule module =
+                new SimpleModule("TestSerialization", new Version(1, 0, 0, null, null, null));
+        module.addDeserializer(Predicate.class, new PredicateDeserializer());
+        module.addDeserializer(SearchQuery.class, new SearchQueryDeserializer());
+        module.addSerializer(SearchQuery.class, new SearchQuerySerializer());
+        objectMapper.registerModule(module);
+
+        return objectMapper;
+    }
+
+    public static SearchQuery deserialize(InputStream jsonStream) throws IOException {
+        return objectMapper().readValue(jsonStream, SearchQuery.class);
+    }
+
+    public static String serializeToString(SearchQuery query) throws IOException {
+        return objectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(query);
     }
 }

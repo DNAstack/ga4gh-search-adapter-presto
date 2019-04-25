@@ -1,5 +1,7 @@
 package org.ga4gh.discovery.search;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum Type {
     BOOLEAN {
         @Override
@@ -36,5 +38,17 @@ public enum Type {
         public String toString() {
             return "date";
         }
+    },
+    DRS_OBJECT {
+        @Override
+        public String toString() {
+            return "org.ga4gh.drs";
+        }
+    };
+
+    @JsonValue
+    @Override
+    public String toString() {
+        return super.toString();
     }
 }

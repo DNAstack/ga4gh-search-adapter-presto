@@ -1,17 +1,17 @@
 package org.ga4gh.discovery.search.source.presto;
 
 import static org.ga4gh.discovery.search.source.presto.MockPrestoMetadata.standardMetadata;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.and;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.field;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.fieldRef;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.from;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.literalNum;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.literalStr;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.noLimit;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.noOffset;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.select;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.tableAs;
-import static org.ga4gh.discovery.search.source.presto.SearchQueryHelper.where;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.and;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.field;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.fieldRef;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.from;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.literalNum;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.literalStr;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.noLimit;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.noOffset;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.select;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.tableAs;
+import static org.ga4gh.discovery.search.query.SearchQueryHelper.where;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import java.util.List;
@@ -20,6 +20,7 @@ import java.util.OptionalLong;
 import org.ga4gh.discovery.search.query.Predicate;
 import org.ga4gh.discovery.search.query.SearchQuery;
 import org.ga4gh.discovery.search.query.SearchQueryField;
+import org.ga4gh.discovery.search.query.SearchQueryHelper;
 import org.ga4gh.discovery.search.query.SearchQueryTable;
 import org.junit.Test;
 
