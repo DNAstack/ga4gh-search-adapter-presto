@@ -24,7 +24,7 @@ public class SearchQueryHelper {
                         field("key"),
                         field("raw_value"),
                         field("vcf_object")),
-                from(table("demo_view")),
+                from(table("pgp_canada")),
                 where(
                         and(
                                 equals(fieldRef("chromosome"), literalStr("chr1")),

@@ -150,6 +150,10 @@
   color: red;
 }
 
+/deep/ .success-snack {
+  color: #20d760;
+}
+
 mat-paginator {
   background: none !important;
 }
@@ -160,7 +164,7 @@ mat-paginator {
 
 .toolbar-white {
   height: 64px;
-  background-color: white; 
+  background-color: white;
   border-bottom: 1px solid #e0e0e0;
   z-index: 100;
 }
@@ -169,7 +173,7 @@ html, body
 {
     width: 100%;
     height: 100%;
-    
+
     margin: 0;
     padding: 0;
 }
@@ -193,16 +197,16 @@ html, body
 
 	display: flex;
 	flex-direction: column;
-	
+
 	.box-header {
     display: flex;
     flex-direction: row;
 	}
-	
+
 	.box-content {
 		flex: 1;
   }
-  
+
   .box-footer {
     display: flex;
     flex-direction: row;
@@ -215,20 +219,8 @@ a {
   }
 }
 
-.fixed-header {
-  top: 0;
-  background: red;
-}
-
-.scrolly-content {
-  padding: 2rem auto;
-}
-
-.fixed-footer {
-  bottom: 0;
-  background: green;
-}
-
-.full-height {
-  height: 100%;
+.mat-column-select {
+  overflow: initial;
+  max-width: 40px;
+  padding-top: 5px;
 }

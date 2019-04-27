@@ -14,7 +14,7 @@ public class FieldsController {
     @Autowired SearchSource dataSource;
 
     @RequestMapping("/api/fields")
-    public List<Field> fields(@RequestParam String table) {
+    public List<Field> fields(@RequestParam(value = "", required = false) String table) {
         return dataSource.getFields(table);
     }
 }

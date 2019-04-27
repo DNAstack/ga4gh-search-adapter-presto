@@ -23,11 +23,11 @@ public class Metadata {
     public static final String FILES_JSON_TABLE = "files_json";
     public static final String VARIANTS_TABLE = "variants";
     public static final String FACTS_TABLE = "facts";
-    public static final String DEMO_VIEW = "demo_view";
+    
+    public static final String PGP_CANADA = "pgp_canada";
 
     private static final Map<String, Table> TABLES =
-            ImmutableMap.of(
-                    FILES_TABLE,
+            ImmutableMap.of(FILES_TABLE,
                     new Table(FILES_TABLE, "org.ga4gh.drs.objects"),
                     FILES_JSON_TABLE,
                     new Table(FILES_JSON_TABLE, "org.ga4gh.drs.json_objects"),
@@ -35,12 +35,12 @@ public class Metadata {
                     new Table(VARIANTS_TABLE, "com.google.variants"),
                     FACTS_TABLE,
                     new Table(FACTS_TABLE, "com.dnastack.pgpc.metadata"),
-                    DEMO_VIEW,
-                    new Table(DEMO_VIEW, "com.dnastack.search.demo.view"));
+                    PGP_CANADA,
+                    new Table(PGP_CANADA, "com.dnastack.search.pgpcanada"));
 
-    private static final TableMetadata DEMO_VIEW_METADATA =
+    private static final TableMetadata PGP_CANADA_METADATA =
             new TableMetadata(
-                    TABLES.get(DEMO_VIEW),
+                    TABLES.get(PGP_CANADA),
                     ImmutableList.of(
                             field("participant_id", "varchar"),
                             field("chromosome", "varchar"),
@@ -83,8 +83,8 @@ public class Metadata {
         Table table = TABLES.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
-        if (DEMO_VIEW.equals(tableName)) {
-            return DEMO_VIEW_METADATA;
+        if (PGP_CANADA.equals(tableName)) {
+            return PGP_CANADA_METADATA;
         } else {
             return toModelMetadata(table, prestoMetadata.getTableMetadata(tableName));
         }
@@ -115,11 +115,11 @@ public class Metadata {
     }
 
     private static Field field(String name, String type) {
-        return toModelField(DEMO_VIEW, new PrestoField(name, type));
+        return toModelField(PGP_CANADA, new PrestoField(name, type));
     }
 
     private static Field field(String name, String type, Type modelType) {
-        return toModelField(DEMO_VIEW, new PrestoField(name, type), modelType);
+        return toModelField(PGP_CANADA, new PrestoField(name, type), modelType);
     }
 
     static String[] operatorsForType(Type type) {

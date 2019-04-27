@@ -1,12 +1,14 @@
 import { FormBuilder, FormControl } from '@angular/forms';
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ApiService } from './app.api.service';
 import { Field } from './model/search/field';
 import { Rule, RuleSet } from 'angular2-query-builder';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material';
+import { MatDialog, MatDialogRef, MatSnackBar } from '@angular/material';
 import { JsonDialog } from './dialog/json/json-dialog';
 import { FieldsDialogComponent } from './dialog/fields/fields-dialog.component';
 import { AppConfigService } from './app-config.service';
+import { SelectionModel } from '@angular/cdk/collections';
+import { delay, repeat, switchMap, takeWhile } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
@@ -14,48 +16,60 @@ import { AppConfigService } from './app-config.service';
   styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit {
+  
+  public sitename : string;
   public queryCtrl: FormControl;
 
   events: string[] = [];
   opened: boolean;
 
-  
+  runs = [];
+  runStatus = {};
+
+  public selection = new SelectionModel(true, []);
 
   public query = {
     select: [
-      {
-        "field": "participant_id"
-      },
-      {
-        "field": "category"
-      },
-      {
-        "field": "key"
-      },
-      {
-        "field": "raw_value"
-      }],
-    from: 'demo_view',
+        {
+            table: "pgp_canada",
+            name: "participant_id"
+        },
+        {
+          table: "pgp_canada",
+          name: "vcf_object"
+        }
+      ],
+    from: 'pgp_canada',
     where: {
       condition: 'and',
       rules: [
         {
-          "field": "demo_view.chromosome",
+          "field": "pgp_canada.key",
+          "operator": "=",
+          "value": "Sex"
+        },
+        {
+          "field": "pgp_canada.raw_value",
+          "operator": "=",
+          "value": "F"
+        },
+        {
+          "field": "pgp_canada.chromosome",
           "operator": "=",
           "value": "chr1"
         },
         {
-          "field": "demo_view.start_position",
+          "field": "pgp_canada.start_position",
           "operator": "=",
           "value": 5087263
         },
         {
-          "field": "demo_view.reference_base",
+          "field": "pgp_canada.reference_base",
           "operator": "=",
           "value": "A"
         },
         {
-          "field": "demo_view.alternate_base",
+          "field": "pgp_canada.alternate_base",
           "operator": "=",
           "value": "G"
         }
@@ -71,7 +85,8 @@ export class AppComponent implements OnInit {
 
   public view = {
     showJSONs: false,
-    sidebarOpened: false,
+    leftSidebarOpened: false,
+    rightSidebarOpened : false,
     wrapResultTableCells: true,
     isQuerying: false,
     selectedTabIndex: 0,
@@ -84,8 +99,32 @@ export class AppComponent implements OnInit {
       offset : true
     }
   }
-  
 
+  public workflows = [
+    {
+      name : "md5sum",
+      inputs : [
+        {
+          id : "input_file",
+          name : "File",
+        }
+      ],
+      url : "http://localhost:8080/api/workflow/organization/108/project/125/workflowVersion/260"
+    },
+    {
+      name : "DeepVariant",
+      inputs : [
+        {
+          id : "input_files",
+          name : "Files",
+        }
+      ],
+      url : "http://localhost:8080/api/workflow/organization/108/project/125/workflowVersion/260"
+    }
+  ];
+
+  public workflow = this.workflows[0];
+  
   public results = null;
 
   private jsonDialogRef: MatDialogRef<JsonDialog>;
@@ -95,10 +134,20 @@ export class AppComponent implements OnInit {
     private app: AppConfigService,
     private formBuilder: FormBuilder,
     private apiService: ApiService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {
+    this.sitename = app.config.sitename;
     this.view.showJSONs = app.config.developerMode;
     this.queryCtrl = this.formBuilder.control(this.query.where);
+  }
+
+  transformSelect(selectFields) {
+    var newSelectFields = [];
+    for (var i = 0; i < selectFields.length; i++) {
+      newSelectFields.push({"field" : selectFields[i].table + "." + selectFields[i].name});
+    }
+    return newSelectFields;
   }
 
   transformRule(rule: RuleSet | Rule) {
@@ -145,22 +194,18 @@ export class AppComponent implements OnInit {
   }
 
   jsonify(str: string) {
-    console.log(str);
-    return JSON.parse(JSON.stringify(str));
+    return JSON.parse(str);
   }
 
   paginationChanged(event) {
     this.query.limit = event.pageSize;
     this.query.offset = event.pageSize * event.pageIndex;
     this.view.queryChanged = true;
-    /*this.doQuery(this.query);*/
   }
 
   transformQuery() {
-    // we're hardcoding select clause here for demo purposes
-    // the flexible thing is the rule built by query builder
     return {
-      'select': this.query.select,
+      'select': this.transformSelect(this.query.select),
       'from': [{
         'table': this.query.from
       }],
@@ -172,9 +217,10 @@ export class AppComponent implements OnInit {
 
   // This is inefficient, being called a lot
   isFieldSelected(field) {
+    var tableName = field.table;
     var fieldName = field.name;
     for (var i = 0; i < this.query.select.length; i++) {
-      if (this.query.select[i].field == fieldName) {
+      if (this.query.select[i].table == tableName && this.query.select[i].name == fieldName) {
         return true;
       }
     }
@@ -185,10 +231,10 @@ export class AppComponent implements OnInit {
     var fieldName = field.name;
     var checked = event.checked;
     if (checked) {
-      this.query.select.push({ "field": fieldName });
+      this.query.select.push(field);
     } else {
       for (var i = 0; i < this.query.select.length; i++) {
-        if (this.query.select[i].field == fieldName) {
+        if (this.query.select[i].name == fieldName) {
           this.query.select.splice(i, 1);
           return;
         }
@@ -201,7 +247,7 @@ export class AppComponent implements OnInit {
     if (b) {
       var newSelect = [];
       for (var index in this.config.fields) {
-        newSelect.push({ "field": this.config.fields[index].name });
+        newSelect.push(this.config.fields[index]);
       }
       this.query.select = newSelect;
     } else {
@@ -226,15 +272,87 @@ export class AppComponent implements OnInit {
     });
   }
 
+  public getDrsLabel(drs) {
+    return JSON.parse(drs).name;
+  }
+
+  numWorkflowsSubmitted = 0;
+
+  public doWorkflowExecution() {
+
+    this.numWorkflowsSubmitted += this.selection.selected.length;
+
+    for (var i = 0; i < this.selection.selected.length; i++) {
+
+      var row = this.selection.selected[i].values;
+
+      var params = {};
+
+      for (var j = 0; j < this.workflow.inputs.length; j++) {
+        var input: any = this.workflow.inputs[j];
+        var field = input.mappedField;
+
+        var fieldName = field.value.name;
+
+        for (var k = 0; k < row.length; k++) {
+          if (row[k].field.name == fieldName) {
+            params[fieldName] = row[k].value;
+          }
+        }
+      }
+
+      var wes = {
+        workflowUrl : this.workflow.url,
+        parameters : params
+      }
+
+      this.apiService.getToken(i*5000).pipe(
+        switchMap((token) => this.apiService.doWorkflowExecution(token, params))
+      ).subscribe(
+        ({run_id}) => this.startJobMonitor(run_id),
+        ({error}) => this.snackError(error.msg || error.message)
+      );
+    }
+  }
+
+  public isSubmittingRuns() {
+    return this.numWorkflowsSubmitted > this.runs.length;
+  }
+
+  startJobMonitor(runId) {
+    this.runs.push(runId);
+    this.runStatus[runId] = {
+      state: 'INITIALIZING'
+    };
+
+    return this.apiService.getToken().pipe(
+      switchMap((token) => this.apiService.monitorJob(token, runId)),
+      delay(10000),
+      repeat(100),
+      takeWhile(({state}: any): any => {
+        return state === 'INITIALIZING' || state === 'RUNNING';
+      })
+    ).subscribe(
+      (res) => {
+        this.runStatus[runId] = res;
+      },
+      ({error}) => {
+        this.runStatus[runId] = 'CONNECTION ERROR';
+        this.snackError(`Error getting run ${runId} status: ${error.msg || error.message}`)
+      },
+      () => {
+        this.runStatus[runId] = {state: 'COMPLETE'};
+      }
+    )
+  }
+
   public doQuery(query) {
     this.view.isQuerying = true;
-    console.log("Original query\n" + JSON.stringify(query, null, 2))
     var transformedQuery = this.transformQuery()
-    console.log("Transformed query\n" + JSON.stringify(transformedQuery, null, 2))
     this.apiService.doQuery(transformedQuery).subscribe(
       (dto) => {
-        console.log(dto);
         this.view.queryChanged = false;
+
         this.results = dto;
         this.view.isQuerying = false;
         this.view.selectedTabIndex = 2;
@@ -245,8 +363,26 @@ export class AppComponent implements OnInit {
       });
   }
 
+  validateInputMappings() {
+    for (var j = 0; j < this.workflow.inputs.length; j++) {
+      var input: any = this.workflow.inputs[j];
+      if (!input.mappedField) {
+        return false;
+      } else if (!this.isFieldSelected(input.mappedField.value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   queryChanged($event) {
     this.view.queryChanged = true;
+  }
+
+  downloadDrs(drsStr) {
+    var drs = JSON.parse(drsStr);
+    var url = drs.urls[0].url;
+    window.open(url);
   }
 
   normalizeArray<T>(array: Array<T>, indexKey: keyof T) {
@@ -258,6 +394,31 @@ export class AppComponent implements OnInit {
     return normalizedObject as { [key: string]: T }
   }
 
+  /** Whether the number of selected elements matches the total number of rows. */
+  isAllSelected() {
+    const numSelected = this.selection.selected.length;
+    const numRows = this.results.results.length;
+    return numSelected == numRows;
+  }
+
+  /** Selects all rows if they are not all selected; otherwise clear selection. */
+  masterToggle() {
+    this.isAllSelected() ?
+        this.selection.clear() :
+        this.results.results.forEach(row => this.selection.select(row));
+  }
+
+  snack(message) {
+    this.snackBar.open(message, "Dismiss", {
+      panelClass: 'success-snack'
+    });
+  }
+
+  snackError(message) {
+    return this.snackBar.open(message, null, {
+      panelClass: 'error-snack'
+    });
+  }
 
   ngOnInit(): void {
 

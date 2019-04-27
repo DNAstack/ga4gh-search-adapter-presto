@@ -51,8 +51,8 @@ public class SearchQueryTransformer {
     public String toPrestoSQL() {
         StringBuilder sql = new StringBuilder();
 
-        if (queryContext.hasFromTable(Metadata.DEMO_VIEW)) {
-            sql.append("WITH demo_view AS (");
+        if (queryContext.hasFromTable(Metadata.PGP_CANADA)) {
+            sql.append("WITH " + Metadata.PGP_CANADA + " AS (");
             sql.append(createDemoViewQuerySQL());
             sql.append(")\n");
         }
@@ -180,10 +180,10 @@ public class SearchQueryTransformer {
 
     private String generateFromTable(SearchQueryTable tableAlias) {
         Optional<String> alias = tableAlias.getAlias();
-        if (Metadata.DEMO_VIEW.equals(tableAlias.getTableName())) {
+        if (Metadata.PGP_CANADA.equals(tableAlias.getTableName())) {
             return alias.isPresent()
-                    ? Metadata.DEMO_VIEW + " AS \"" + alias.get() + "\""
-                    : Metadata.DEMO_VIEW;
+                    ? Metadata.PGP_CANADA + " AS \"" + alias.get() + "\""
+                    : Metadata.PGP_CANADA;
         } else {
             PrestoTable prestoTable = metadata.getPrestoTable(tableAlias.getTableName());
             String prestoTableName = prestoTable.getQualifiedName();

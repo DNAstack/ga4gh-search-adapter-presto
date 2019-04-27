@@ -12,7 +12,7 @@ export class FieldsDialogComponent {
 
   fields: any;
   dataTable: Field[];
-  displayedColumns: string[] = ['id', 'name', 'type', 'value', 'operators', 'specification'];
+  displayedColumns: string[] = ['id', 'name', 'type'];
   public view;
 
   private jsonDialogRef: MatDialogRef<JsonDialog>;

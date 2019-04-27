@@ -8,6 +8,40 @@
 // Be sure that you only ever include this mixin once!
 @include mat-core();
 
+$pgp-canada-palette-primary: (
+    50 : #f9e5e8,
+    100 : #efbdc5,
+    200 : #e4929f,
+    300 : #d96679,
+    400 : #d1455c,
+    500 : #c9243f,
+    600 : #c32039,
+    700 : #bc1b31,
+    800 : #b51629,
+    900 : #a90d1b,
+    A100 : #ffd7da,
+    A200 : #ffa4aa,
+    A400 : #ff717a,
+    A700 : #ff5862,
+    contrast: (
+        50 : #000000,
+        100 : #000000,
+        200 : #000000,
+        300 : #000000,
+        400 : #ffffff,
+        500 : #ffffff,
+        600 : #ffffff,
+        700 : #ffffff,
+        800 : #ffffff,
+        900 : #ffffff,
+        A100 : #000000,
+        A200 : #000000,
+        A400 : #000000,
+        A700 : #000000,
+    )
+);
+
+
 $cloud-palette-primary: (
     50 : #e3eefc,
     100 : #b9d5f8,

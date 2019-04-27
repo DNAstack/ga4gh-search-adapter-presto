@@ -31,7 +31,9 @@ import {
   MatPaginatorModule,
   MatSidenavModule,
   MatExpansionModule,
-  MatProgressBarModule
+  MatProgressBarModule,
+  MatBadgeModule,
+  MatChipsModule
 } from '@angular/material';
 import {AppConfigService} from './app-config.service';
 import { JsonDialog } from './dialog/json/json-dialog';
@@ -80,6 +82,8 @@ import { ClipboardModule } from 'ngx-clipboard';
     MatSidenavModule,
     MatExpansionModule,
     MatProgressBarModule,
+    MatBadgeModule,
+    MatChipsModule,
     ClipboardModule
   ],
   providers: [

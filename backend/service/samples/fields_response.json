@@ -1,6 +1,6 @@
 [
 	{
-		"id": "demo_view.participant_id",
+		"id": "pgp_canada.participant_id",
 		"name": "participant_id",
 		"type": "string",
 		"operators": [
@@ -10,10 +10,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.chromosome",
+		"id": "pgp_canada.chromosome",
 		"name": "chromosome",
 		"type": "string",
 		"operators": [
@@ -23,10 +23,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.start_position",
+		"id": "pgp_canada.start_position",
 		"name": "start_position",
 		"type": "number",
 		"operators": [
@@ -38,10 +38,10 @@
 			">="
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.end_position",
+		"id": "pgp_canada.end_position",
 		"name": "end_position",
 		"type": "number",
 		"operators": [
@@ -53,10 +53,10 @@
 			">="
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.reference_base",
+		"id": "pgp_canada.reference_base",
 		"name": "reference_base",
 		"type": "string",
 		"operators": [
@@ -66,10 +66,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.alternate_base",
+		"id": "pgp_canada.alternate_base",
 		"name": "alternate_base",
 		"type": "string",
 		"operators": [
@@ -79,10 +79,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.vcf_size",
+		"id": "pgp_canada.vcf_size",
 		"name": "vcf_size",
 		"type": "number",
 		"operators": [
@@ -94,19 +94,19 @@
 			">="
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.vcf_object",
+		"id": "pgp_canada.vcf_object",
 		"name": "vcf_object",
 		"type": "org.ga4gh.drs",
 		"operators": [
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.category",
+		"id": "pgp_canada.category",
 		"name": "category",
 		"type": "string",
 		"operators": [
@@ -116,10 +116,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.key",
+		"id": "pgp_canada.key",
 		"name": "key",
 		"type": "string",
 		"operators": [
@@ -129,10 +129,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.raw_value",
+		"id": "pgp_canada.raw_value",
 		"name": "raw_value",
 		"type": "string",
 		"operators": [
@@ -142,10 +142,10 @@
 			"like"
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	},
 	{
-		"id": "demo_view.numeric_value",
+		"id": "pgp_canada.numeric_value",
 		"name": "numeric_value",
 		"type": "number",
 		"operators": [
@@ -157,6 +157,6 @@
 			">="
 		],
 		"options": null,
-		"table": "demo_view"
+		"table": "pgp_canada"
 	}
 ]
