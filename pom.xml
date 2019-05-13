@@ -19,6 +19,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<version.presto>308</version.presto>
+		<version.presto.parser>311</version.presto.parser>
 		<version.spring>5.1.5.RELEASE</version.spring>
 		<version.spring.boot>2.1.3.RELEASE</version.spring.boot>
 		<version.mysql>5.1.6</version.mysql>
@@ -27,7 +28,6 @@
 
 	<modules>
 		<module>backend/data-models</module>
-		<module>backend/data-sources/sql-source</module>
 		<module>backend/data-sources/presto-source</module>
 		<module>backend/service</module>
 		<module>frontend</module>
@@ -84,6 +84,11 @@
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
 				<version>1.7.25</version>
+			</dependency>
+			<dependency>
+				<groupId>io.prestosql</groupId>
+				<artifactId>presto-parser</artifactId>
+				<version>${version.presto.parser}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

@@ -1,6 +1,6 @@
 package org.ga4gh.discovery.search.rest;
 
-import org.ga4gh.discovery.search.query.SearchQuery;
+import org.ga4gh.discovery.search.request.SearchRequest;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,7 @@ public class SearchController {
     @Autowired SearchSource dataSource;
 
     @RequestMapping(value = "/api/search", method = RequestMethod.POST)
-    public SearchResult search(@RequestBody SearchQuery query) {
-        return dataSource.search(query);
+    public SearchResult search(@RequestBody SearchRequest request) {
+        return dataSource.search(request);
     }
 }

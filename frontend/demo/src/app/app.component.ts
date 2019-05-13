@@ -210,9 +210,13 @@ export class AppComponent implements OnInit {
         'table': this.query.from
       }],
       'where': this.transformRule(this.query.where),
-      'limit': this.query.limit,
-      'offset': this.query.offset
+      'limit': this.query.limit
+      //'offset': this.query.offset
     }
+  }
+
+  createSearchRequest() {
+    return { json_query: this.transformQuery() }
   }
 
   // This is inefficient, being called a lot
@@ -348,8 +352,8 @@ export class AppComponent implements OnInit {
 
   public doQuery(query) {
     this.view.isQuerying = true;
-    var transformedQuery = this.transformQuery()
-    this.apiService.doQuery(transformedQuery).subscribe(
+    var searchRequest = this.createSearchRequest()
+    this.apiService.doQuery(searchRequest).subscribe(
       (dto) => {
         this.view.queryChanged = false;
 

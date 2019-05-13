@@ -3,17 +3,21 @@ package org.ga4gh.discovery.search.source.presto;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.Type;
+
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -23,11 +27,12 @@ public class Metadata {
     public static final String FILES_JSON_TABLE = "files_json";
     public static final String VARIANTS_TABLE = "variants";
     public static final String FACTS_TABLE = "facts";
-    
+
     public static final String PGP_CANADA = "pgp_canada";
 
     private static final Map<String, Table> TABLES =
-            ImmutableMap.of(FILES_TABLE,
+            ImmutableMap.of(
+                    FILES_TABLE,
                     new Table(FILES_TABLE, "org.ga4gh.drs.objects"),
                     FILES_JSON_TABLE,
                     new Table(FILES_JSON_TABLE, "org.ga4gh.drs.json_objects"),

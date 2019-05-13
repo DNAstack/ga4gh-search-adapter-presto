@@ -4,15 +4,21 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
-import org.ga4gh.discovery.search.query.SearchQuery;
+import org.ga4gh.discovery.search.request.SearchRequest;
 import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.ResultValue;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.springframework.beans.factory.annotation.Value;
+
 import com.google.common.collect.ImmutableList;
+
+import io.prestosql.sql.parser.ParsingOptions;
+import io.prestosql.sql.parser.SqlParser;
+import io.prestosql.sql.tree.Query;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -45,9 +51,29 @@ public class PrestoSearchSource implements SearchSource {
         return listBuilder.build();
     }
 
+    private Query getQuery(SearchRequest query) {
+        if (query.getSqlQuery() != null) {
+            if (query.getJsonQuery() != null) {
+                log.warn("Received both JSON and SQL query, ignoring JSON");
+            }
+            return parseQuery(query.getSqlQuery());
+        } else if (query.getJsonQuery() != null) {
+            log.debug("Processing JSON query");
+            return query.getJsonQuery();
+        } else {
+            throw new IllegalArgumentException(
+                    "Either JSON or SQL query has to be present in search request");
+        }
+    }
+
+    private Query parseQuery(String sql) {
+        log.debug("Processing SQL query: {}", sql);
+        return (Query) new SqlParser().createStatement(sql, new ParsingOptions());
+    }
+
     @Override
-    public SearchResult search(SearchQuery query) {
-        log.info("Received query: {}", query);
+    public SearchResult search(SearchRequest searchRequest) {
+        Query query = getQuery(searchRequest);
         QueryContext queryContext = new QueryContext(query, metadata);
         SearchQueryTransformer queryTransformer =
                 new SearchQueryTransformer(metadata, query, queryContext);
@@ -62,14 +88,8 @@ public class PrestoSearchSource implements SearchSource {
                     try {
                         fields.addAll(queryTransformer.validateAndGetFields(rs.getMetaData()));
 
-                        long skipCount = query.getOffset().orElse(0l);
-
                         while (rs.next()) {
-                            if (skipCount > 0) {
-                                skipCount--;
-                            } else {
-                                results.add(extractRow(rs, fields));
-                            }
+                            results.add(extractRow(rs, fields));
                         }
                     } catch (SQLException e) {
                         throw new RuntimeException(e);

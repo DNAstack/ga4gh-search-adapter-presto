@@ -1,110 +1,213 @@
 package org.ga4gh.discovery.search.source.presto;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.prestosql.sql.ExpressionFormatter.formatExpression;
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.joining;
+
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
-import org.ga4gh.discovery.search.Field;
-import org.ga4gh.discovery.search.query.And;
-import org.ga4gh.discovery.search.query.Predicate;
-import org.ga4gh.discovery.search.query.SearchQuery;
-import org.ga4gh.discovery.search.query.SearchQueryField;
-import org.ga4gh.discovery.search.query.SearchQueryHelper;
-import org.ga4gh.discovery.search.query.SearchQueryTable;
-import com.google.common.base.Joiner;
-import lombok.AllArgsConstructor;
+import java.util.stream.Collectors;
 
-@AllArgsConstructor
-public class SearchQueryTransformer {
+import org.ga4gh.discovery.search.Field;
+import org.ga4gh.discovery.search.query.SearchQueryHelper;
+
+import io.prestosql.sql.tree.AliasedRelation;
+import io.prestosql.sql.tree.AllColumns;
+import io.prestosql.sql.tree.AstVisitor;
+import io.prestosql.sql.tree.Expression;
+import io.prestosql.sql.tree.Identifier;
+import io.prestosql.sql.tree.Join;
+import io.prestosql.sql.tree.Limit;
+import io.prestosql.sql.tree.Node;
+import io.prestosql.sql.tree.Offset;
+import io.prestosql.sql.tree.QualifiedName;
+import io.prestosql.sql.tree.Query;
+import io.prestosql.sql.tree.QuerySpecification;
+import io.prestosql.sql.tree.Select;
+import io.prestosql.sql.tree.SelectItem;
+import io.prestosql.sql.tree.SingleColumn;
+import io.prestosql.sql.tree.Table;
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public class SearchQueryTransformer extends AstVisitor<Void, VisitorContext> {
 
     private final Metadata metadata;
-    private final SearchQuery query;
+    private final Query query;
     private final QueryContext queryContext;
+    private StringBuilder sql = new StringBuilder();
 
-    private PredicateTransformer createTransformer(Predicate predicate) {
-        return PredicateTransformer.createTransformer(predicate, queryContext);
+    @Override
+    protected Void visitNode(Node node, VisitorContext context) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Void visitQuery(Query node, VisitorContext context) {
+        if (queryContext.hasFromTable(Metadata.PGP_CANADA)) {
+            sql.append("WITH " + Metadata.PGP_CANADA + " AS (");
+            sql.append(createDemoViewQuerySQL());
+            sql.append(")\n");
+        }
+        checkArgument(!node.getWith().isPresent(), "WITH clause not supported");
+        checkArgument(!node.getOrderBy().isPresent(), "ORDER BY clause not supported");
+        checkArgument(!node.getLimit().isPresent(), "LIMIT clause not supported");
+        process(node.getQueryBody());
+        return null;
+    }
+
+    @Override
+    protected Void visitQuerySpecification(QuerySpecification node, VisitorContext context) {
+        checkArgument(node.getFrom().isPresent(), "queries without FROM clause not supported");
+        checkArgument(!node.getGroupBy().isPresent(), "GROUP BY clause not supported");
+        checkArgument(!node.getHaving().isPresent(), "HAVING clause not supported");
+        checkArgument(!node.getOrderBy().isPresent(), "ORDER BY clause not supported");
+
+        process(node.getSelect(), VisitorContext.SELECT);
+
+        sql.append("\nFROM ");
+        process(node.getFrom().get(), VisitorContext.FROM);
+
+        if (node.getWhere().isPresent()) {
+            sql.append("\nWHERE ");
+            sql.append(formatExpression(node.getWhere().get(), Optional.empty()));
+        }
+        if (node.getOffset().isPresent()) {
+            process(node.getOffset().get(), VisitorContext.OFFSET);
+        }
+        if (node.getLimit().isPresent()) {
+            process(node.getLimit().get(), VisitorContext.LIMIT);
+        }
+        return null;
+    }
+
+    @Override
+    protected Void visitSelect(Select node, VisitorContext context) {
+        if (!node.getSelectItems().isEmpty()) {
+            sql.append("SELECT ");
+            SelectItem first = node.getSelectItems().get(0);
+            process(first);
+            for (SelectItem item : node.getSelectItems().subList(1, node.getSelectItems().size())) {
+                sql.append(", ");
+                process(item);
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected Void visitAllColumns(AllColumns node, VisitorContext context) {
+        sql.append("* ");
+        return null;
+    }
+
+    @Override
+    protected Void visitSingleColumn(SingleColumn node, VisitorContext context) {
+        process(node.getExpression());
+        if (node.getAlias().isPresent()) {
+            sql.append(" AS \"");
+            sql.append(node.getAlias().get().getValue());
+            sql.append("\"");
+        }
+        return null;
+    }
+
+    @Override
+    protected Void visitExpression(Expression node, VisitorContext context) {
+        sql.append(formatExpression(node, Optional.empty()));
+        return null;
+    }
+
+    @Override
+    protected Void visitTable(Table node, VisitorContext context) {
+        sql.append(formatName(translateToPresto(node.getName())));
+        return null;
+    }
+
+    private QualifiedName translateToPresto(QualifiedName qualifiedName) {
+        checkArgument(
+                qualifiedName.getParts().size() == 1,
+                "only single part qualified names are supported");
+        String tableName = qualifiedName.getParts().get(0);
+        if (Metadata.PGP_CANADA.equals(tableName)) {
+            return QualifiedName.of(Metadata.PGP_CANADA);
+        } else {
+            PrestoTable prestoTable = metadata.getPrestoTable(tableName);
+            return prestoTable.getQualifiedName();
+        }
+    }
+
+    private String formatName(QualifiedName name) {
+        return name.getOriginalParts().stream().map(this::formatName).collect(joining("."));
+    }
+
+    private String formatName(Identifier name) {
+        String delimiter = name.isDelimited() ? "\"" : "";
+        return delimiter + name.getValue().replace("\"", "\"\"") + delimiter;
+    }
+
+    @Override
+    protected Void visitAliasedRelation(AliasedRelation node, VisitorContext context) {
+        process(node.getRelation(), VisitorContext.FROM);
+
+        sql.append(" AS ").append(formatExpression(node.getAlias(), Optional.empty()));
+        appendAliasColumns(sql, node.getColumnNames());
+
+        return null;
+    }
+
+    private static void appendAliasColumns(StringBuilder builder, List<Identifier> columns) {
+        if ((columns != null) && (!columns.isEmpty())) {
+            String formattedColumns =
+                    columns.stream()
+                            .map(name -> formatExpression(name, Optional.empty()))
+                            .collect(Collectors.joining(", "));
+
+            builder.append(" (").append(formattedColumns).append(')');
+        }
+    }
+
+    protected Void visitJoin(Join node, VisitorContext context) {
+        checkArgument(VisitorContext.FROM.equals(context));
+        checkArgument(node.getType() == Join.Type.IMPLICIT, "only IMPLICIT joins supported");
+        checkArgument(!node.getCriteria().isPresent(), "JOIN criteria not supported yet");
+        process(node.getLeft(), VisitorContext.FROM);
+        sql.append(",\n");
+        process(node.getRight(), VisitorContext.FROM);
+        return null;
+    }
+
+    @Override
+    protected Void visitLimit(Limit node, VisitorContext context) {
+        sql.append("\nLIMIT ");
+        sql.append(node.getLimit());
+        return null;
+    }
+
+    @Override
+    protected Void visitOffset(Offset node, VisitorContext context) {
+        sql.append("\nOFFSET ");
+        sql.append(node.getRowCount());
+        return null;
     }
 
     private String createDemoViewQuerySQL() {
-        SearchQuery demoViewQuery = SearchQueryHelper.demoViewQuery();
+        Query demoViewQuery = SearchQueryHelper.demoViewQuery();
         QueryContext demoViewQueryContext = new QueryContext(demoViewQuery, metadata);
         SearchQueryTransformer transformer =
                 new SearchQueryTransformer(metadata, demoViewQuery, demoViewQueryContext);
         return transformer.toPrestoSQL();
     }
 
-    private OptionalLong limitAndOffset() {
-        if (query.getLimit().isPresent()) {
-            return query.getOffset().isPresent()
-                    ? OptionalLong.of(query.getOffset().getAsLong() + query.getLimit().getAsLong())
-                    : query.getLimit();
-        } else {
-            return OptionalLong.empty();
-        }
-    }
-
     public String toPrestoSQL() {
-        StringBuilder sql = new StringBuilder();
-
-        if (queryContext.hasFromTable(Metadata.PGP_CANADA)) {
-            sql.append("WITH " + Metadata.PGP_CANADA + " AS (");
-            sql.append(createDemoViewQuerySQL());
-            sql.append(")\n");
-        }
-
-        sql.append("SELECT ");
-        sql.append(generateSelect());
-
-        sql.append("\nFROM ");
-        sql.append(generateFrom());
-
-        simplify(query.getWhere())
-                .ifPresent(
-                        predicate -> {
-                            sql.append("\nWHERE ");
-                            sql.append(createTransformer(predicate).toSql());
-                        });
-
-        limitAndOffset()
-                .ifPresent(
-                        limit -> {
-                            sql.append("\nLIMIT ");
-                            sql.append(Long.toString(limit));
-                        });
-
-        return sql.toString();
-    }
-
-    private Optional<Predicate> simplify(Optional<Predicate> where) {
-        if (where.isPresent()) {
-            if (where.get().getKey().equals(And.KEY)) {
-                And and = (And) where.get();
-                if (and.getPredicates().isEmpty()) {
-                    return Optional.empty();
-                } else if (and.getPredicates().size() == 1) {
-                    return Optional.of(and.getPredicates().get(0));
-                } else {
-                    return where;
-                }
-            } else {
-                return where;
-            }
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private String generateSelect() {
-        if (query.getSelect().isEmpty()) {
-            return "*";
-        }
-        return Joiner.on(", ")
-                .join(query.getSelect().stream().map(f -> toSQL(f)).collect(toList()));
+        this.process(query);
+        String sql = this.sql.toString();
+        this.sql = new StringBuilder();
+        return sql;
     }
 
     public List<Field> validateAndGetFields(ResultSetMetaData rsMetadata) {
@@ -119,7 +222,7 @@ public class SearchQueryTransformer {
                 String jdbcRsType = normalizeNestedTypes(rsMetadata.getColumnTypeName(j));
 
                 ResolvedColumn resolvedColumn = queryContext.getSelectColumn(i);
-                Optional<String> alias = resolvedColumn.getQueryField().getAlias();
+                Optional<String> alias = resolvedColumn.getColumnAlias();
                 Field resolvedField = resolvedColumn.getResolvedField();
                 Set<String> allowedJdbcTypes = Metadata.jdbcTypesFor(resolvedField.getType());
                 if (alias.isPresent()) {
@@ -159,44 +262,5 @@ public class SearchQueryTransformer {
         } else {
             return jdbcType;
         }
-    }
-
-    public String toSQL(SearchQueryField field) {
-        StringBuilder sql = new StringBuilder();
-
-        sql.append(
-                FieldReferenceTransformer.createTransformer(field.getFieldReference(), queryContext)
-                        .toSql());
-        field.getAlias()
-                .ifPresent(
-                        alias -> {
-                            sql.append(" AS \"");
-                            sql.append(alias);
-                            sql.append("\"");
-                        });
-
-        return sql.toString();
-    }
-
-    private String generateFromTable(SearchQueryTable tableAlias) {
-        Optional<String> alias = tableAlias.getAlias();
-        if (Metadata.PGP_CANADA.equals(tableAlias.getTableName())) {
-            return alias.isPresent()
-                    ? Metadata.PGP_CANADA + " AS \"" + alias.get() + "\""
-                    : Metadata.PGP_CANADA;
-        } else {
-            PrestoTable prestoTable = metadata.getPrestoTable(tableAlias.getTableName());
-            String prestoTableName = prestoTable.getQualifiedName();
-            return alias.isPresent()
-                    ? prestoTableName + " AS \"" + alias.get() + "\""
-                    : prestoTableName;
-        }
-    }
-
-    private String generateFrom() {
-        // TODO: maybe remove this constraint after we support literals in SELECT clause
-        checkArgument(!query.getFrom().isEmpty(), "FROM clause cannot be empty");
-        return Joiner.on(", ")
-                .join(query.getFrom().stream().map(t -> generateFromTable(t)).collect(toList()));
     }
 }

@@ -1,21 +1,23 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import java.util.OptionalLong;
-import org.ga4gh.discovery.search.query.SearchQuery;
+import java.util.Optional;
+
 import org.ga4gh.discovery.search.query.SearchQueryHelper;
+
+import io.prestosql.sql.tree.Node;
+import io.prestosql.sql.tree.Offset;
+import io.prestosql.sql.tree.Query;
 
 public class TestQueries extends SearchQueryHelper {
 
-    public static SearchQuery animalsQuery(Long limit, Long offset) {
-        OptionalLong optLimit =
-                limit == null ? OptionalLong.empty() : OptionalLong.of(limit.longValue());
-        OptionalLong optOffset =
-                offset == null ? OptionalLong.empty() : OptionalLong.of(offset.longValue());
+    public static Query animalsQuery(Integer offset, Integer limit) {
+        Optional<Offset> optOffset = offset == null ? noOffset() : offset(offset);
+        Optional<Node> optLimit = limit == null ? noLimit() : limit(limit);
         return query(
                 select(field("id"), field("name")),
                 from(table("facts")),
                 noWhere(),
-                optLimit,
-                optOffset);
+                optOffset,
+                optLimit);
     }
 }

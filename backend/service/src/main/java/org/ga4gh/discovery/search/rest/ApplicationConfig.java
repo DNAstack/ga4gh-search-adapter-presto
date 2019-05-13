@@ -1,11 +1,10 @@
 package org.ga4gh.discovery.search.rest;
 
 import static com.google.common.base.Preconditions.checkArgument;
+
 import java.sql.SQLException;
-import org.ga4gh.discovery.search.query.Predicate;
-import org.ga4gh.discovery.search.query.SearchQuery;
-import org.ga4gh.discovery.search.serde.PredicateDeserializer;
-import org.ga4gh.discovery.search.serde.SearchQueryDeserializer;
+
+import org.ga4gh.discovery.search.serde.QueryDeserializer;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.ga4gh.discovery.search.source.presto.PrestoAdapterImpl;
 import org.ga4gh.discovery.search.source.presto.PrestoSearchSource;
@@ -18,6 +17,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import io.prestosql.sql.tree.Query;
 
 @Configuration
 public class ApplicationConfig {
@@ -84,8 +85,7 @@ public class ApplicationConfig {
     @Bean
     public Jackson2ObjectMapperBuilder objectMapperBuilder() {
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
-        builder.deserializerByType(SearchQuery.class, new SearchQueryDeserializer());
-        builder.deserializerByType(Predicate.class, new PredicateDeserializer());
+        builder.deserializerByType(Query.class, new QueryDeserializer());
         return builder;
     }
 

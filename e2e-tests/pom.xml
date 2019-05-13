@@ -43,6 +43,11 @@
 			<artifactId>guava</artifactId>
 			<version>27.1-jre</version>
 		</dependency>
+		<dependency>
+			<groupId>io.prestosql</groupId>
+			<artifactId>presto-parser</artifactId>
+			<version>311</version>
+		</dependency>
 	</dependencies>
 
 	<build>

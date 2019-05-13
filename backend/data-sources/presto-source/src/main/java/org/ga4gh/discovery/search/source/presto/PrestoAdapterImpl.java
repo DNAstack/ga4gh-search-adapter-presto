@@ -6,7 +6,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.function.Consumer;
+
 import com.google.common.collect.ImmutableList;
+
+import io.prestosql.sql.ExpressionFormatter;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
@@ -20,7 +23,8 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     public PrestoTableMetadata getMetadata(PrestoTable table) {
         ImmutableList.Builder<PrestoField> listBuilder = ImmutableList.<PrestoField>builder();
         query(
-                "show columns from " + table.getQualifiedName(),
+                "show columns from "
+                        + ExpressionFormatter.formatQualifiedName(table.getQualifiedName()),
                 resultSet -> {
                     try {
                         while (resultSet.next()) {

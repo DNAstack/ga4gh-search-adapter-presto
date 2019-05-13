@@ -5,11 +5,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+
 import java.sql.SQLException;
 import java.util.List;
+
+import org.ga4gh.discovery.search.request.SearchRequest;
 import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.junit.Test;
+
 import com.google.common.collect.ImmutableList;
 
 public class PrestoSearchSourceTest {
@@ -34,18 +38,22 @@ public class PrestoSearchSourceTest {
                         .addRow("8", "Zebra")
                         .addRow("9", "Horse")
                         .addRow("10", "Ant");
-        MockResultSet subset = resultSet.subset(0, 6);
-
         mockPresto.addMockResults(
                 "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"", resultSet);
         mockPresto.addMockResults(
-                "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"\nLIMIT 6",
-                subset);
+                "SELECT \"id\", \"name\"\n"
+                        + "FROM \"postgres\".\"public\".\"fact\"\nOFFSET 3\nLIMIT 3",
+                resultSet.subset(3, 3));
+        mockPresto.addMockResults(
+                "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"\nOFFSET 3",
+                resultSet.subset(3, 7));
         searchSource = new PrestoSearchSource(mockPresto);
     }
 
-    private void searchWithLimitOffset(Long limit, Long offset) {
-        searchResult = searchSource.search(TestQueries.animalsQuery(limit, offset));
+    private void searchWithLimitOffset(Integer limit, Integer offset) {
+        searchResult =
+                searchSource.search(
+                        new SearchRequest(TestQueries.animalsQuery(offset, limit), null));
     }
 
     private void assertIndices(int... indices) {
@@ -69,14 +77,14 @@ public class PrestoSearchSourceTest {
     @Test
     public void testNoLimitOffset3() throws SQLException {
         givenDefaultTable();
-        searchWithLimitOffset(null, 3l);
+        searchWithLimitOffset(null, 3);
         assertIndices(4, 5, 6, 7, 8, 9, 10);
     }
 
     @Test
     public void testLimit3Offset3() throws SQLException {
         givenDefaultTable();
-        searchWithLimitOffset(3l, 3l);
+        searchWithLimitOffset(3, 3);
         assertIndices(4, 5, 6);
     }
 }
