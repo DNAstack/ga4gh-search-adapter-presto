@@ -44,10 +44,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.ga4gh.discovery.search</groupId>
-			<artifactId>ga4gh-discovery-search-sql-source</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.ga4gh.discovery.search</groupId>
 			<artifactId>ga4gh-discovery-search-presto-source</artifactId>
 		</dependency>
 		<dependency>

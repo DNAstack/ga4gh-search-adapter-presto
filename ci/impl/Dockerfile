@@ -17,7 +17,6 @@ ADD target/.mvn/ /build/.mvn/
 ADD target/mvnw /build/mvnw
 ADD target/backend/service/pom.xml /build/backend/service/pom.xml
 ADD target/backend/data-sources/presto-source/pom.xml /build/backend/data-sources/presto-source/pom.xml
-ADD target/backend/data-sources/sql-source/pom.xml /build/backend/data-sources/sql-source/pom.xml
 ADD target/backend/data-models/pom.xml /build/backend/data-models/pom.xml
 ADD target/frontend/pom.xml /build/frontend/pom.xml
 
@@ -27,7 +26,6 @@ RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
 # Now add sources, which will bust the cache.
 ADD target/backend/service/src/ /build/backend/service/src/
 ADD target/backend/data-sources/presto-source/src/ /build/backend/data-sources/presto-source/src/
-ADD target/backend/data-sources/sql-source/src/ /build/backend/data-sources/sql-source/src/
 ADD target/backend/data-models/src/ /build/backend/data-models/src/
 ADD target/frontend/demo/ /build/frontend/demo/
 
