@@ -210,8 +210,8 @@ export class AppComponent implements OnInit {
         'table': this.query.from
       }],
       'where': this.transformRule(this.query.where),
-      'limit': this.query.limit
-      //'offset': this.query.offset
+      'limit': this.query.limit,
+      'offset': this.query.offset
     }
   }
 
