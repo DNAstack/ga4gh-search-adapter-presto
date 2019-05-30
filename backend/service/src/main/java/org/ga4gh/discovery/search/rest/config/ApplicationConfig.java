@@ -1,4 +1,4 @@
-package org.ga4gh.discovery.search.rest;
+package org.ga4gh.discovery.search.rest.config;
 
 import org.ga4gh.discovery.search.serde.QueryDeserializer;
 import org.ga4gh.discovery.search.source.SearchSource;

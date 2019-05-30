@@ -11,3 +11,12 @@ server:
   tomcat:
     remote-ip-header: "x-forwarded-for"
     protocol-header: "x-forwarded-proto"
+
+app:
+  service-info:
+    id:
+    name:
+    description:
+    documentation-url:
+    contact-url:
+    version:
