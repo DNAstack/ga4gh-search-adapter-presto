@@ -16,7 +16,7 @@ export PRESTO_DATASOURCE_URL=jdbc:presto://presto.staging.dnastack.com:443
 export PRESTO_DATASOURCE_USERNAME=<user>
 export PRESTO_DATASOURCE_PASSWORD=<password>
 export PRESTO_RESULTS_LIMIT_MAX=100
-export CORS_URL=http://localhost:4200
+export CORS_URLS=http://localhost:4200
 
 
 mvn spring-boot:run
