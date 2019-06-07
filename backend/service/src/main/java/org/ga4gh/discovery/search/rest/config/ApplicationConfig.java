@@ -83,7 +83,7 @@ public class ApplicationConfig {
                             .httpBasic()
                             .and()
                             .authorizeRequests()
-                            .antMatchers("/actuator/health", "/actuator/info")
+                            .antMatchers("/actuator/health", "/actuator/info", "/service-info")
                             .permitAll()
                             .and()
                             .authorizeRequests()
