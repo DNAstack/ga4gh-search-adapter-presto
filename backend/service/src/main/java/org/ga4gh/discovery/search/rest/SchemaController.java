@@ -1,0 +1,36 @@
+package org.ga4gh.discovery.search.rest;
+
+import org.ga4gh.dataset.SchemaId;
+import org.ga4gh.dataset.SchemaIdConverter;
+import org.ga4gh.dataset.SchemaManager;
+import org.ga4gh.dataset.model.ListSchemasResponse;
+import org.ga4gh.dataset.model.Schema;
+import org.ga4gh.dataset.model.SchemaInfo;
+import org.ga4gh.discovery.search.request.SearchRequest;
+import org.ga4gh.discovery.search.source.SearchSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.InputStream;
+import java.net.URI;
+import java.util.List;
+
+@RestController
+public class SchemaController {
+    @Autowired
+    SearchSource dataSource;
+
+    //TODO (fizz): BADDDDDD, but is there a better way?
+    @Autowired
+    DatasetApiService datasetApiService;
+
+    @RequestMapping(value = "/api/schemas", method = RequestMethod.GET)
+    public ListSchemasResponse getSchemas() {
+        return datasetApiService.listSchemas();
+    }
+
+    @RequestMapping(value = "/api/schemas/{id}", method = RequestMethod.GET)
+    public Schema getSchema(@PathVariable("id") String id) {
+        return datasetApiService.getSchema(id);
+    }
+}

@@ -35,6 +35,11 @@
 
 	<dependencies>
 		<dependency>
+			<groupId>org.ga4gh.dataset</groupId>
+			<artifactId>dataset-api-tools</artifactId>
+			<version>0.1.9-SNAPSHOT</version>
+		</dependency>
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 		</dependency>
@@ -138,4 +143,11 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<!-- <repositories>
+		<repository>
+			<id>dnastack-releases</id>
+			<url>https://nexus.dnastack.com/content/repositories/releases</url>
+		</repository>
+	</repositories> -->
 </project>

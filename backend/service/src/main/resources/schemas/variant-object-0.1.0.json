@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "x-ga4gh-schema-id": "ca.personalgenomes.schemas.v0.1.0.Variant",
+  "$id": "ca.personalgenomes.schemas.v0.1.0.Variant",
+  "description": "Variant, based on Google Variant transforms",
+  "$ref": "ca.personalgenomes.schemas.v0.1.0#/definitions/Variant"
+}

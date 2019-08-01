@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "x-ga4gh-schema-id": "org.ga4gh.schemas.drs.v0.1.0.Object",
+  "$id": "org.ga4gh.schemas.drs.v0.1.0.Object",
+  "description": "GA4GH DRS Object 0.1.0",
+  "$ref": "org.ga4gh.schemas.drs.v0.1.0#/definitions/Object"
+}

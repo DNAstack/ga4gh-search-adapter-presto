@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "x-ga4gh-schema-id": "ca.personalgenomes.schemas.v0.1.0",
+  "$id": "ca.personalgenomes.schemas.v0.1.0",
+  "description": "Personal Genomes Project Canada - Schemas",
+  "definitions": {
+    "Variant": {
+      "description": "Variant, based on Google Variant transforms",
+      "type": "object",
+      "required": [
+        "reference_name",
+        "start_position",
+        "end_position",
+        "reference_base",
+        "alternate_base",
+        "call_name"
+      ],
+      "properties": {
+        "reference_name": {
+          "type": "string",
+          "description": "Chromosome name"
+        },
+        "start_position": {
+          "type": "integer",
+          "description": "Variant start position"
+        },
+        "end_position": {
+          "type": "integer",
+          "description": "Variant end position"
+        },
+        "reference_base": {
+          "type": "string",
+          "description": "Reference base"
+        },
+        "alternate_base": {
+          "type": "string",
+          "description": "Alternate base"
+        },
+        "call_name": {
+          "type": "string",
+          "description": "Variant call name"
+        }
+      }
+    },
+    "Fact": {
+      "description": "Row in PGPC Metadata fact table",
+      "type": "object",
+      "required": [
+        "participant_id",
+        "category",
+        "key",
+        "raw_value",
+        "numeric_value"
+      ],
+      "properties": {
+        "participant_id": {
+          "type": "string",
+          "description": "Participant this fact relates to"
+        },
+        "category": {
+          "type": "string",
+          "description": "Fact category"
+        },
+        "key": {
+          "type": "string",
+          "description": "Fact key"
+        },
+        "raw_value": {
+          "type": "string",
+          "description": "Raw (text representation of) value"
+        },
+        "numeric_value": {
+          "type": "number",
+          "description": "Numeric value"
+        }
+      }
+    }
+  }
+}
