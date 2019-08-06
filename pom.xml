@@ -11,8 +11,8 @@
 	<packaging>pom</packaging>
 
 	<properties>
-		<java.version>11</java.version>
-		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
+		<java.version>1.8</java.version>
+		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
 		<maven-resources-plugin.version>3.1.0</maven-resources-plugin.version>
 		<maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
 		<spring-cloud.version>Greenwich.RC2</spring-cloud.version>

@@ -34,11 +34,11 @@
 	</dependencyManagement>
 
 	<dependencies>
-		<dependency>
+		<!-- <dependency>
 			<groupId>org.ga4gh.dataset</groupId>
-			<artifactId>dataset-api-tools</artifactId>
+			<artifactId>	dataset-api-tools</artifactId>
 			<version>0.1.9-SNAPSHOT</version>
-		</dependency>
+		</dependency> -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

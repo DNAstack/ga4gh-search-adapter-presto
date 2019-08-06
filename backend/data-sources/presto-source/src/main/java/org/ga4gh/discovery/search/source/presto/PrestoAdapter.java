@@ -1,6 +1,8 @@
 package org.ga4gh.discovery.search.source.presto;
 
 import java.sql.ResultSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public interface PrestoAdapter {
@@ -8,4 +10,5 @@ public interface PrestoAdapter {
     PrestoTableMetadata getMetadata(PrestoTable table);
 
     void query(String prestoSQL, Consumer<ResultSet> resultProcessor);
+    void query(String prestoSQL, Optional<List<Object>> params, Consumer<ResultSet> resultProcessor);
 }

@@ -1,12 +1,13 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.collect.ImmutableList;
+import io.prestosql.sql.parser.ParsingOptions;
+import io.prestosql.sql.parser.SqlParser;
+import io.prestosql.sql.tree.Query;
+import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
+import org.ga4gh.discovery.search.Type;
 import org.ga4gh.discovery.search.request.SearchRequest;
 import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.ResultValue;
@@ -14,12 +15,9 @@ import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.springframework.beans.factory.annotation.Value;
 
-import com.google.common.collect.ImmutableList;
-
-import io.prestosql.sql.parser.ParsingOptions;
-import io.prestosql.sql.parser.SqlParser;
-import io.prestosql.sql.tree.Query;
-import lombok.extern.slf4j.Slf4j;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -49,6 +47,74 @@ public class PrestoSearchSource implements SearchSource {
             listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
         }
         return listBuilder.build();
+    }
+
+    @Override
+    public Map<String, List<ResultRow>> getDatasets() {
+        //TODO: Revaluate where this lives
+        List<ResultRow> catalogs = getCatalogs();
+        Map<String, List<ResultRow>> tables = new HashMap<>();
+        for (ResultRow catalog : catalogs) {
+            String catalogName = catalog.getValues().get(0).getValue().toString();
+            List<ResultRow> catalogTables = getTablesFromCatalog(catalogName);
+            tables.put(catalogName, catalogTables);
+        }
+        return tables;
+    }
+
+    private List<ResultRow> getTablesFromCatalog(String catalog) {
+        //String sql = String.format(, catalog);
+        String sql = String.format("show tables from \"%s\".information_schema.tables");
+//        List<Object> params = new ArrayList<>();
+//        params.add(catalog);
+        List<Field> fields = new ArrayList<>();
+        fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
+        fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
+        return query(sql, Optional.empty(), fields);
+    }
+
+    private List<ResultRow> getCatalogs() {
+        String sql = "show catalogs";
+        List<Field> fields = new ArrayList<>();
+        fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null, null));
+        return query(sql, fields);
+
+    }
+
+    //TODO: Better string substitution
+    private List<ResultRow> getSchemas(String catalog) {
+        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalog);
+        List<Field> fields = new ArrayList<>();
+        fields.add(new Field("Schema", "Schema", Type.STRING, null, null, null));
+        return query(sql, fields);
+    }
+
+    private List<ResultRow> getTables(String schema) {
+        String sql = String.format("SHOW TABLES FROM \"%s\"", schema);
+        List<Field> fields = new ArrayList<>();
+        fields.add(new Field("Table", "Table", Type.STRING, null, null, null));
+        return query(sql, fields);
+    }
+
+    private List<ResultRow> query(String sql, List<Field> fields) {
+        return query(sql, Optional.empty(), fields);
+    }
+
+    private List<ResultRow> query(String sql, Optional<List<Object>> params, List<Field> fields) {
+        List<ResultRow> results = new ArrayList<>();
+        prestoAdapter.query(
+                sql,
+                params,
+                rs -> {
+                    try {
+                        while (rs.next()) {
+                            results.add(extractRow(rs, fields));
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        return results;
     }
 
     private Query getQuery(SearchRequest query) {

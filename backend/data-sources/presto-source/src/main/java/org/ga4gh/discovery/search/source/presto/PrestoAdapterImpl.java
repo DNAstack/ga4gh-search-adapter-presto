@@ -1,16 +1,13 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.function.Consumer;
-
 import com.google.common.collect.ImmutableList;
-
 import io.prestosql.sql.ExpressionFormatter;
 import lombok.AllArgsConstructor;
+
+import java.sql.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 @AllArgsConstructor
 public class PrestoAdapterImpl implements PrestoAdapter {
@@ -42,10 +39,24 @@ public class PrestoAdapterImpl implements PrestoAdapter {
 
     @Override
     public void query(String prestoSQL, Consumer<ResultSet> resultProcessor) {
+        query(prestoSQL, Optional.empty(), resultProcessor);
+    }
+
+    @Override
+    public void query(String prestoSQL, Optional<List<Object>> params, Consumer<ResultSet> resultProcessor) {
         try {
             Connection connection = getConnection();
-            Statement stmt = connection.createStatement();
-            resultProcessor.accept(stmt.executeQuery(prestoSQL));
+            PreparedStatement stmt = connection.prepareStatement(prestoSQL);
+            if (params.isPresent()) {
+                int i = 1;
+                for (Object p : params.get()) {
+                    //TODO: Null guard
+                    stmt.setString(i, p.toString());
+                    i++;
+
+                }
+            }
+            resultProcessor.accept(stmt.executeQuery());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
