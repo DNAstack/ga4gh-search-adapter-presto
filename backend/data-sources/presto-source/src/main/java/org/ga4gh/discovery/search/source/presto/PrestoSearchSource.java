@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -27,16 +28,58 @@ public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
+    private Map<String, PrestoTable> tablesWhitelist;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(new PrestoMetadata(prestoAdapter));
+        //this.metadata = new Metadata(new PrestoMetadata(getTablesWhitelist()));
     }
 
     @Override
     public List<Table> getTables() {
         return metadata.getTables();
     }
+
+    //TODO: Destroy this
+    private synchronized Map<String, PrestoTable> getTablesWhitelist() {
+        if (tablesWhitelist == null) {
+            tablesWhitelist = populateTables2();
+        }
+        return tablesWhitelist;
+    }
+
+    private Map<String, String> populateTables() {
+        Map<String, List<Table>> datasets = getDatasets();
+        Map<String, String> tables = new HashMap<>();
+        datasets.forEach((dataset, tableList) -> tableList.forEach(table -> {
+            tables.put(String.format("%s.%s.%s", dataset, table.getSchema(), table.getName()),
+                    String.format("\"%s\".\"%s\".\"%s\"", dataset, table.getSchema(), table.getName()));
+        }));
+        return tables;
+    }
+
+    private Map<String, PrestoTable> populateTables2() {
+        Map<String, PrestoTable> tables = new HashMap<>();
+        List<PrestoCatalog> catalogs = getCatalogs();
+        for (PrestoCatalog catalog : catalogs) {
+            //TODO: Better way of filtering
+            //TODO: Also filter out information schemas.
+            //Don't show system tables.
+            if (catalog.getName().equals("system")) {
+                continue;
+            }
+            List<ResultRow> catalogTables = getTables(catalog);
+            for (ResultRow table : catalogTables) {
+                String tableName = table.getValues().get(0).getValue().toString();
+                String tableSchema = table.getValues().get(1).getValue().toString();
+                String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
+                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+            }
+        }
+        return tables;
+    }
+
 
     @Override
     public List<Field> getFields(String tableName) {
@@ -50,40 +93,55 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     @Override
-    public Map<String, List<ResultRow>> getDatasets() {
+    public SearchResult getDataset(String id) {
+        if (!getTablesWhitelist().containsKey(id)) {
+            return null;
+        }
+        PrestoTable table = getTablesWhitelist().get(id);
+        SearchRequest request = new SearchRequest(null, String.format("SELECT * FROM %s", table.getQualifiedName()));
+        SearchResult result = search(request);
+        return result;
+    }
+
+    @Override
+    public Map<String, List<Table>> getDatasets() {
         //TODO: Revaluate where this lives
-        List<ResultRow> catalogs = getCatalogs();
-        Map<String, List<ResultRow>> tables = new HashMap<>();
-        for (ResultRow catalog : catalogs) {
-            String catalogName = catalog.getValues().get(0).getValue().toString();
-            List<ResultRow> catalogTables = getTablesFromCatalog(catalogName);
-            tables.put(catalogName, catalogTables);
+        List<PrestoCatalog> catalogs = getCatalogs();
+        Map<String, List<Table>> tables = new HashMap<>();
+        for (PrestoCatalog catalog : catalogs) {
+            if (catalog.getName().equals("system")) {
+                continue;
+            }
+            List<ResultRow> catalogTables = getTables(catalog);
+            tables.put(catalog.getName(), catalogTables.stream().map(table ->
+                    new Table(table.getValues().get(0).getValue().toString(), table.getValues().get(1).getValue().toString())).collect(Collectors.toList()));
         }
         return tables;
     }
 
-    private List<ResultRow> getTablesFromCatalog(String catalog) {
-        //String sql = String.format(, catalog);
-        String sql = String.format("show tables from \"%s\".information_schema.tables");
+    private List<ResultRow> getTables(PrestoCatalog catalog) {
+        String sql = String.format("select table_name, table_schema from \"%s\".information_schema.tables", catalog.getName());
 //        List<Object> params = new ArrayList<>();
-//        params.add(catalog);
+//        params.add(catalog.GetName());
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
         return query(sql, Optional.empty(), fields);
     }
 
-    private List<ResultRow> getCatalogs() {
+    private List<PrestoCatalog> getCatalogs() {
         String sql = "show catalogs";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null, null));
-        return query(sql, fields);
+        List<ResultRow> results = query(sql, fields);
+        return results.stream().map(row -> new
+                PrestoCatalog(row.getValues().get(0).getValue().toString(), new ArrayList<>())).collect(Collectors.toList());
 
     }
 
     //TODO: Better string substitution
-    private List<ResultRow> getSchemas(String catalog) {
-        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalog);
+    private List<ResultRow> getSchemas(PrestoCatalog catalog) {
+        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalog.getName());
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("Schema", "Schema", Type.STRING, null, null, null));
         return query(sql, fields);

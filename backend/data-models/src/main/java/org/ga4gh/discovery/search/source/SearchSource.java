@@ -14,7 +14,9 @@ public interface SearchSource {
 
     List<Table> getTables();
 
-    Map<String, List<ResultRow>> getDatasets();
+    Map<String, List<Table>> getDatasets();
+
+    SearchResult getDataset(String id);
 
     List<Field> getFields(String table);
 
