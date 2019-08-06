@@ -15,6 +15,10 @@ public enum Type {
             return "number";
         }
     },
+    NUMBER_ARRAY {
+        @Override
+        public String toString() {return "number[]";}
+    },
     STRING {
         @Override
         public String toString() {

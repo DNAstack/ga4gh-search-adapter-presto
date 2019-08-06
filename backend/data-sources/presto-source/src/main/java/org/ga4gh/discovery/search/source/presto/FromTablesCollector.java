@@ -34,11 +34,12 @@ public class FromTablesCollector extends AstVisitor<Void, String> {
         checkArgument(
                 qualifiedName.getParts().size() == 1, "only one part table names are allowed");
         return qualifiedName.getParts().get(0);
+        //return qualifiedName.getParts().get(qualifiedName.getParts().size() - 1);
     }
 
     @Override
     protected Void visitTable(Table node, String alias) {
-        String tableName = toTableName(node.getName());
+        String tableName = node.getName().toString(); //toTableName(node.getName());
         TableMetadata tableMetadata = metadata.getTableMetadata(tableName);
         if (alias != null) {
             TableMetadata prev = fromTables.put(alias, tableMetadata);

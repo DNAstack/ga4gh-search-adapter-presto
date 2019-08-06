@@ -5,6 +5,8 @@ import static org.ga4gh.discovery.search.source.presto.Metadata.FACTS_TABLE;
 import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_TABLE;
 import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_JSON_TABLE;
 import static org.ga4gh.discovery.search.source.presto.Metadata.VARIANTS_TABLE;
+
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -13,7 +15,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class PrestoMetadata {
 
-    static final Map<String, PrestoTable> PRESTO_TABLES =
+    static Map<String, PrestoTable> PRESTO_TABLES =
             ImmutableMap.of(
                     FILES_TABLE,
                     new PrestoTable(
@@ -45,6 +47,11 @@ public class PrestoMetadata {
                             "fact"));
 
     private final PrestoAdapter presto;
+    private final Map<String, PrestoTable> prestoTables;
+    PrestoMetadata(PrestoAdapter presto) {
+        this.presto = presto;
+        this.prestoTables = new HashMap<>();
+    }
 
     public PrestoTable getPrestoTable(String tableName) {
         Optional<PrestoTable> table = findPrestoTable(tableName);
@@ -54,11 +61,18 @@ public class PrestoMetadata {
     }
 
     public Optional<PrestoTable> findPrestoTable(String tableName) {
-        return Optional.ofNullable(PRESTO_TABLES.get(tableName));
+//        return Optional.ofNullable(PRESTO_TABLES.get(tableName));
+        return Optional.ofNullable(prestoTables.get(tableName));
+    }
+
+    //TODO: Fizz : Evaluate OM here
+    public Map<String, PrestoTable> getPrestoTables() {
+        return this.prestoTables;
     }
 
     public PrestoTableMetadata getTableMetadata(String tableName) {
-        PrestoTable prestoTable = PRESTO_TABLES.get(tableName);
+//        PrestoTable prestoTable = PRESTO_TABLES.get(tableName);
+        PrestoTable prestoTable = prestoTables.get(tableName);
         checkArgument(prestoTable != null, "Unknown table: " + tableName);
         return presto.getMetadata(prestoTable);
     }

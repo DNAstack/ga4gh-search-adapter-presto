@@ -21,7 +21,9 @@ public class PrestoAdapterImpl implements PrestoAdapter {
         ImmutableList.Builder<PrestoField> listBuilder = ImmutableList.<PrestoField>builder();
         query(
                 "show columns from "
-                        + ExpressionFormatter.formatQualifiedName(table.getQualifiedName()),
+                    + table.getQualifiedName(),
+                //TODO: PUT BACK
+//                        + ExpressionFormatter.formatQualifiedName(table.getQualifiedName()),
                 resultSet -> {
                     try {
                         while (resultSet.next()) {

@@ -32,8 +32,8 @@ public class PrestoSearchSource implements SearchSource {
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
-        this.metadata = new Metadata(new PrestoMetadata(prestoAdapter));
-        //this.metadata = new Metadata(new PrestoMetadata(getTablesWhitelist()));
+//        this.metadata = new Metadata(new PrestoMetadata(prestoAdapter));
+        this.metadata = new Metadata(new PrestoMetadata(prestoAdapter, getTablesWhitelist()));
     }
 
     @Override
@@ -71,10 +71,14 @@ public class PrestoSearchSource implements SearchSource {
             }
             List<ResultRow> catalogTables = getTables(catalog);
             for (ResultRow table : catalogTables) {
+                //TODO: Better string manip
                 String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
+                String escapedName = String.format("\"%s\"", tableName);
+                String escapedSchema = String.format("\"%s\"", tableSchema);
                 String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName())/* catalog.getName()*/, escapedSchema, escapedName));
+//                tables.put(id, new PrestoTable(escapedName, escapedSchema, catalog.getName(), tableSchema, tableName));
             }
         }
         return tables;
@@ -87,7 +91,12 @@ public class PrestoSearchSource implements SearchSource {
                 tableName == null ? getTables() : ImmutableList.of(metadata.getTable(tableName));
         ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
         for (Table table : tableList) {
-            listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+            if (tableName == null) {
+                listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+            } else {
+                //TODO: breaky breaky, hacky hacky
+                listBuilder.addAll(metadata.getTableMetadata(tableName).getFields());
+            }
         }
         return listBuilder.build();
     }
@@ -98,7 +107,17 @@ public class PrestoSearchSource implements SearchSource {
             return null;
         }
         PrestoTable table = getTablesWhitelist().get(id);
-        SearchRequest request = new SearchRequest(null, String.format("SELECT * FROM %s", table.getQualifiedName()));
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ");
+        //List<Field> fields = getFields(id);
+        List<Field> fields = getFields(table.getName());
+        for (Field f : fields) {
+            sqlBuilder.append(String.format(" %s,", f.getName()));
+        }
+        sqlBuilder.deleteCharAt(sqlBuilder.lastIndexOf(","));
+        sqlBuilder.append(String.format(" FROM %s", table.getQualifiedName()));
+        SearchRequest request = new SearchRequest(null, sqlBuilder.toString());
+        //SearchRequest request = new SearchRequest(null, String.format("SELECT * FROM %s", table.getQualifiedName()));
         SearchResult result = search(request);
         return result;
     }
@@ -197,6 +216,9 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public SearchResult search(SearchRequest searchRequest) {
+        //TODO: After this line, we have a QUERY obj which should _already be valid_.
+        // Thus, does it make sense doing the escaping, etc. down the pipeline?
+        // Alternatively, does this mean query generation should exist at a different layer?
         Query query = getQuery(searchRequest);
         QueryContext queryContext = new QueryContext(query, metadata);
         SearchQueryTransformer queryTransformer =

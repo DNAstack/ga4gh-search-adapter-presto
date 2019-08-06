@@ -4,10 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
@@ -20,7 +17,7 @@ import com.google.common.collect.ImmutableSet;
 
 import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
+//@AllArgsConstructor
 public class Metadata {
 
     public static final String FILES_TABLE = "files";
@@ -29,6 +26,8 @@ public class Metadata {
     public static final String FACTS_TABLE = "facts";
 
     public static final String PGP_CANADA = "pgp_canada";
+
+    private final Map<String, Table> tables = new HashMap<>();
 
     private static final Map<String, Table> TABLES =
             ImmutableMap.of(
@@ -62,6 +61,15 @@ public class Metadata {
 
     private final PrestoMetadata prestoMetadata;
 
+    public Metadata(PrestoMetadata prestoMetadata) {
+        this.prestoMetadata = prestoMetadata;
+        this.prestoMetadata.getPrestoTables().forEach((qualifiedName, prestoTable) -> {
+            //TODO: Qualified name or name?
+            //this.tables.put(qualifiedName, new Table(prestoTable.getName(), prestoTable.getSchema()));
+            this.tables.put(prestoTable.getName(), new Table(prestoTable.getName(), prestoTable.getSchema()));
+        });
+    }
+
     public PrestoTable getPrestoTable(String tableName) {
         return prestoMetadata.getPrestoTable(tableName);
     }
@@ -71,21 +79,27 @@ public class Metadata {
     }
 
     public List<Table> getTables() {
-        return TABLES.values().stream().sorted().collect(toList());
+        //return TABLES.values().stream().sorted().collect(toList());
+        return tables.values().stream().sorted().collect(toList());
     }
 
     public Table getTable(String tableName) {
-        Optional<Table> table = findTable(tableName);
-        checkArgument(table.isPresent(), format("Table %s not found", tableName));
-        return table.get();
+        //Optional<Table> table = findTable(tableName);
+        Table table = tables.getOrDefault(tableName, null);
+        //checkArgument(table.isPresent(), format("Table %s not found", tableName));
+        checkArgument(table != null, format("Table %s not found", tableName));
+        return table;
+        //return table.get();
     }
 
     public Optional<Table> findTable(String tableName) {
-        return TABLES.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
+        //return TABLES.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
+        return tables.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
     }
 
     public TableMetadata getTableMetadata(String tableName) {
-        Table table = TABLES.get(tableName);
+        //Table table = TABLES.get(tableName);
+        Table table = tables.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
         if (PGP_CANADA.equals(tableName)) {
@@ -182,6 +196,8 @@ public class Metadata {
             return Type.STRING_ARRAY;
         } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
+        } else if (prestoType.startsWith("array(double")) {
+            return Type.NUMBER_ARRAY;
         }
         throw new RuntimeException("Unknown mapping for Presto field type " + prestoType);
     }

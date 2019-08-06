@@ -124,15 +124,18 @@ public class SearchQueryTransformer extends AstVisitor<Void, VisitorContext> {
 
     @Override
     protected Void visitTable(Table node, VisitorContext context) {
-        sql.append(formatName(translateToPresto(node.getName())));
+        //sql.append(formatName(translateToPresto(node.getName())));
+        sql.append(translateToPresto(node.getName()));
         return null;
     }
 
     private QualifiedName translateToPresto(QualifiedName qualifiedName) {
-        checkArgument(
-                qualifiedName.getParts().size() == 1,
-                "only single part qualified names are supported");
-        String tableName = qualifiedName.getParts().get(0);
+//        checkArgument(
+//                qualifiedName.getParts().size() == 1,
+//                "only single part qualified names are supported");
+//        String tableName = qualifiedName.getParts().get(0);
+        //TODO: HACKS ON HACKS ON HACKS (whatchu need?)
+        String tableName = qualifiedName.toString();
         if (Metadata.PGP_CANADA.equals(tableName)) {
             return QualifiedName.of(Metadata.PGP_CANADA);
         } else {
@@ -215,6 +218,9 @@ public class SearchQueryTransformer extends AstVisitor<Void, VisitorContext> {
             int numColumns = rsMetadata.getColumnCount();
             checkArgument(
                     numColumns == queryContext.getSelectColumnCount(), "Unexpected column count");
+                    //TODO: Another hack --> query context doesn't get columnCount populated correctly when performing
+                    // A 'SELECT *' type search.
+//                    (numColumns == queryContext.getSelectColumnCount() || queryContext.getSelectColumnCount() == 0), "Unexpected column count");
 
             for (int i = 0; i < numColumns; i++) {
                 int j = i + 1;
