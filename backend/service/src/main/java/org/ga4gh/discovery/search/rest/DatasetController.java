@@ -1,5 +1,6 @@
 package org.ga4gh.discovery.search.rest;
 
+import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
@@ -24,7 +25,7 @@ public class DatasetController {
 
     //TODO: Update to /dataset/{id} -- Also for schemas
     @RequestMapping(value = "/api/datasets/{id}", method = RequestMethod.GET)
-    public SearchResult getDataset(@PathVariable("id") String id) {
+    public Dataset getDataset(@PathVariable("id") String id) {
         //TODO: Include pagination
         return dataSource.getDataset(id);
     }

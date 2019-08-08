@@ -51,8 +51,10 @@ public class MockPrestoMetadata {
     }
 
     private static PrestoTableMetadata metadata(String table, PrestoField... fields) {
-        return new PrestoTableMetadata(
-                PrestoMetadata.PRESTO_TABLES.get(table), Arrays.asList(fields));
+        //TODO: reinstate me
+        return null;
+//        return new PrestoTableMetadata(
+//                PrestoMetadata.PRESTO_TABLES.get(table), Arrays.asList(fields));
     }
 
     private static PrestoField field(String name, String type) {

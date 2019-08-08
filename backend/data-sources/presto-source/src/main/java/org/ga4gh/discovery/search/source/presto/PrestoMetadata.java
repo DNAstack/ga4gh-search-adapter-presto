@@ -1,57 +1,25 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static org.ga4gh.discovery.search.source.presto.Metadata.FACTS_TABLE;
-import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_TABLE;
-import static org.ga4gh.discovery.search.source.presto.Metadata.FILES_JSON_TABLE;
-import static org.ga4gh.discovery.search.source.presto.Metadata.VARIANTS_TABLE;
+import lombok.AllArgsConstructor;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import com.google.common.collect.ImmutableMap;
-import lombok.AllArgsConstructor;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 @AllArgsConstructor
 public class PrestoMetadata {
 
-    static Map<String, PrestoTable> PRESTO_TABLES =
-            ImmutableMap.of(
-                    FILES_TABLE,
-                    new PrestoTable(
-                            FILES_TABLE,
-                            "org.ga4gh.drs.objects",
-                            "drs",
-                            "org_ga4gh_drs",
-                            "objects"),
-                    FILES_JSON_TABLE,
-                    new PrestoTable(
-                            FILES_JSON_TABLE,
-                            "org.ga4gh.drs.json_objects",
-                            "drs",
-                            "org_ga4gh_drs",
-                            "json_objects"),
-                    VARIANTS_TABLE,
-                    new PrestoTable(
-                            VARIANTS_TABLE,
-                            "com.google.variants",
-                            "bigquery-pgc-data",
-                            "pgp_variants",
-                            "view_variants2_beacon"),
-                    FACTS_TABLE,
-                    new PrestoTable(
-                            FACTS_TABLE,
-                            "com.dnastack.pgpc.metadata",
-                            "postgres",
-                            "public",
-                            "fact"));
-
     private final PrestoAdapter presto;
-    private final Map<String, PrestoTable> prestoTables;
-    PrestoMetadata(PrestoAdapter presto) {
-        this.presto = presto;
-        this.prestoTables = new HashMap<>();
-    }
+    private final List<PrestoCatalog> catalogs;
+//    private final Map<String, List<PrestoSchema>> schemas;
+    private final Map<String, PrestoTable> tables;
+//
+//    public PrestoMetadata(PrestoAdapter presto, Map<String, PrestoTable> tables) {
+//        this.tables = tables;
+//        this.presto = presto;
+//    }
 
     public PrestoTable getPrestoTable(String tableName) {
         Optional<PrestoTable> table = findPrestoTable(tableName);
@@ -62,17 +30,17 @@ public class PrestoMetadata {
 
     public Optional<PrestoTable> findPrestoTable(String tableName) {
 //        return Optional.ofNullable(PRESTO_TABLES.get(tableName));
-        return Optional.ofNullable(prestoTables.get(tableName));
+        return Optional.ofNullable(tables.get(tableName));
     }
 
     //TODO: Fizz : Evaluate OM here
-    public Map<String, PrestoTable> getPrestoTables() {
-        return this.prestoTables;
+    public Map<String, PrestoTable> getTables() {
+        return this.tables;
     }
 
     public PrestoTableMetadata getTableMetadata(String tableName) {
 //        PrestoTable prestoTable = PRESTO_TABLES.get(tableName);
-        PrestoTable prestoTable = prestoTables.get(tableName);
+        PrestoTable prestoTable = tables.get(tableName);
         checkArgument(prestoTable != null, "Unknown table: " + tableName);
         return presto.getMetadata(prestoTable);
     }

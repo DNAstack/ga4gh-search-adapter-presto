@@ -2,8 +2,8 @@ package org.ga4gh.discovery.search.source;
 
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
+import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.discovery.search.request.SearchRequest;
-import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.SearchResult;
 
 import java.util.List;
@@ -16,7 +16,7 @@ public interface SearchSource {
 
     Map<String, List<Table>> getDatasets();
 
-    SearchResult getDataset(String id);
+    Dataset getDataset(String id);
 
     List<Field> getFields(String table);
 
