@@ -103,16 +103,13 @@ public class PrestoSearchSource implements SearchSource {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT ");
         List<Field> fields = getFields(tableQualifiedName);
-        //List<Field> fields = getFields(table.getQualifiedName().toString());
         for (Field f : fields) {
             sqlBuilder.append(String.format(" %s,", f.getName()));
         }
         sqlBuilder.deleteCharAt(sqlBuilder.lastIndexOf(","));
         sqlBuilder.append(String.format(" FROM %s", table.getQualifiedName()));
         SearchRequest request = new SearchRequest(null, sqlBuilder.toString());
-        //SearchRequest request = new SearchRequest(null, String.format("SELECT * FROM %s", table.getQualifiedName()));
-        SearchResult result = search(request);
-        return result;
+        return search(request);
     }
 
     @Override
@@ -150,7 +147,6 @@ public class PrestoSearchSource implements SearchSource {
             String escapedSchema = String.format("\"%s\"", tableSchema);
             String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
             tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName())/* catalog.getName()*/, escapedSchema, escapedName));
-//                tables.put(id, new PrestoTable(escapedName, escapedSchema, catalog.getName(), tableSchema, tableName));
         }
 
         return tables;
