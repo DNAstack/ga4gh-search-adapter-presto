@@ -15,44 +15,9 @@ import static java.util.stream.Collectors.toList;
 //@AllArgsConstructor
 public class Metadata {
 
-//    public static final String FILES_TABLE = "files";
-//    public static final String FILES_JSON_TABLE = "files_json";
-//    public static final String VARIANTS_TABLE = "variants";
-//    public static final String FACTS_TABLE = "facts";
-
     public static final String PGP_CANADA = "pgp_canada";
 
     private final Map<String, Table> tables = new HashMap<>();
-
-//    private static final Map<String, Table> TABLES =
-//            ImmutableMap.of(
-//                    FILES_TABLE,
-//                    new Table(FILES_TABLE, "org.ga4gh.drs.objects"),
-//                    FILES_JSON_TABLE,
-//                    new Table(FILES_JSON_TABLE, "org.ga4gh.drs.json_objects"),
-//                    VARIANTS_TABLE,
-//                    new Table(VARIANTS_TABLE, "com.google.variants"),
-//                    FACTS_TABLE,
-//                    new Table(FACTS_TABLE, "com.dnastack.pgpc.metadata"),
-//                    PGP_CANADA,
-//                    new Table(PGP_CANADA, "com.dnastack.search.pgpcanada"));
-
-//    private static final TableMetadata PGP_CANADA_METADATA =
-//            new TableMetadata(
-//                    TABLES.get(PGP_CANADA),
-//                    ImmutableList.of(
-//                            field("participant_id", "varchar"),
-//                            field("chromosome", "varchar"),
-//                            field("start_position", "integer"),
-//                            field("end_position", "integer"),
-//                            field("reference_base", "varchar"),
-//                            field("alternate_base", "varchar"),
-//                            field("vcf_size", "bigint"),
-//                            field("vcf_object", "varchar", Type.DRS_OBJECT),
-//                            field("category", "varchar"),
-//                            field("key", "varchar"),
-//                            field("raw_value", "varchar"),
-//                            field("numeric_value", "double")));
 
     private final PrestoMetadata prestoMetadata;
 
@@ -65,6 +30,22 @@ public class Metadata {
         });
     }
 
+    public List<PrestoCatalog> getCatalogs() {
+        return this.prestoMetadata.getCatalogs();
+    }
+
+    public List<Field> getFields(Table table) {
+        return this.prestoMetadata.getFields(getPrestoTable(table.getName()));
+    }
+
+    public List<Field> getFields() {
+        return this.prestoMetadata.getFields();
+    }
+
+    public void addFieldMetadata(Map<PrestoTable, List<Field>> data) {
+        this.prestoMetadata.addFieldMetadata(data);
+    }
+
     public PrestoTable getPrestoTable(String tableName) {
         return prestoMetadata.getPrestoTable(tableName);
     }
@@ -74,26 +55,21 @@ public class Metadata {
     }
 
     public List<Table> getTables() {
-        //return TABLES.values().stream().sorted().collect(toList());
         return tables.values().stream().sorted().collect(toList());
     }
 
     public Table getTable(String tableName) {
-        //Optional<Table> table = findTable(tableName);
         Table table = tables.getOrDefault(tableName, null);
         //checkArgument(table.isPresent(), format("Table %s not found", tableName));
         checkArgument(table != null, format("Table %s not found", tableName));
         return table;
-        //return table.get();
     }
 
     public Optional<Table> findTable(String tableName) {
-        //return TABLES.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
         return tables.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
     }
 
     public TableMetadata getTableMetadata(String tableName) {
-        //Table table = TABLES.get(tableName);
         Table table = tables.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));

@@ -1,5 +1,8 @@
 package org.ga4gh.discovery.search.source;
 
+import org.ga4gh.dataset.model.ListDatasetsResponse;
+import org.ga4gh.dataset.model.ListSchemasResponse;
+import org.ga4gh.dataset.model.Schema;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.dataset.model.Dataset;
@@ -14,7 +17,11 @@ public interface SearchSource {
 
     List<Table> getTables();
 
-    Map<String, List<Table>> getDatasets();
+    ListSchemasResponse getSchemas();
+
+    Schema getSchema(String id);
+
+    ListDatasetsResponse getDatasets();
 
     Dataset getDataset(String id);
 

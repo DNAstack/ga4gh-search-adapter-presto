@@ -6,8 +6,7 @@ import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
 import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.dataset.SchemaId;
-import org.ga4gh.dataset.model.Dataset;
-import org.ga4gh.dataset.model.Schema;
+import org.ga4gh.dataset.model.*;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.Type;
@@ -18,6 +17,7 @@ import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.net.URI;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -31,10 +31,14 @@ public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
+    private final DatasetApiService datasetApiService;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildMetadata());
+        this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
+        this.datasetApiService.initialize(); // TODO: During construction?
+        buildFieldMetadata();
     }
 
     @Override
@@ -52,24 +56,70 @@ public class PrestoSearchSource implements SearchSource {
             populatedCatalogs.add(populateSchemas(catalog));
             tables.putAll(getTables(catalog));
         }
-        return new PrestoMetadata(prestoAdapter, populatedCatalogs, tables);
+        //buildFieldMetadata();
+        //TODO: Fix construction
+        return new PrestoMetadata(prestoAdapter, populatedCatalogs, tables, null);
+    }
+
+    public void buildFieldMetadata() {
+        List<Table> tableList = getTables();
+        ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
+        for (Table table : tableList) {
+            listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+        }
+        List<Field> fields = listBuilder.build();
+        Map<PrestoTable, List<Field>> fieldMetadata = new HashMap<>();
+        for (Field field : fields) {
+            String table = field.getTable();
+            String catalog = table.substring(0, table.indexOf("."));
+            String schema = table.substring(table.indexOf(".") + 1, table.lastIndexOf("."));
+            String tableName = table.substring(table.lastIndexOf(".") + 1);
+            PrestoTable t = this.metadata.getPrestoTable(table);
+            fieldMetadata.putIfAbsent(t, new ArrayList<>());
+            fieldMetadata.get(t).add(field);
+        }
+        this.metadata.addFieldMetadata(fieldMetadata);
     }
 
 
+    //TODO: TOO SLOW
     @Override
     public List<Field> getFields(String tableName) {
-        List<Table> tableList =
-                tableName == null ? getTables() : ImmutableList.of(metadata.getTable(tableName));
+        //TODO: This could cause endless recursion if getFields tries to get a null table
+        // MUST FIX
+        if (tableName == null) {
+            //return getFields();
+            return metadata.getFields();
+        }
+        Table table = metadata.getTable(tableName);
+        return metadata.getFields(table);
+    }
+
+    public List<Field> getFields() {
+        List<Table> tableList = getTables();
         ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
         for (Table table : tableList) {
-            if (tableName == null) {
-                listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
-            } else {
-                //TODO: breaky breaky, hacky hacky
-                listBuilder.addAll(metadata.getTableMetadata(tableName).getFields());
-            }
+            //listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+            listBuilder.addAll(getFields(table.getName()));
         }
         return listBuilder.build();
+    }
+
+    @Override
+    public Schema getSchema(String id) {
+//        metadata.get
+        //Schema schema = new Schema()
+//        metadata.get
+//        SchemaIdConverter converter = new SchemaIdConverter(URI.create("https://search.dnastack.com"), "com.dnastack.search.pgpcanada");
+//        SchemaManager manager = new SchemaManager(converter);
+//        manager.registerSchema();
+//        return null;
+        return datasetApiService.getSchema(id);
+    }
+
+    @Override
+    public ListSchemasResponse getSchemas() {
+        return datasetApiService.listSchemas();
     }
 
     @Override
@@ -113,23 +163,22 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     @Override
-    public Map<String, List<Table>> getDatasets() {
-        return null;
-        //TODO: Revaluate where this lives
-//        List<PrestoCatalog> catalogs = getCatalogs();
-//        Map<String, List<Table>> tables = new HashMap<>();
-//        for (PrestoCatalog catalog : catalogs) {
-////            if (catalog.getName().equals("system")) {
-////                continue;
-////            }
-//            List<ResultRow> catalogTables = getTables(catalog);
-//            tables.put(catalog.getName(), catalogTables.stream()
-//                    //TODO: Better filtering, remove information schemas
-//                    .filter(table -> !table.getValues().get(1).getValue().toString().equals("information_schema"))
-//                    .map(table ->
-//                    new Table(table.getValues().get(0).getValue().toString(), table.getValues().get(1).getValue().toString())).collect(Collectors.toList()));
-//        }
-//        return tables;
+    public ListDatasetsResponse getDatasets() {
+        //TODO: To effectively use these classes, we should be leveraging
+        // The schema/dataset managers s.t. we don't have to dynamically construct these DatasetInfos
+        List<DatasetInfo> info = new ArrayList<>();
+        for (Table t : this.metadata.getTables()) {
+            DatasetInfo di = DatasetInfo.builder()
+                    .id(t.getName())
+                    .description("Fake description")
+                    //TODO: Should this schema be unescaped by default?
+                    // Part of a larger issue to re-evaluate name escaping in general.
+                    .schemaId(t.getSchema().replace("\"", ""))
+                    .schemaLocation(URI.create("http://localhost:8080/schemas/" + t.getSchema().replace("\"", "")))
+                    .build();
+            info.add(di);
+        }
+        return new ListDatasetsResponse(info);
     }
 
     private Map<String, PrestoTable> getTables(PrestoCatalog catalog) {
@@ -181,23 +230,6 @@ public class PrestoSearchSource implements SearchSource {
 
         return new PrestoCatalog(catalog.getName(), schemas);
     }
-
-//    private List<PrestoSchema> getSchemas(PrestoCatalog catalog) {
-//        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalog.getName());
-//        List<Field> fields = Arrays.asList(new Field("Schema", "Schema", Type.STRING, null, null, null));
-//        List<ResultRow> results = query(sql, fields);
-//
-//        List<PrestoSchema> schemas = new ArrayList<>();
-//        for (ResultRow row : results) {
-//           List<ResultValue> values = row.getValues();
-//           for (ResultValue value : values) {
-//               String name = value.getValue().toString();
-//               schemas.add(new PrestoSchema(name));
-//           }
-//        }
-//
-//        return schemas;
-//    }
 
 
     private List<ResultRow> query(String sql, List<Field> fields) {
