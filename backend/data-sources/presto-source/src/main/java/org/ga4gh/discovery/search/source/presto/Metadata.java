@@ -26,7 +26,6 @@ public class Metadata {
         this.prestoMetadata.getTables().forEach((qualifiedName, prestoTable) -> {
             //TODO: Qualified name or name?
             this.tables.put(qualifiedName, new Table(qualifiedName, prestoTable.getSchema()));
-            //this.tables.put(prestoTable.getName(), new Table(prestoTable.getName(), prestoTable.getSchema()));
         });
     }
 
@@ -35,15 +34,23 @@ public class Metadata {
     }
 
     public List<Field> getFields(Table table) {
-        return this.prestoMetadata.getFields(getPrestoTable(table.getName()));
+        //TODO: better impl
+        PrestoTable prestoTable = this.prestoMetadata.getPrestoTable(table.getName());
+        List<Field> fields = toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
+        return fields;
+        //return null;
+//        return this.prestoMetadata.getFields(getPrestoTable(table.getName()));
     }
 
     public List<Field> getFields() {
-        return this.prestoMetadata.getFields();
-    }
-
-    public void addFieldMetadata(Map<PrestoTable, List<Field>> data) {
-        this.prestoMetadata.addFieldMetadata(data);
+        //TODO: better impl
+        List<Field> fields = new ArrayList<>();
+        for (Table t : this.getTables()) {
+            fields.addAll(getFields(t));
+        }
+        return fields;
+//        return null;
+//        return this.prestoMetadata.getFields();
     }
 
     public PrestoTable getPrestoTable(String tableName) {
@@ -60,7 +67,6 @@ public class Metadata {
 
     public Table getTable(String tableName) {
         Table table = tables.getOrDefault(tableName, null);
-        //checkArgument(table.isPresent(), format("Table %s not found", tableName));
         checkArgument(table != null, format("Table %s not found", tableName));
         return table;
     }
@@ -74,11 +80,6 @@ public class Metadata {
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
         return toModelMetadata(table, prestoMetadata.getTableMetadata(tableName));
-//        if (PGP_CANADA.equals(tableName)) {
-//            return PGP_CANADA_METADATA;
-//        } else {
-//
-//        }
     }
 
     public TableMetadata toModelMetadata(Table table, PrestoTableMetadata prestoTableMetadata) {

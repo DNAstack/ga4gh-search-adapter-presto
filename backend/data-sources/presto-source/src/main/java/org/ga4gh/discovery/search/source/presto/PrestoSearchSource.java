@@ -35,10 +35,9 @@ public class PrestoSearchSource implements SearchSource {
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
-        this.metadata = new Metadata(buildMetadata());
+        this.metadata = new Metadata(buildMetadata(prestoAdapter));
         this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
         this.datasetApiService.initialize(); // TODO: During construction?
-        buildFieldMetadata();
     }
 
     @Override
@@ -46,7 +45,9 @@ public class PrestoSearchSource implements SearchSource {
         return metadata.getTables();
     }
 
-    private PrestoMetadata buildMetadata() {
+    private PrestoMetadata buildMetadata(PrestoAdapter adapter) {
+        PrestoMetadata.PrestoMetadataBuilder builder = PrestoMetadata.builder();
+        builder.presto(adapter);
         //TODO: these object structures are unusual
         // AND GROSS!!!
         List<PrestoCatalog> emptyCatalogs = getCatalogs();
@@ -56,29 +57,30 @@ public class PrestoSearchSource implements SearchSource {
             populatedCatalogs.add(populateSchemas(catalog));
             tables.putAll(getTables(catalog));
         }
-        //buildFieldMetadata();
-        //TODO: Fix construction
-        return new PrestoMetadata(prestoAdapter, populatedCatalogs, tables, null);
+        //TODO: Fix constructionPrestoMetadata.PrestoMetadataBuilder builder = PrestoMetadata.builder();
+        builder.catalogs(populatedCatalogs);
+        builder.tables(tables);
+        Map<PrestoTable, List<PrestoField>> fields = getFieldMetadata(tables);
+        builder.fields(fields);
+        return builder.build();
     }
 
-    public void buildFieldMetadata() {
-        List<Table> tableList = getTables();
-        ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
-        for (Table table : tableList) {
-            listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+    public Map<PrestoTable, List<PrestoField>> getFieldMetadata(Map<String, PrestoTable> tables) {
+        //List<Table> tableList = getTables();
+        List<PrestoTable> t = new ArrayList<>();
+        tables.forEach((k, v) -> t.add(v));
+        Map<PrestoTable, List<PrestoField>> fieldMetadata = new HashMap<>();
+        for (PrestoTable pt : t) {
+             PrestoTableMetadata metadata = prestoAdapter.getMetadata(pt);
+            fieldMetadata.put(pt, metadata.getFields());
         }
-        List<Field> fields = listBuilder.build();
-        Map<PrestoTable, List<Field>> fieldMetadata = new HashMap<>();
-        for (Field field : fields) {
-            String table = field.getTable();
-            String catalog = table.substring(0, table.indexOf("."));
-            String schema = table.substring(table.indexOf(".") + 1, table.lastIndexOf("."));
-            String tableName = table.substring(table.lastIndexOf(".") + 1);
-            PrestoTable t = this.metadata.getPrestoTable(table);
-            fieldMetadata.putIfAbsent(t, new ArrayList<>());
-            fieldMetadata.get(t).add(field);
-        }
-        this.metadata.addFieldMetadata(fieldMetadata);
+        return fieldMetadata;
+        /*ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
+        PrestoMetadata partialData = metadataBuilder.build();
+//        for (Table table : tableList) {
+//            listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
+//            //listBuilder.addAll(partialData.getTableMetadata("ay").getFields());
+//        }*/
     }
 
 
