@@ -33,10 +33,9 @@ public class MockPrestoAdapter implements PrestoAdapter {
     }
 
     @Override
-    public void query(String prestoSQL, Optional<List<Object>> params, Consumer<ResultSet> resultProcessor) {
-        ResultSet resultSet = mockResultSests.get(prestoSQL);
-        checkArgument(resultSet != null, "No mock result set for query '" + prestoSQL + "'");
-        resultProcessor.accept(resultSet);
+    public void query(String prestoSQL, List<Object> params, Consumer<ResultSet> resultProcessor) {
+        //TODO: impl params handling
+        query(prestoSQL, resultProcessor);
     }
 
     public void addMockResults(String sql, ResultSet resultSet) {

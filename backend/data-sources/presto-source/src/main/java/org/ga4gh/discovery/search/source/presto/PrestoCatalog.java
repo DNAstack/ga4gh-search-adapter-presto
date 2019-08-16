@@ -1,10 +1,12 @@
 package org.ga4gh.discovery.search.source.presto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 import java.util.Collections;
 import java.util.List;
 
+@Builder
 @AllArgsConstructor
 public class PrestoCatalog {
     private final String name;

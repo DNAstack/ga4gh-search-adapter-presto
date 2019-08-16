@@ -1,6 +1,8 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import com.google.common.collect.ImmutableList;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
@@ -15,13 +17,14 @@ import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.ResultValue;
 import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
+import org.ga4gh.discovery.search.source.presto.PrestoMetadata.PrestoMetadataBuilder;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.net.URI;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -35,7 +38,7 @@ public class PrestoSearchSource implements SearchSource {
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
-        this.metadata = new Metadata(buildMetadata(prestoAdapter));
+        this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
         this.datasetApiService.initialize(); // TODO: During construction?
     }
@@ -45,77 +48,18 @@ public class PrestoSearchSource implements SearchSource {
         return metadata.getTables();
     }
 
-    private PrestoMetadata buildMetadata(PrestoAdapter adapter) {
-        PrestoMetadata.PrestoMetadataBuilder builder = PrestoMetadata.builder();
-        builder.presto(adapter);
-        //TODO: these object structures are unusual
-        // AND GROSS!!!
-        List<PrestoCatalog> emptyCatalogs = getCatalogs();
-        List<PrestoCatalog> populatedCatalogs = new ArrayList<>(emptyCatalogs.size());
-        Map<String, PrestoTable> tables = new HashMap<>();
-        for (PrestoCatalog catalog : emptyCatalogs) {
-            populatedCatalogs.add(populateSchemas(catalog));
-            tables.putAll(getTables(catalog));
-        }
-        //TODO: Fix constructionPrestoMetadata.PrestoMetadataBuilder builder = PrestoMetadata.builder();
-        builder.catalogs(populatedCatalogs);
-        builder.tables(tables);
-        Map<PrestoTable, List<PrestoField>> fields = getFieldMetadata(tables);
-        builder.fields(fields);
-        return builder.build();
-    }
-
-    public Map<PrestoTable, List<PrestoField>> getFieldMetadata(Map<String, PrestoTable> tables) {
-        //List<Table> tableList = getTables();
-        List<PrestoTable> t = new ArrayList<>();
-        tables.forEach((k, v) -> t.add(v));
-        Map<PrestoTable, List<PrestoField>> fieldMetadata = new HashMap<>();
-        for (PrestoTable pt : t) {
-             PrestoTableMetadata metadata = prestoAdapter.getMetadata(pt);
-            fieldMetadata.put(pt, metadata.getFields());
-        }
-        return fieldMetadata;
-        /*ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
-        PrestoMetadata partialData = metadataBuilder.build();
-//        for (Table table : tableList) {
-//            listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
-//            //listBuilder.addAll(partialData.getTableMetadata("ay").getFields());
-//        }*/
-    }
-
-
     //TODO: TOO SLOW
     @Override
     public List<Field> getFields(String tableName) {
-        //TODO: This could cause endless recursion if getFields tries to get a null table
-        // MUST FIX
         if (tableName == null) {
-            //return getFields();
             return metadata.getFields();
         }
         Table table = metadata.getTable(tableName);
         return metadata.getFields(table);
     }
 
-    public List<Field> getFields() {
-        List<Table> tableList = getTables();
-        ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
-        for (Table table : tableList) {
-            //listBuilder.addAll(metadata.getTableMetadata(table.getName()).getFields());
-            listBuilder.addAll(getFields(table.getName()));
-        }
-        return listBuilder.build();
-    }
-
     @Override
     public Schema getSchema(String id) {
-//        metadata.get
-        //Schema schema = new Schema()
-//        metadata.get
-//        SchemaIdConverter converter = new SchemaIdConverter(URI.create("https://search.dnastack.com"), "com.dnastack.search.pgpcanada");
-//        SchemaManager manager = new SchemaManager(converter);
-//        manager.registerSchema();
-//        return null;
         return datasetApiService.getSchema(id);
     }
 
@@ -126,43 +70,50 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public Dataset getDataset(String id) {
-        SearchResult tableData = getEntireTable(id);
-        if (tableData == null) {
+        SearchResult datasetResult = getEntireTable(id);
+        //TODO: better null handling
+        if (datasetResult == null) {
             return null;
         }
 
-        //TODO: List<Object> vs List<Map<String, Object>>
-        List<Object> results = new ArrayList<>(tableData.getResults().size());
-        for (ResultRow row : tableData.getResults()) {
+        List<Object> results = new ArrayList<>(datasetResult.getResults().size());
+        for (ResultRow row : datasetResult.getResults()) {
             Map<String, Object> rowData = new HashMap<>();
             for (ResultValue value : row.getValues()) {
                 rowData.put(value.getField().getId(), value.getValue());
             }
             results.add(rowData);
         }
-        //TODO: fix
-        SchemaId schemaId = SchemaId.of("ga4gh.example.com");
-        Schema schema = new Schema(schemaId, null);
+
+        SchemaId schemaId = SchemaId.of(id);
+        Map<String, Object> schemaJson = createBadSchema(datasetResult.getFields());
+        ObjectMapper mapper = new ObjectMapper();
+        String json = "";
+        JsonNode node;
+        try {
+            json = mapper.writeValueAsString(schemaJson);
+            node = mapper.readTree(json);
+        } catch (IOException e) {
+            //TODO: better
+            return null;
+        }
+        Schema schema = new Schema(schemaId, node);
         return new Dataset(schema, Collections.unmodifiableList(results), null);
     }
 
-    public SearchResult getEntireTable(String tableQualifiedName) {
-        if (!metadata.hasTable(tableQualifiedName)) {
-            log.info("Got an invalid table name: {}", tableQualifiedName);
-            return null;
-        }
-        PrestoTable table = metadata.getPrestoTable(tableQualifiedName);
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT ");
-        List<Field> fields = getFields(tableQualifiedName);
+    private Map<String, Object> createBadSchema(List<Field> fields) {
+        Map<String, Object> schemaJson = new LinkedHashMap<>();
+        int i = 0;
         for (Field f : fields) {
-            sqlBuilder.append(String.format(" %s,", f.getName()));
+            Map<String, Object> props = new LinkedHashMap<>();
+            props.put("type", f.getType().toString());
+            props.put("x-ga4gh-position", i);
+            schemaJson.put(f.getName(), props);
+            i++;
         }
-        sqlBuilder.deleteCharAt(sqlBuilder.lastIndexOf(","));
-        sqlBuilder.append(String.format(" FROM %s", table.getQualifiedName()));
-        SearchRequest request = new SearchRequest(null, sqlBuilder.toString());
-        return search(request);
+        return schemaJson;
     }
+
 
     @Override
     public ListDatasetsResponse getDatasets() {
@@ -183,62 +134,169 @@ public class PrestoSearchSource implements SearchSource {
         return new ListDatasetsResponse(info);
     }
 
-    private Map<String, PrestoTable> getTables(PrestoCatalog catalog) {
+    @Override
+    public SearchResult search(SearchRequest searchRequest) {
+        //TODO: After this line, we have a QUERY obj which should _already be valid_.
+        // Thus, does it make sense doing the escaping, etc. down the pipeline?
+        // Alternatively, does this mean query generation should exist at a different layer?
+        Query query = getQuery(searchRequest);
+        QueryContext queryContext = new QueryContext(query, metadata);
+        SearchQueryTransformer queryTransformer =
+                new SearchQueryTransformer(metadata, query, queryContext);
+        String prestoSqlString = queryTransformer.toPrestoSQL();
+        log.info("Transformed to SQL: {}", prestoSqlString);
+        List<Field> fields = new ArrayList<>();
+        List<ResultRow> results = new ArrayList<>();
+
+        prestoAdapter.query(
+                prestoSqlString,
+                rs -> {
+                    try {
+                        fields.addAll(queryTransformer.validateAndGetFields(rs.getMetaData()));
+
+                        while (rs.next()) {
+                            results.add(extractRow(rs, fields));
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        SearchResult searchResult = new SearchResult(fields, results);
+        return searchResult;
+    }
+
+    private SearchResult getEntireTable(String tableQualifiedName) {
+        if (!metadata.hasTable(tableQualifiedName)) {
+            log.info("Got an invalid table name: {}", tableQualifiedName);
+            return null;
+        }
+        PrestoTable table = metadata.getPrestoTable(tableQualifiedName);
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT ");
+        List<Field> fields = getFields(tableQualifiedName);
+        for (Field f : fields) {
+            sqlBuilder.append(String.format(" %s,", f.getName()));
+        }
+        sqlBuilder.deleteCharAt(sqlBuilder.lastIndexOf(","));
+        sqlBuilder.append(String.format(" FROM %s", table.getQualifiedName()));
+        SearchRequest request = new SearchRequest(null, sqlBuilder.toString());
+        return search(request);
+    }
+
+    private PrestoMetadata buildPrestoMetadata(PrestoAdapter adapter) {
+        PrestoMetadataBuilder prestoMetadata = PrestoMetadata.builder();
+        List<PrestoCatalog> catalogs = getCatalogMetadata();
+        Map<String, PrestoTable> tables = getTableMetadata(catalogs);
+        Map<PrestoTable, List<PrestoField>> fields = getFieldMetadata(tables);
+        prestoMetadata.presto(adapter);
+        prestoMetadata.catalogs(catalogs);
+        prestoMetadata.tables(tables);
+        prestoMetadata.fields(fields);
+        return prestoMetadata.build();
+    }
+
+    private List<PrestoCatalog> getCatalogMetadata() {
+        List<PrestoCatalog.PrestoCatalogBuilder> emptyCatalogs = getCatalogBuilders();
+        List<PrestoCatalog> populatedCatalogs = new ArrayList<>(emptyCatalogs.size());
+        for (PrestoCatalog.PrestoCatalogBuilder catalog : emptyCatalogs) {
+            if (tryPopulateSchemas(catalog)) {
+                populatedCatalogs.add(catalog.build());
+            }
+        }
+        return populatedCatalogs;
+    }
+
+    private Map<PrestoTable, List<PrestoField>> getFieldMetadata(Map<String, PrestoTable> tables) {
+        List<PrestoTable> t = new ArrayList<>();
+        tables.forEach((k, v) -> t.add(v));
+        Map<PrestoTable, List<PrestoField>> fieldMetadata = new HashMap<>();
+        // TODO: This is maybe a temporary workaround, re-evaluate using common pool (or customize?)
+        t.parallelStream().forEach(prestoTable -> {
+            PrestoTableMetadata metadata = prestoAdapter.getMetadata(prestoTable);
+            badThing(fieldMetadata, prestoTable, metadata);
+        });
+        return fieldMetadata;
+    }
+
+    //TODO: UGLY, KILL IT WITH FIRE
+    private synchronized void badThing(Map<PrestoTable, List<PrestoField>> fieldMetadata, PrestoTable pt, PrestoTableMetadata metadata) {
+        fieldMetadata.put(pt, metadata.getFields());
+    }
+
+    private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
-        String sql = String.format("select table_name, table_schema from \"%s\".information_schema.tables", catalog.getName());
+        String sqlTemplate = "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN ('information_schema', 'connector_views', 'roles')";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
-        List<ResultRow> catalogTables = query(sql, fields);
-        for (ResultRow table : catalogTables) {
-            //TODO: Better string manip
-            String tableName = table.getValues().get(0).getValue().toString();
-            String tableSchema = table.getValues().get(1).getValue().toString();
-            String escapedName = String.format("\"%s\"", tableName);
-            String escapedSchema = String.format("\"%s\"", tableSchema);
-            String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-            tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName())/* catalog.getName()*/, escapedSchema, escapedName));
+
+        for (PrestoCatalog catalog : catalogs) {
+            String sql = String.format(sqlTemplate, catalog.getName());
+            List<ResultRow> catalogTables = query(sql, fields);
+            for (ResultRow table : catalogTables) {
+                //TODO: Better string manip
+                String tableName = table.getValues().get(0).getValue().toString();
+                String tableSchema = table.getValues().get(1).getValue().toString();
+                String escapedName = String.format("\"%s\"", tableName);
+                String escapedSchema = String.format("\"%s\"", tableSchema);
+                String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
+                //TODO: Name escaping revisit!
+                tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName())/* catalog.getName()*/, escapedSchema, escapedName));
+            }
         }
 
         return tables;
     }
 
-    private List<PrestoCatalog> getCatalogs() {
+    private List<PrestoCatalog.PrestoCatalogBuilder> getCatalogBuilders() {
         final String sql = "show catalogs";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null, null));
         List<ResultRow> results = query(sql, fields);
-        return results.stream().map(row -> new
-                //TODO: SCHEMAS SHOULD BE POPULATED HERE
-                PrestoCatalog(row.getValues().get(0).getValue().toString(), new ArrayList<>()))
-                //TODO: Check blacklist here
-                .filter(prestoCatalog -> !prestoCatalog.getName().equals("system"))
-                .collect(Collectors.toList());
+        List<PrestoCatalog.PrestoCatalogBuilder> catalogBuilders = new ArrayList<>();
+        HashSet<String> blacklist = new HashSet<>();
+        results.forEach(row -> {
+            String name = row.getValues().get(0).getValue().toString();
+            if (name.equals("system")) {
+                return;
+            }
+            catalogBuilders.add(PrestoCatalog.builder().name(name));
+        });
 
+        return catalogBuilders;
     }
 
-    private PrestoCatalog populateSchemas(PrestoCatalog catalog) {
-        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalog.getName());
+    //TODO: better signature
+    private boolean tryPopulateSchemas(PrestoCatalog.PrestoCatalogBuilder catalog) {
+        String catalogName = catalog.build().getName();
+        //TODO: better enforcement of partial build state requirements
+        if (catalogName == null) {
+            return false;
+        }
+        String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
         List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
         List<ResultRow> results = query(sql, fields);
 
+        HashSet<String> blacklist = new HashSet<>();
+        blacklist.add("information");
+        blacklist.add("information_schema");
+        blacklist.add("billing");
         List<PrestoSchema> schemas = new ArrayList<>();
         for (ResultRow row : results) {
             List<ResultValue> values = row.getValues();
             values.stream()
-                    .filter(v -> !v.getValue().toString().equals("information"))
+                    .filter(v -> !blacklist.contains(v.getValue().toString()))
                     .forEach(v -> schemas.add(new PrestoSchema(v.getValue().toString())));
         }
-
-        return new PrestoCatalog(catalog.getName(), schemas);
+        catalog.schemas(schemas);
+        return true;
     }
-
 
     private List<ResultRow> query(String sql, List<Field> fields) {
-        return query(sql, Optional.empty(), fields);
+        return query(sql, null, fields);
     }
 
-    private List<ResultRow> query(String sql, Optional<List<Object>> params, List<Field> fields) {
+    private List<ResultRow> query(String sql, List<Object> params, List<Field> fields) {
         List<ResultRow> results = new ArrayList<>();
         prestoAdapter.query(
                 sql,
@@ -273,37 +331,6 @@ public class PrestoSearchSource implements SearchSource {
     private Query parseQuery(String sql) {
         log.debug("Processing SQL query: {}", sql);
         return (Query) new SqlParser().createStatement(sql, new ParsingOptions());
-    }
-
-    @Override
-    public SearchResult search(SearchRequest searchRequest) {
-        //TODO: After this line, we have a QUERY obj which should _already be valid_.
-        // Thus, does it make sense doing the escaping, etc. down the pipeline?
-        // Alternatively, does this mean query generation should exist at a different layer?
-        Query query = getQuery(searchRequest);
-        QueryContext queryContext = new QueryContext(query, metadata);
-        SearchQueryTransformer queryTransformer =
-                new SearchQueryTransformer(metadata, query, queryContext);
-        String prestoSqlString = queryTransformer.toPrestoSQL();
-        log.info("Transformed to SQL: {}", prestoSqlString);
-        List<Field> fields = new ArrayList<>();
-        List<ResultRow> results = new ArrayList<>();
-
-        prestoAdapter.query(
-                prestoSqlString,
-                rs -> {
-                    try {
-                        fields.addAll(queryTransformer.validateAndGetFields(rs.getMetaData()));
-
-                        while (rs.next()) {
-                            results.add(extractRow(rs, fields));
-                        }
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-        SearchResult searchResult = new SearchResult(fields, results);
-        return searchResult;
     }
 
     private ResultRow extractRow(ResultSet rs, List<Field> fields) throws SQLException {

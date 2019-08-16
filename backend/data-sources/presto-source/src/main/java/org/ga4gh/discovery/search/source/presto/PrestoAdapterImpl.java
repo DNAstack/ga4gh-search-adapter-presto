@@ -41,21 +41,20 @@ public class PrestoAdapterImpl implements PrestoAdapter {
 
     @Override
     public void query(String prestoSQL, Consumer<ResultSet> resultProcessor) {
-        query(prestoSQL, Optional.empty(), resultProcessor);
+        query(prestoSQL, null, resultProcessor);
     }
 
     @Override
-    public void query(String prestoSQL, Optional<List<Object>> params, Consumer<ResultSet> resultProcessor) {
+    public void query(String prestoSQL, List<Object> params, Consumer<ResultSet> resultProcessor) {
         try {
             Connection connection = getConnection();
             PreparedStatement stmt = connection.prepareStatement(prestoSQL);
-            if (params.isPresent()) {
+            if (params != null) {
                 int i = 1;
-                for (Object p : params.get()) {
-                    //TODO: Null guard
+                for (Object p : params) {
+                    //TODO: Could NPE here
                     stmt.setString(i, p.toString());
                     i++;
-
                 }
             }
             resultProcessor.accept(stmt.executeQuery());

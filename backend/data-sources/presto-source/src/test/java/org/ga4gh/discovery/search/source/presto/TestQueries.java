@@ -15,7 +15,7 @@ public class TestQueries extends SearchQueryHelper {
         Optional<Node> optLimit = limit == null ? noLimit() : limit(limit);
         return query(
                 select(field("id"), field("name")),
-                from(table("facts")),
+                from(table("fact")),
                 noWhere(),
                 optOffset,
                 optLimit);

@@ -1,6 +1,7 @@
 package org.ga4gh.discovery.search.source.presto;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
@@ -17,6 +18,25 @@ public class Metadata {
 
     public static final String PGP_CANADA = "pgp_canada";
 
+    private static final Table PGP_CANADA_TABLE = new Table(PGP_CANADA, "com.dnastack.search.pgpcanada");
+
+    private static final TableMetadata PGP_CANADA_METADATA =
+            new TableMetadata(
+                    PGP_CANADA_TABLE,
+                    ImmutableList.of(
+                            field("participant_id", "varchar"),
+                            field("chromosome", "varchar"),
+                            field("start_position", "integer"),
+                            field("end_position", "integer"),
+                            field("reference_base", "varchar"),
+                            field("alternate_base", "varchar"),
+                            field("vcf_size", "bigint"),
+                            field("vcf_object", "varchar", Type.DRS_OBJECT),
+                            field("category", "varchar"),
+                            field("key", "varchar"),
+                            field("raw_value", "varchar"),
+                            field("numeric_value", "double")));
+
     private final Map<String, Table> tables = new HashMap<>();
 
     private final PrestoMetadata prestoMetadata;
@@ -27,6 +47,8 @@ public class Metadata {
             //TODO: Qualified name or name?
             this.tables.put(qualifiedName, new Table(qualifiedName, prestoTable.getSchema()));
         });
+        //TODO: HACK CITY
+        this.tables.put(PGP_CANADA, PGP_CANADA_TABLE);
     }
 
     public List<PrestoCatalog> getCatalogs() {
@@ -79,6 +101,9 @@ public class Metadata {
         Table table = tables.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
+        if (PGP_CANADA.equals(tableName)) {
+            return PGP_CANADA_METADATA;
+        }
         return toModelMetadata(table, prestoMetadata.getTableMetadata(tableName));
     }
 
@@ -104,14 +129,6 @@ public class Metadata {
                 operatorsForType(type),
                 null,
                 tableName);
-    }
-
-    private static Field field(String name, String type) {
-        return toModelField(PGP_CANADA, new PrestoField(name, type));
-    }
-
-    private static Field field(String name, String type, Type modelType) {
-        return toModelField(PGP_CANADA, new PrestoField(name, type), modelType);
     }
 
     static String[] operatorsForType(Type type) {
@@ -147,6 +164,8 @@ public class Metadata {
                 return ImmutableSet.of("integer", "double", "bigint");
             case STRING:
                 return ImmutableSet.of("varchar");
+                //TODO: is this correct??
+            case NUMBER_ARRAY:
             case STRING_ARRAY:
                 return ImmutableSet.of("array");
             default:
@@ -176,12 +195,21 @@ public class Metadata {
         } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
         } else if (prestoType.startsWith("array(double")
-                    || prestoType.startsWith("array(int")) {
+                    || prestoType.startsWith("array(int") || prestoType.equals(Type.NUMBER_ARRAY.toString())) {
             return Type.NUMBER_ARRAY;
             // TODO: Double check correctness of below, was a best guess
         } else if (prestoType.startsWith("row(")) {
             return Type.JSON;
         }
         throw new RuntimeException("Unknown mapping for Presto field type " + prestoType);
+    }
+
+    //TODO: delete me
+    private static Field field(String name, String type) {
+        return toModelField(PGP_CANADA, new PrestoField(name, type));
+    }
+
+    private static Field field(String name, String type, Type modelType) {
+        return toModelField(PGP_CANADA, new PrestoField(name, type), modelType);
     }
 }

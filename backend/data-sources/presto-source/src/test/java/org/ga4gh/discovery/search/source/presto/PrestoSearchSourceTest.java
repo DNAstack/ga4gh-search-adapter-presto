@@ -47,7 +47,34 @@ public class PrestoSearchSourceTest {
         mockPresto.addMockResults(
                 "SELECT \"id\", \"name\"\n" + "FROM \"postgres\".\"public\".\"fact\"\nOFFSET 3",
                 resultSet.subset(3, 7));
+
+        mockPresto.addMockResults("show catalogs", defaultCatalogs());
+        mockPresto.addMockResults("SHOW SCHEMAS FROM \"postgres\"", schemaResult("public"));
+        String selectTablesQuery = "select table_name, table_schema from \"postgres\".information_schema.tables WHERE table_schema NOT IN ('information_schema', 'connector_views', 'roles')";
+        MockResultSet tableInfo = new MockResultSet(ImmutableList.of("table_name", "table+schema"), ImmutableList.of("varchar", "varchar"));
+        tableInfo.addRow("fact", "public");
+        mockPresto.addMockResults(selectTablesQuery, tableInfo);
         searchSource = new PrestoSearchSource(mockPresto);
+    }
+
+    //TODO: This is getting really bad
+    private MockResultSet schemaResult(String... schema) {
+         MockResultSet resultSet = new MockResultSet(
+            ImmutableList.of("Schema"),
+            ImmutableList.of("varchar"));
+        for (String s : schema) {
+            resultSet.addRow(s);
+        }
+        return resultSet;
+    }
+
+    private MockResultSet defaultCatalogs() {
+        return new MockResultSet(
+                ImmutableList.of("Catalog"),
+                ImmutableList.of("varchar"))
+//                .addRow("drs")
+//                .addRow("bigquery-pgc-data")
+                .addRow("postgres");
     }
 
     private void searchWithLimitOffset(Integer limit, Integer offset) {

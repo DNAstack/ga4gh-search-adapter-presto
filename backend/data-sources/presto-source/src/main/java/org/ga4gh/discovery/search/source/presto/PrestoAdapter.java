@@ -10,5 +10,5 @@ public interface PrestoAdapter {
     PrestoTableMetadata getMetadata(PrestoTable table);
 
     void query(String prestoSQL, Consumer<ResultSet> resultProcessor);
-    void query(String prestoSQL, Optional<List<Object>> params, Consumer<ResultSet> resultProcessor);
+    void query(String prestoSQL,List<Object> params, Consumer<ResultSet> resultProcessor);
 }
