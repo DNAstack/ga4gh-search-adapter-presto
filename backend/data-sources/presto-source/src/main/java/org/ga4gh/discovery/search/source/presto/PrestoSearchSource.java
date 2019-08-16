@@ -78,7 +78,7 @@ public class PrestoSearchSource implements SearchSource {
 
         List<Object> results = new ArrayList<>(datasetResult.getResults().size());
         for (ResultRow row : datasetResult.getResults()) {
-            Map<String, Object> rowData = new HashMap<>();
+            Map<String, Object> rowData = new LinkedHashMap<>();
             for (ResultValue value : row.getValues()) {
                 rowData.put(value.getField().getId(), value.getValue());
             }
