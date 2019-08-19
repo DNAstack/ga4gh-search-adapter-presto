@@ -71,7 +71,13 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public Dataset getDataset(String id) {
-        SearchResult datasetResult = getEntireTable(id);
+        if (!metadata.hasTable(id)) {
+            return null;
+        }
+        SearchRequest datasetRequest = new SearchRequest();
+        datasetRequest.setSqlQuery("SELECT * FROM " + id);
+        //SearchResult datasetResult = enumerateTable(id);
+        SearchResult datasetResult = search(datasetRequest);
         //TODO: better null handling
         if (datasetResult == null) {
             return null;
@@ -81,15 +87,15 @@ public class PrestoSearchSource implements SearchSource {
         for (ResultRow row : datasetResult.getResults()) {
             Map<String, Object> rowData = new LinkedHashMap<>();
             for (ResultValue value : row.getValues()) {
-                rowData.put(value.getField().getId(), value.getValue());
+                rowData.put(value.getField().getName(), value.getValue());
             }
             results.add(rowData);
         }
 
         SchemaId schemaId = SchemaId.of(id);
-        Map<String, Object> schemaJson = createBadSchema(datasetResult.getFields());
+        Map<String, Object> schemaJson = generateSchema(datasetResult.getFields());
         ObjectMapper mapper = new ObjectMapper();
-        String json = "";
+        String json;
         JsonNode node;
         try {
             json = mapper.writeValueAsString(schemaJson);
@@ -102,15 +108,14 @@ public class PrestoSearchSource implements SearchSource {
         return new Dataset(schema, Collections.unmodifiableList(results), null);
     }
 
-    private Map<String, Object> createBadSchema(List<Field> fields) {
+    private Map<String, Object> generateSchema(List<Field> fields) {
         Map<String, Object> schemaJson = new LinkedHashMap<>();
-        int i = 0;
+        int position = 0;
         for (Field f : fields) {
             Map<String, Object> props = new LinkedHashMap<>();
             props.put("type", f.getType().toString());
-            props.put("x-ga4gh-position", i);
+            props.put("x-ga4gh-position", position++);
             schemaJson.put(f.getName(), props);
-            i++;
         }
         return schemaJson;
     }
@@ -178,24 +183,6 @@ public class PrestoSearchSource implements SearchSource {
         return  fields;
     }
 
-    private SearchResult getEntireTable(String tableQualifiedName) {
-        if (!metadata.hasTable(tableQualifiedName)) {
-            log.info("Got an invalid table name: {}", tableQualifiedName);
-            return null;
-        }
-        PrestoTable table = metadata.getPrestoTable(tableQualifiedName);
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT ");
-        List<Field> fields = getFields(tableQualifiedName);
-        for (Field f : fields) {
-            sqlBuilder.append(String.format(" %s,", f.getName()));
-        }
-        sqlBuilder.deleteCharAt(sqlBuilder.lastIndexOf(","));
-        sqlBuilder.append(String.format(" FROM %s", table.getQualifiedName()));
-        SearchRequest request = new SearchRequest(null, sqlBuilder.toString());
-        return search(request);
-    }
-
     private PrestoMetadata buildPrestoMetadata(PrestoAdapter adapter) {
         PrestoMetadataBuilder prestoMetadata = PrestoMetadata.builder();
         List<PrestoCatalog> catalogs = getCatalogMetadata();
@@ -249,7 +236,7 @@ public class PrestoSearchSource implements SearchSource {
                 String escapedSchema = String.format("\"%s\"", tableSchema);
                 String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
                 //TODO: Name escaping revisit!
-                tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName())/* catalog.getName()*/, escapedSchema, escapedName));
+                tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName()), escapedSchema, escapedName));
             }
         }
 

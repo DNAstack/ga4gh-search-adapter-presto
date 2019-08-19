@@ -16,27 +16,6 @@ import static java.util.stream.Collectors.toList;
 //@AllArgsConstructor
 public class Metadata {
 
-    public static final String PGP_CANADA = "pgp_canada";
-
-    private static final Table PGP_CANADA_TABLE = new Table(PGP_CANADA, "com.dnastack.search.pgpcanada");
-
-    private static final TableMetadata PGP_CANADA_METADATA =
-            new TableMetadata(
-                    PGP_CANADA_TABLE,
-                    ImmutableList.of(
-                            field("participant_id", "varchar"),
-                            field("chromosome", "varchar"),
-                            field("start_position", "integer"),
-                            field("end_position", "integer"),
-                            field("reference_base", "varchar"),
-                            field("alternate_base", "varchar"),
-                            field("vcf_size", "bigint"),
-                            field("vcf_object", "varchar", Type.DRS_OBJECT),
-                            field("category", "varchar"),
-                            field("key", "varchar"),
-                            field("raw_value", "varchar"),
-                            field("numeric_value", "double")));
-
     private final Map<String, Table> tables = new HashMap<>();
 
     private final PrestoMetadata prestoMetadata;
@@ -48,7 +27,6 @@ public class Metadata {
             this.tables.put(qualifiedName, new Table(qualifiedName, prestoTable.getSchema()));
         });
         //TODO: HACK CITY
-        this.tables.put(PGP_CANADA, PGP_CANADA_TABLE);
     }
 
     public List<PrestoCatalog> getCatalogs() {
@@ -60,8 +38,6 @@ public class Metadata {
         PrestoTable prestoTable = this.prestoMetadata.getPrestoTable(table.getName());
         List<Field> fields = toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
         return fields;
-        //return null;
-//        return this.prestoMetadata.getFields(getPrestoTable(table.getName()));
     }
 
     public List<Field> getFields() {
@@ -71,8 +47,6 @@ public class Metadata {
             fields.addAll(getFields(t));
         }
         return fields;
-//        return null;
-//        return this.prestoMetadata.getFields();
     }
 
     public PrestoTable getPrestoTable(String tableName) {
@@ -101,9 +75,6 @@ public class Metadata {
         Table table = tables.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
-        if (PGP_CANADA.equals(tableName)) {
-            return PGP_CANADA_METADATA;
-        }
         return toModelMetadata(table, prestoMetadata.getTableMetadata(tableName));
     }
 
@@ -202,14 +173,5 @@ public class Metadata {
             return Type.JSON;
         }
         throw new RuntimeException("Unknown mapping for Presto field type " + prestoType);
-    }
-
-    //TODO: delete me
-    private static Field field(String name, String type) {
-        return toModelField(PGP_CANADA, new PrestoField(name, type));
-    }
-
-    private static Field field(String name, String type, Type modelType) {
-        return toModelField(PGP_CANADA, new PrestoField(name, type), modelType);
     }
 }

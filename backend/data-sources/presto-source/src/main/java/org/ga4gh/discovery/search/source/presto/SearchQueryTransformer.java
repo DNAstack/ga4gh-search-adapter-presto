@@ -48,11 +48,6 @@ public class SearchQueryTransformer extends AstVisitor<Void, VisitorContext> {
 
     @Override
     protected Void visitQuery(Query node, VisitorContext context) {
-        if (queryContext.hasFromTable(Metadata.PGP_CANADA)) {
-            sql.append("WITH " + Metadata.PGP_CANADA + " AS (");
-            sql.append(createDemoViewQuerySQL());
-            sql.append(")\n");
-        }
         checkArgument(!node.getWith().isPresent(), "WITH clause not supported");
         checkArgument(!node.getOrderBy().isPresent(), "ORDER BY clause not supported");
         checkArgument(!node.getLimit().isPresent(), "LIMIT clause not supported");
@@ -134,14 +129,9 @@ public class SearchQueryTransformer extends AstVisitor<Void, VisitorContext> {
 //                qualifiedName.getParts().size() == 1,
 //                "only single part qualified names are supported");
 //        String tableName = qualifiedName.getParts().get(0);
-        //TODO: HACKS ON HACKS ON HACKS (whatchu need?)
         String tableName = qualifiedName.toString();
-        if (Metadata.PGP_CANADA.equals(tableName)) {
-            return QualifiedName.of(Metadata.PGP_CANADA);
-        } else {
-            PrestoTable prestoTable = metadata.getPrestoTable(tableName);
-            return prestoTable.getQualifiedName();
-        }
+        PrestoTable prestoTable = metadata.getPrestoTable(tableName);
+        return prestoTable.getQualifiedName();
     }
 
     private String formatName(QualifiedName name) {
