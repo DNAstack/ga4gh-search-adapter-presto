@@ -1,6 +1,5 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.prestosql.sql.parser.ParsingOptions;
@@ -23,8 +22,10 @@ import org.springframework.beans.factory.annotation.Value;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -136,15 +137,8 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public SearchResult search(SearchRequest searchRequest) {
-        //TODO: After this line, we have a QUERY obj which should _already be valid_.
-        // Thus, does it make sense doing the escaping, etc. down the pipeline?
-        // Alternatively, does this mean query generation should exist at a different layer?
-        Query query = getQuery(searchRequest);
-        QueryContext queryContext = new QueryContext(query, metadata);
-        SearchQueryTransformer queryTransformer =
-                new SearchQueryTransformer(metadata, query, queryContext);
-        String prestoSqlString = queryTransformer.toPrestoSQL();
-        log.info("Transformed to SQL: {}", prestoSqlString);
+        String prestoSqlString = searchRequest.getSqlQuery();
+        log.info("Received SQL: {}", prestoSqlString);
         List<Field> fields = new ArrayList<>();
         List<ResultRow> results = new ArrayList<>();
 
@@ -152,8 +146,8 @@ public class PrestoSearchSource implements SearchSource {
                 prestoSqlString,
                 rs -> {
                     try {
-                        fields.addAll(queryTransformer.validateAndGetFields(rs.getMetaData()));
-
+                        ResultSetMetaData resultSetMetaData = rs.getMetaData();
+                        fields.addAll(extractFields(resultSetMetaData));
                         while (rs.next()) {
                             results.add(extractRow(rs, fields));
                         }
@@ -161,8 +155,27 @@ public class PrestoSearchSource implements SearchSource {
                         throw new RuntimeException(e);
                     }
                 });
-        SearchResult searchResult = new SearchResult(fields, results);
-        return searchResult;
+        return new SearchResult(fields, results);
+    }
+
+    private List<Field> extractFields(ResultSetMetaData resultSetMetaData) throws SQLException {
+        List<Field> fields = new ArrayList<>(resultSetMetaData.getColumnCount());
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+            String columnName = resultSetMetaData.getColumnName(i);
+            String prestoType = resultSetMetaData.getColumnTypeName(i);
+            Type primitiveType = Metadata.prestoToPrimitiveType(prestoType);
+            String[] typeOperators = Metadata.operatorsForType(primitiveType);
+            //TODO: This data is not populated correctly -- why?
+            String qualifiedTableName = String.format("%s.%s.%s",
+                    resultSetMetaData.getCatalogName(i),
+                    resultSetMetaData.getSchemaName(i),
+                    resultSetMetaData.getTableName(i));
+            String id = qualifiedTableName + "." + columnName;
+            Field f = new Field(id, columnName, primitiveType, typeOperators, null, qualifiedTableName);
+            fields.add(f);
+        }
+
+        return  fields;
     }
 
     private SearchResult getEntireTable(String tableQualifiedName) {
@@ -209,18 +222,13 @@ public class PrestoSearchSource implements SearchSource {
     private Map<PrestoTable, List<PrestoField>> getFieldMetadata(Map<String, PrestoTable> tables) {
         List<PrestoTable> t = new ArrayList<>();
         tables.forEach((k, v) -> t.add(v));
-        Map<PrestoTable, List<PrestoField>> fieldMetadata = new HashMap<>();
+        ConcurrentHashMap<PrestoTable, List<PrestoField>> fieldMetadata = new ConcurrentHashMap<>();
         // TODO: This is maybe a temporary workaround, re-evaluate using common pool (or customize?)
         t.parallelStream().forEach(prestoTable -> {
             PrestoTableMetadata metadata = prestoAdapter.getMetadata(prestoTable);
-            badThing(fieldMetadata, prestoTable, metadata);
+            fieldMetadata.put(prestoTable, metadata.getFields());
         });
-        return fieldMetadata;
-    }
-
-    //TODO: UGLY, KILL IT WITH FIRE
-    private synchronized void badThing(Map<PrestoTable, List<PrestoField>> fieldMetadata, PrestoTable pt, PrestoTableMetadata metadata) {
-        fieldMetadata.put(pt, metadata.getFields());
+        return Collections.unmodifiableMap(fieldMetadata);
     }
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
