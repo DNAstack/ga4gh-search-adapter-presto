@@ -35,18 +35,18 @@ public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
-    private final DatasetApiService datasetApiService;
+    private final SchemaService schemaService;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         //TODO: better home
-        this.datasetApiService = new DatasetApiService("fake", "fake", 100);
-        datasetApiService.registerSchema("pgpc-schemas-0.1.0");
-        datasetApiService.registerSchema("bigquery-pgc-data.pgp_variants.view_variants2_beacon", "variant-object-0.1.0");
-        datasetApiService.registerSchema("postgres.public.fact", "fact-object-0.1.0");
-        datasetApiService.registerSchema("ga4gh-drs-0.1.0");
-        datasetApiService.registerSchema("drs.org_ga4gh_drs.objects", "ga4gh-drs-object-0.1.0");
+        this.schemaService = new SchemaService("http://localhost:8080", "fake", 100);
+        schemaService.registerSchema("pgpc-schemas-0.1.0");
+        schemaService.registerSchema("bigquery-pgc-data.pgp_variants.view_variants2_beacon", "variant-object-0.1.0");
+        schemaService.registerSchema("postgres.public.fact", "fact-object-0.1.0");
+        schemaService.registerSchema("ga4gh-drs-0.1.0");
+        schemaService.registerSchema("drs.org_ga4gh_drs.objects", "ga4gh-drs-object-0.1.0");
     }
 
     @Override
@@ -83,11 +83,11 @@ public class PrestoSearchSource implements SearchSource {
         datasetRequest.setSqlQuery("SELECT * FROM " + id);
         Schema expectedSchema;
         try {
-            expectedSchema = datasetApiService.getSchema(id);
+            expectedSchema = schemaService.getSchema(id);
             datasetRequest.setExpectedSchema(expectedSchema);
         }
         catch (SchemaNotFoundException e) {
-            log.warn("Serving a dataset request with no associated ga4gh schema: {}", id);
+            log.info("Serving a dataset request with no associated ga4gh schema: {}", id);
         }
 
         return search(datasetRequest);
@@ -110,13 +110,17 @@ public class PrestoSearchSource implements SearchSource {
     public ListDatasetsResponse getDatasets() {
         List<DatasetInfo> info = new ArrayList<>();
         for (Table t : this.metadata.getTables()) {
+            Schema ga4ghSchema = null;
+            try {
+                ga4ghSchema = schemaService.getSchema(t.getName());
+            } catch (SchemaNotFoundException e) {
+                log.info("No schema info for dataset : {}", t.getName());
+            }
             DatasetInfo di = DatasetInfo.builder()
                     .id(t.getName())
-                    .description("TODO: How to map metadata like descriptions to tables?")
-                    //TODO: Should this schema be unescaped by default?
-                    // Part of a larger issue to re-evaluate name escaping in general.
-                    .schemaId(t.getSchema().replace("\"", ""))
-                    .schemaLocation(URI.create("http://localhost:8080/schemas/" + t.getSchema().replace("\"", "")))
+                    .description(ga4ghSchema != null ? ga4ghSchema.getSchemaJson().get("description").asText() : "N/A")
+                    .schemaId(ga4ghSchema != null ? ga4ghSchema.getSchemaId().toString() : t.getSchema())
+                    .schemaLocation(ga4ghSchema != null? URI.create(ga4ghSchema.getSchemaJson().get("$ref").asText()) : URI.create("http://localhost:8080/schemas/" + t.getName()))
                     .build();
             info.add(di);
         }
@@ -234,7 +238,11 @@ public class PrestoSearchSource implements SearchSource {
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
-        String sqlTemplate = "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN ('information_schema', 'connector_views', 'roles')";
+        //TODO: better table blackisting than hardcoded in SQL query
+        //TODO: Consolidate blacklisting, there is a weird overlap in how things are blacklisted at the
+        // catalog, schema, and table level.
+        String sqlTemplate = "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
+                "('information_schema', 'connector_views', 'roles', 'databasechangelog', 'databasechangeloglock', 'billing')";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
@@ -246,12 +254,8 @@ public class PrestoSearchSource implements SearchSource {
                 //TODO: Better string manip
                 String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
-                //String escapedName = String.format("\"%s\"", tableName);
-//                String escapedSchema = String.format("\"%s\"", tableSchema);
                 String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-                //TODO: Name escaping revisit!
                 tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
-                //tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName()), escapedSchema, escapedName));
             }
         }
 
