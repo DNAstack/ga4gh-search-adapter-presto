@@ -14,7 +14,6 @@ import org.ga4gh.discovery.search.Type;
 import org.ga4gh.discovery.search.request.SearchRequest;
 import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.ResultValue;
-import org.ga4gh.discovery.search.result.SearchResult;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.ga4gh.discovery.search.source.presto.PrestoMetadata.PrestoMetadataBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,13 +34,13 @@ public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
-    private final DatasetApiService datasetApiService;
+//    private final DatasetApiService datasetApiService;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
-        this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
-        this.datasetApiService.initialize(); // TODO: During construction?
+        //this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
+        //this.datasetApiService.initialize(); // TODO: During construction?
     }
 
     @Override
@@ -61,12 +60,14 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public Schema getSchema(String id) {
-        return datasetApiService.getSchema(id);
+        //return datasetApiService.getSchema(id);
+        return null;
     }
 
     @Override
     public ListSchemasResponse getSchemas() {
-        return datasetApiService.listSchemas();
+        //return datasetApiService.listSchemas();
+        return null;
     }
 
     @Override
@@ -76,36 +77,7 @@ public class PrestoSearchSource implements SearchSource {
         }
         SearchRequest datasetRequest = new SearchRequest();
         datasetRequest.setSqlQuery("SELECT * FROM " + id);
-        //SearchResult datasetResult = enumerateTable(id);
-        SearchResult datasetResult = search(datasetRequest);
-        //TODO: better null handling
-        if (datasetResult == null) {
-            return null;
-        }
-
-        List<Object> results = new ArrayList<>(datasetResult.getResults().size());
-        for (ResultRow row : datasetResult.getResults()) {
-            Map<String, Object> rowData = new LinkedHashMap<>();
-            for (ResultValue value : row.getValues()) {
-                rowData.put(value.getField().getName(), value.getValue());
-            }
-            results.add(rowData);
-        }
-
-        SchemaId schemaId = SchemaId.of(id);
-        Map<String, Object> schemaJson = generateSchema(datasetResult.getFields());
-        ObjectMapper mapper = new ObjectMapper();
-        String json;
-        JsonNode node;
-        try {
-            json = mapper.writeValueAsString(schemaJson);
-            node = mapper.readTree(json);
-        } catch (IOException e) {
-            //TODO: better
-            return null;
-        }
-        Schema schema = new Schema(schemaId, node);
-        return new Dataset(schema, Collections.unmodifiableList(results), null);
+        return search(datasetRequest);
     }
 
     private Map<String, Object> generateSchema(List<Field> fields) {
@@ -141,7 +113,7 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     @Override
-    public SearchResult search(SearchRequest searchRequest) {
+    public Dataset search(SearchRequest searchRequest) {
         String prestoSqlString = searchRequest.getSqlQuery();
         log.info("Received SQL: {}", prestoSqlString);
         List<Field> fields = new ArrayList<>();
@@ -160,7 +132,36 @@ public class PrestoSearchSource implements SearchSource {
                         throw new RuntimeException(e);
                     }
                 });
-        return new SearchResult(fields, results);
+        return createDataset(fields, results);
+    }
+
+    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults) {
+        return createDataset(fields, queryResults, null);
+    }
+
+    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, String id) {
+        List<Object> results = new ArrayList<>(queryResults.size());
+        for (ResultRow row : queryResults) {
+            Map<String, Object> rowData = new LinkedHashMap<>();
+            for (ResultValue value : row.getValues()) {
+                rowData.put(value.getField().getName(), value.getValue());
+            }
+            results.add(rowData);
+        }
+        SchemaId schemaId = SchemaId.of(id == null ? "a.b.c" : id);
+        Map<String, Object> schemaJson = generateSchema(fields);
+        ObjectMapper mapper = new ObjectMapper();
+        String json;
+        JsonNode node;
+        try {
+            json = mapper.writeValueAsString(schemaJson);
+            node = mapper.readTree(json);
+        } catch (IOException e) {
+            //TODO: better
+            return null;
+        }
+        Schema schema = new Schema(schemaId, node);
+        return new Dataset(schema, Collections.unmodifiableList(results), null);
     }
 
     private List<Field> extractFields(ResultSetMetaData resultSetMetaData) throws SQLException {
@@ -176,7 +177,9 @@ public class PrestoSearchSource implements SearchSource {
                     resultSetMetaData.getSchemaName(i),
                     resultSetMetaData.getTableName(i));
             String id = qualifiedTableName + "." + columnName;
-            Field f = new Field(id, columnName, primitiveType, typeOperators, null, qualifiedTableName);
+            //TODO: Temporary workaround while above is unpopulated
+            Field f = new Field(columnName, columnName, primitiveType, typeOperators, null, qualifiedTableName);
+            //Field f = new Field(id, columnName, primitiveType, typeOperators, null, qualifiedTableName);
             fields.add(f);
         }
 
@@ -232,11 +235,12 @@ public class PrestoSearchSource implements SearchSource {
                 //TODO: Better string manip
                 String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
-                String escapedName = String.format("\"%s\"", tableName);
-                String escapedSchema = String.format("\"%s\"", tableSchema);
+                //String escapedName = String.format("\"%s\"", tableName);
+//                String escapedSchema = String.format("\"%s\"", tableSchema);
                 String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
                 //TODO: Name escaping revisit!
-                tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName()), escapedSchema, escapedName));
+                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                //tables.put(id, new PrestoTable(escapedName, escapedSchema, String.format("\"%s\"", catalog.getName()), escapedSchema, escapedName));
             }
         }
 
@@ -250,9 +254,10 @@ public class PrestoSearchSource implements SearchSource {
         List<ResultRow> results = query(sql, fields);
         List<PrestoCatalog.PrestoCatalogBuilder> catalogBuilders = new ArrayList<>();
         HashSet<String> blacklist = new HashSet<>();
+        blacklist.add("system");
         results.forEach(row -> {
             String name = row.getValues().get(0).getValue().toString();
-            if (name.equals("system")) {
+            if (blacklist.contains(name)) {
                 return;
             }
             catalogBuilders.add(PrestoCatalog.builder().name(name));

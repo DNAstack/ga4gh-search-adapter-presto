@@ -78,9 +78,9 @@ public class PrestoSearchSourceTest {
     }
 
     private void searchWithLimitOffset(Integer limit, Integer offset) {
-        searchResult =
-                searchSource.search(
-                        new SearchRequest(TestQueries.animalsQuery(offset, limit), null));
+//        searchResult =
+//                searchSource.search(
+//                        new SearchRequest(TestQueries.animalsQuery(offset, limit), null));
     }
 
     private void assertIndices(int... indices) {
