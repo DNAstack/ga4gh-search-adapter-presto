@@ -6,6 +6,7 @@ import io.prestosql.sql.tree.Query;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.ga4gh.dataset.model.Schema;
 
 @Data
 @AllArgsConstructor
@@ -17,4 +18,6 @@ public class SearchRequest {
 
     @JsonProperty("query")
     private String sqlQuery;
+
+    private Schema expectedSchema;
 }

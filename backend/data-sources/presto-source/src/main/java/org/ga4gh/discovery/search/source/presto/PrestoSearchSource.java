@@ -7,6 +7,7 @@ import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
 import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.dataset.SchemaId;
+import org.ga4gh.dataset.exception.SchemaNotFoundException;
 import org.ga4gh.dataset.model.*;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
@@ -34,13 +35,18 @@ public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
-//    private final DatasetApiService datasetApiService;
+    private final DatasetApiService datasetApiService;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
-        //this.datasetApiService = new DatasetApiService("http://localhost:8080/api", "ca.personalgenomes.schemas", null, 100);
-        //this.datasetApiService.initialize(); // TODO: During construction?
+        //TODO: better home
+        this.datasetApiService = new DatasetApiService("fake", "fake", 100);
+        datasetApiService.registerSchema("pgpc-schemas-0.1.0");
+        datasetApiService.registerSchema("bigquery-pgc-data.pgp_variants.view_variants2_beacon", "variant-object-0.1.0");
+        datasetApiService.registerSchema("postgres.public.fact", "fact-object-0.1.0");
+        datasetApiService.registerSchema("ga4gh-drs-0.1.0");
+        datasetApiService.registerSchema("drs.org_ga4gh_drs.objects", "ga4gh-drs-object-0.1.0");
     }
 
     @Override
@@ -60,13 +66,11 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public Schema getSchema(String id) {
-        //return datasetApiService.getSchema(id);
         return null;
     }
 
     @Override
     public ListSchemasResponse getSchemas() {
-        //return datasetApiService.listSchemas();
         return null;
     }
 
@@ -77,6 +81,15 @@ public class PrestoSearchSource implements SearchSource {
         }
         SearchRequest datasetRequest = new SearchRequest();
         datasetRequest.setSqlQuery("SELECT * FROM " + id);
+        Schema expectedSchema;
+        try {
+            expectedSchema = datasetApiService.getSchema(id);
+            datasetRequest.setExpectedSchema(expectedSchema);
+        }
+        catch (SchemaNotFoundException e) {
+            log.warn("Serving a dataset request with no associated ga4gh schema: {}", id);
+        }
+
         return search(datasetRequest);
     }
 
@@ -95,13 +108,11 @@ public class PrestoSearchSource implements SearchSource {
 
     @Override
     public ListDatasetsResponse getDatasets() {
-        //TODO: To effectively use these classes, we should be leveraging
-        // The schema/dataset managers s.t. we don't have to dynamically construct these DatasetInfos
         List<DatasetInfo> info = new ArrayList<>();
         for (Table t : this.metadata.getTables()) {
             DatasetInfo di = DatasetInfo.builder()
                     .id(t.getName())
-                    .description("Fake description")
+                    .description("TODO: How to map metadata like descriptions to tables?")
                     //TODO: Should this schema be unescaped by default?
                     // Part of a larger issue to re-evaluate name escaping in general.
                     .schemaId(t.getSchema().replace("\"", ""))
@@ -132,14 +143,10 @@ public class PrestoSearchSource implements SearchSource {
                         throw new RuntimeException(e);
                     }
                 });
-        return createDataset(fields, results);
+        return createDataset(fields, results, searchRequest.getExpectedSchema());
     }
 
-    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults) {
-        return createDataset(fields, queryResults, null);
-    }
-
-    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, String id) {
+    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Schema expectedSchema) {
         List<Object> results = new ArrayList<>(queryResults.size());
         for (ResultRow row : queryResults) {
             Map<String, Object> rowData = new LinkedHashMap<>();
@@ -148,7 +155,11 @@ public class PrestoSearchSource implements SearchSource {
             }
             results.add(rowData);
         }
-        SchemaId schemaId = SchemaId.of(id == null ? "a.b.c" : id);
+        if (expectedSchema != null) {
+            return new Dataset(expectedSchema, Collections.unmodifiableList(results), null);
+        }
+
+        SchemaId schemaId = SchemaId.of("No.Schema.Provided");
         Map<String, Object> schemaJson = generateSchema(fields);
         ObjectMapper mapper = new ObjectMapper();
         String json;
