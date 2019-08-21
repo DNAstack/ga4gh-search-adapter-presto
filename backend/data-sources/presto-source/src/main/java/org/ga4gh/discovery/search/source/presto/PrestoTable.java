@@ -20,8 +20,12 @@ public class PrestoTable {
     public QualifiedName getQualifiedName() {
         return QualifiedName.of(
                 ImmutableList.of(
-                        new Identifier(prestoCatalog, true),
-                        new Identifier(prestoSchema, true),
-                        new Identifier(prestoTable, true)));
+                        new Identifier(escape(prestoCatalog), true),
+                        new Identifier(escape(prestoSchema), true),
+                        new Identifier(escape(prestoTable), true)));
+    }
+
+    private String escape(String identifier) {
+        return "\"" + identifier + "\"";
     }
 }
