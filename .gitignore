@@ -19,3 +19,5 @@ README.html
 .idea
 *.DS_Store
 *application.properties
+
+env\.sh
