@@ -37,7 +37,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.ga4gh.dataset</groupId>
-			<artifactId>	dataset-api-tools</artifactId>
+			<artifactId>dataset-api-tools</artifactId>
 			<version>0.1.8-SNAPSHOT</version>
 		</dependency>
 		<dependency>
