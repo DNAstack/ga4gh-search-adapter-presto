@@ -15,11 +15,11 @@ app_version=$3
 # This script does all its staging in a directory called target for easy cleanup and effective .gitignore.
 docker_context_dir=ci/impl/target
 mkdir -p ${docker_context_dir}
-cp -rp .mvn mvnw pom.xml backend frontend ${docker_context_dir}
-# Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
 mkdir -p ${docker_context_dir}/.m2
-cp -rp src .mvn mvnw pom.xml ${docker_context_dir}
+cp -rp .mvn mvnw pom.xml backend frontend ${docker_context_dir}
 cp ~/.m2/*.xml ${docker_context_dir}/.m2
+# Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
+
 
 docker build \
   --build-arg APP_NAME=${app_name} \
