@@ -35,7 +35,7 @@ ADD target/frontend/demo/ /build/frontend/demo/
 #     org.apache.maven.artifact.resolver.MultipleArtifactsNotFoundException: Missing:
 # then update the version number of surefire-junit4 in pom.xml under the
 # dynamicDependencies section of go-offline-maven-plugin configuration.
-RUN ./mvnw -B -o package
+RUN ./mvnw -B package
 
 ##
 ## Stage 2: Package the runnable image
