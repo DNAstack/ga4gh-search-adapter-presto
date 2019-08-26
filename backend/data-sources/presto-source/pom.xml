@@ -38,7 +38,7 @@
 		<dependency>
 			<groupId>org.ga4gh.dataset</groupId>
 			<artifactId>dataset-api-tools</artifactId>
-			<version>0.1.8-SNAPSHOT</version>
+			<version>0.1.9-3-gaa3916e</version>
 		</dependency>
 		<dependency>
 			<groupId>io.prestosql</groupId>
@@ -66,4 +66,12 @@
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>dnastack-releases</id>
+			<layout>default</layout>
+			<url>https://nexus.dnastack.com/content/repositories/releases</url>
+		</repository>
+	</repositories>
 </project>

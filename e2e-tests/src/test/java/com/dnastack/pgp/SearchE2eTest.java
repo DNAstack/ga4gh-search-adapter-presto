@@ -2,14 +2,12 @@ package com.dnastack.pgp;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 
 import java.lang.reflect.Type;
 import java.util.List;
 
+import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.discovery.search.test.model.Field;
 import org.ga4gh.discovery.search.test.model.ResultRow;
 import org.ga4gh.discovery.search.test.model.ResultValue;
@@ -75,46 +73,55 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
-    public void jsonQueryShouldFindSomething() {
-        Query query = SearchQueryHelper.exampleQuery();
-        SearchResult result = search(query);
-        int numColumns = getSelectColumnCount(query);
-        assertThat(result.getFields(), hasSize(numColumns));
-        assertThat(result.getResults(), hasSize(getQueryLimit(query)));
-        ResultRow row1 = result.getResults().get(0);
-        assertThat(row1.getValues(), hasSize(numColumns));
-
-        for (int i = 0; i < numColumns; i++) {
-            ResultValue val = row1.getValues().get(i);
-            Field field = result.getFields().get(i);
-            assertThat(val.getField(), is(field));
-        }
+    public void sqlQueryShouldFindSomething() {
+        Dataset result = search("SELECT id, name FROM drs.org_ga4gh_drs.objects LIMIT 10");
+        assertThat(result.getObjects(), hasSize(10));
     }
 
     @Test
-    public void sqlQueryShouldFindSomething() {
-        SearchResult result = search("SELECT id, name FROM files LIMIT 10");
-        assertThat(result.getFields(), hasSize(2));
-        assertThat(result.getResults(), hasSize(10));
-        ResultRow row1 = result.getResults().get(0);
-        assertThat(row1.getValues(), hasSize(2));
-
-        for (int i = 0; i < 2; i++) {
-            ResultValue val = row1.getValues().get(i);
-            Field field = result.getFields().get(i);
-            assertThat(val.getField(), is(field));
-        }
+    public void registeredDatasetShouldHaveResultsAndSchema() {
+        Dataset d = dataset("drs.org_ga4gh_drs.objects");
+        //TODO: These tests are admittedly fragile.
+        // However, they should serve us wll in the short term as we expect these schemas to stay more or less
+        // static in terms of naming scheme/version/etc., but their sources are likely to change a lot,
+        // both in terms of absoulte location as well as serving implementations.
+        // Thus, we'll swallow these for now and solidify naming/versioning/etc. in the future.
+        assertThat(d.getSchema().getSchemaId().toString(), equalTo("org.ga4gh.schemas.drs.v0.1.0.Object"));
+        assertThat(d.getSchema().getSchemaId().getName(), equalTo("Object"));
+        assertThat(d.getObjects(), not(hasSize(0)));
     }
 
-    private SearchResult search(String sqlQuery) {
+    @Test
+    public void unregisteredDatasetShouldHaveResultsAndSchema() {
+        Dataset d = dataset("postgres.public.participant");
+        assertThat(d.getSchema().getSchemaId().getName(), not(equalTo(null)));
+    }
+
+    private Dataset search(String sqlQuery) {
         return search(new SearchRequest(null, sqlQuery));
     }
 
-    private SearchResult search(Query jsonQuery) {
-        return search(new SearchRequest(jsonQuery, null));
+    private Dataset dataset(String id) {
+        return given().config(config)
+                .log()
+                .method()
+                .log()
+                .uri()
+                .auth()
+                .basic(requiredEnv("E2E_BASIC_USERNAME"), requiredEnv("E2E_BASIC_PASSWORD"))
+                .when()
+                .contentType(ContentType.JSON)
+                .pathParam("id", id)
+                .get("/api/datasets/{id}")
+                .then()
+                .log()
+                .ifValidationFails()
+                .statusCode(200)
+                .extract()
+                .as(Dataset.class);
     }
 
-    private SearchResult search(SearchRequest request) {
+    private Dataset search(SearchRequest request) {
         return given().config(config)
                 .log()
                 .method()
@@ -131,7 +138,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 .ifValidationFails()
                 .statusCode(200)
                 .extract()
-                .as(SearchResult.class);
+                .as(Dataset.class);
     }
 
     private int getQueryLimit(Query query) {
