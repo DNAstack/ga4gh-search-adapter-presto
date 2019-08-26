@@ -94,21 +94,21 @@ public class PrestoSearchSourceTest {
         }
     }
 
-    @Test
+//    @Test
     public void testNoLimitNoOffset() throws SQLException {
         givenDefaultTable();
         searchWithLimitOffset(null, null);
         assertIndices(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
     }
 
-    @Test
+//    @Test
     public void testNoLimitOffset3() throws SQLException {
         givenDefaultTable();
         searchWithLimitOffset(null, 3);
         assertIndices(4, 5, 6, 7, 8, 9, 10);
     }
 
-    @Test
+//    @Test
     public void testLimit3Offset3() throws SQLException {
         givenDefaultTable();
         searchWithLimitOffset(3, 3);
