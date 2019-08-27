@@ -108,12 +108,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
-	<repositories>
-		<repository>
-			<id>dnastack-releases</id>
-			<layout>default</layout>
-			<url>https://nexus.dnastack.com/content/repositories/releases</url>
-		</repository>
-	</repositories>
 </project>
