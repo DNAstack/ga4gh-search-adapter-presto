@@ -19,6 +19,8 @@ ADD target/backend/service/pom.xml /build/backend/service/pom.xml
 ADD target/backend/data-sources/presto-source/pom.xml /build/backend/data-sources/presto-source/pom.xml
 ADD target/backend/data-models/pom.xml /build/backend/data-models/pom.xml
 ADD target/frontend/pom.xml /build/frontend/pom.xml
+# Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
+ADD target/.m2 /root/.m2
 
 RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
