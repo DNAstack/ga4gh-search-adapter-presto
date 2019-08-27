@@ -16,13 +16,15 @@ WORKDIR /build
 ADD target/pom.xml ./
 ADD target/.mvn/ ./.mvn/
 ADD target/mvnw ./mvnw
+# Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
+ADD target/.m2 /root/.m2
 
 RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
 
 # Now add sources, which will bust the cache.
 ADD target/src ./src
-RUN ./mvnw -B package -DskipTests=true
+RUN ./mvnw -B -U package -DskipTests=true
 
 ##
 ## Stage 2: Package the runnable test image
