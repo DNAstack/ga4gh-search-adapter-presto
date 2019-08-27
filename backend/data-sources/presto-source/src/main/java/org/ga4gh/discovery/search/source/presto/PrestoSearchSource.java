@@ -85,7 +85,8 @@ public class PrestoSearchSource implements SearchSource {
             expectedSchema = schemaService.getSchema(id);
             datasetRequest.setExpectedSchema(expectedSchema);
         }
-        catch (SchemaNotFoundException e) {
+        //catch (SchemaNotFoundException e) {
+        catch (Exception e) {
             log.info("Serving a dataset request with no associated ga4gh schema: {}", id);
         }
 
