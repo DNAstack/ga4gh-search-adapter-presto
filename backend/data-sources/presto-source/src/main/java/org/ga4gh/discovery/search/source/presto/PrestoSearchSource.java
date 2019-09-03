@@ -315,7 +315,19 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     private List<ResultRow> query(String sql, List<Field> fields) {
-        return query(sql, null, fields);
+        List<ResultRow> results = new ArrayList<>();
+        prestoAdapter.query(
+                sql,
+                rs -> {
+                    try {
+                        while (rs.next()) {
+                            results.add(extractRow(rs, fields));
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+        return results;
     }
 
     private List<ResultRow> query(String sql, List<Object> params, List<Field> fields) {

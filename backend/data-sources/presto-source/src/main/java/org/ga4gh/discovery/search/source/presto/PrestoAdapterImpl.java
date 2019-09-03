@@ -41,7 +41,13 @@ public class PrestoAdapterImpl implements PrestoAdapter {
 
     @Override
     public void query(String prestoSQL, Consumer<ResultSet> resultProcessor) {
-        query(prestoSQL, null, resultProcessor);
+        try {
+            Connection connection = getConnection();
+            Statement stmt = connection.createStatement();
+            resultProcessor.accept(stmt.executeQuery(prestoSQL));
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
