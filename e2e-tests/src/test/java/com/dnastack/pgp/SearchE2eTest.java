@@ -49,7 +49,7 @@ public class SearchE2eTest extends BaseE2eTest {
                                                 }));
     }
 
-    @Test
+//    @Test
     public void thereShouldBeSomeFields() {
         List<String> datasetIds =
                 given().config(config)
@@ -72,13 +72,13 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(datasetIds, not(empty()));
     }
 
-    @Test
+    //@Test
     public void sqlQueryShouldFindSomething() {
         Dataset result = search("SELECT id, name FROM drs.org_ga4gh_drs.objects LIMIT 10");
         assertThat(result.getObjects(), hasSize(10));
     }
 
-    @Test
+    //@Test
     public void registeredDatasetShouldHaveResultsAndSchema() {
         Dataset d = dataset("drs.org_ga4gh_drs.objects");
         //TODO: These tests are admittedly fragile.
@@ -91,7 +91,7 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(d.getObjects(), not(hasSize(0)));
     }
 
-    @Test
+    //@Test
     public void unregisteredDatasetShouldHaveResultsAndSchema() {
         Dataset d = dataset("postgres.public.participant");
         assertThat(d.getSchema().getSchemaId().getName(), not(equalTo(null)));
