@@ -144,6 +144,7 @@ public class Metadata {
         }
     }
 
+    //TODO: Verify these type mappings (via test?)
     static Type prestoToPrimitiveType(String prestoType) {
         if (prestoType.equals("integer")
                 || prestoType.equals("double")
@@ -161,7 +162,8 @@ public class Metadata {
             return Type.BOOLEAN;
         } else if (prestoType.startsWith("varchar")) {
             return Type.STRING;
-        } else if (prestoType.startsWith("array(varchar")) {
+        } else if (prestoType.startsWith("array(varchar") || prestoType.startsWith("array(date")
+            || prestoType.startsWith("array(timestamp")) { // oof
             return Type.STRING_ARRAY;
         } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
