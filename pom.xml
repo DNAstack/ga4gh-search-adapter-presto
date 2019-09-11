@@ -55,10 +55,6 @@
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.springframework</groupId>
-				<artifactId>spring-beans</artifactId>
-			</dependency>
-			<dependency>
 				<groupId>io.prestosql</groupId>
 				<artifactId>presto-jdbc</artifactId>
 				<version>${version.presto}</version>
