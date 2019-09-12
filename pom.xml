@@ -4,10 +4,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.ga4gh.discovery.search</groupId>
-	<artifactId>ga4gh-discovery-search</artifactId>
+	<groupId>com.dnastack.search.adapter</groupId>
+	<artifactId>ga4gh-search-adapter-presto-parent</artifactId>
 	<version>0.1-SNAPSHOT</version>
-	<name>GA4GH Discovery Search Parent</name>
+	<name>GA4GH Discovery Search Presto Adapter Parent</name>
 	<packaging>pom</packaging>
 
 	<properties>
@@ -35,22 +35,22 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.ga4gh.discovery.search</groupId>
+				<groupId>com.dnastack.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-data-models</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.ga4gh.discovery.search</groupId>
+				<groupId>com.dnastack.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-presto-source</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.ga4gh.discovery.search</groupId>
+				<groupId>com.dnastack.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-frontend</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.ga4gh.discovery.search</groupId>
+				<groupId>com.dnastack.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-service</artifactId>
 				<version>${project.version}</version>
 			</dependency>

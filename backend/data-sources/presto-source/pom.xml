@@ -5,8 +5,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.ga4gh.discovery.search</groupId>
-		<artifactId>ga4gh-discovery-search</artifactId>
+		<groupId>com.dnastack.search.adapter</groupId>
+		<artifactId>ga4gh-search-adapter-presto-parent</artifactId>
 		<version>0.1-SNAPSHOT</version>
 		<relativePath>../../../pom.xml</relativePath>
 	</parent>
@@ -45,7 +45,7 @@
 			<artifactId>presto-parser</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.ga4gh.discovery.search</groupId>
+			<groupId>com.dnastack.search.adapter</groupId>
 			<artifactId>ga4gh-discovery-search-data-models</artifactId>
 		</dependency>
 		<dependency>
