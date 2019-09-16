@@ -16,13 +16,13 @@ public class SchemaService {
     private int pageSize;
     private SchemaManager schemaManager;
     //TODO: better name
-    private Map<String, String> ga4ghSchemas;
+    private Map<String, String> registeredSchemas;
 
     SchemaService(
             String rootUrl, String localNS, int pageSize) {
         this.pageSize = pageSize;
         this.schemaManager = new SchemaManager(SchemaIdConverter.of(rootUrl, localNS));
-        this.ga4ghSchemas = new HashMap<>();
+        this.registeredSchemas = new HashMap<>();
     }
 
     /**
@@ -32,7 +32,7 @@ public class SchemaService {
      */
     void registerSchema(String tableQualifiedName, String schema_filename) {
         Schema registeredSchema = registerSchema(schema_filename);
-        ga4ghSchemas.put(tableQualifiedName, registeredSchema.getSchemaId().toString());
+        registeredSchemas.put(tableQualifiedName, registeredSchema.getSchemaId().toString());
     }
 
     /**
@@ -61,7 +61,7 @@ public class SchemaService {
     }
 
     Schema getSchema(String schemaId) {
-        String internalSchemaId = ga4ghSchemas.getOrDefault(schemaId, schemaId);
+        String internalSchemaId = registeredSchemas.getOrDefault(schemaId, schemaId);
         Schema schema = schemaManager.getSchema(SchemaId.of(internalSchemaId));
         if (schema == null) {
             throw new SchemaNotFoundException("Schema \"" + internalSchemaId + "\" not found");
