@@ -1,22 +1,5 @@
 package com.dnastack.pgp;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-
-import java.lang.reflect.Type;
-import java.util.List;
-
-import org.ga4gh.dataset.model.Dataset;
-import org.ga4gh.discovery.search.test.model.Field;
-import org.ga4gh.discovery.search.test.model.ResultRow;
-import org.ga4gh.discovery.search.test.model.ResultValue;
-import org.ga4gh.discovery.search.test.model.SearchQueryHelper;
-import org.ga4gh.discovery.search.test.model.SearchRequest;
-import org.ga4gh.discovery.search.test.model.SearchResult;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import io.prestosql.sql.tree.Limit;
 import io.prestosql.sql.tree.Query;
 import io.prestosql.sql.tree.QuerySpecification;
@@ -25,6 +8,18 @@ import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
 import io.restassured.mapper.ObjectMapperType;
 import io.restassured.mapper.factory.Jackson2ObjectMapperFactory;
+import org.ga4gh.dataset.model.Dataset;
+import org.ga4gh.discovery.search.test.model.SearchQueryHelper;
+import org.ga4gh.discovery.search.test.model.SearchRequest;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.lang.reflect.Type;
+import java.util.List;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
 
 public class SearchE2eTest extends BaseE2eTest {
 
@@ -72,29 +67,20 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(datasetIds, not(empty()));
     }
 
-    //@Test
+    @Test
     public void sqlQueryShouldFindSomething() {
-        Dataset result = search("SELECT id, name FROM drs.org_ga4gh_drs.objects LIMIT 10");
-        assertThat(result.getObjects(), hasSize(10));
+        String dataset = requiredEnv("E2E_DATASET");
+        Dataset result = search("SELECT id, name FROM " + dataset + " LIMIT 10");
+        assertThat(result.getObjects(), not(hasSize(0)));
+        assertThat(result.getSchema().getSchemaJson().size(), not(is(0)));
     }
 
-    //@Test
-    public void registeredDatasetShouldHaveResultsAndSchema() {
-        Dataset d = dataset("drs.org_ga4gh_drs.objects");
-        //TODO: These tests are admittedly fragile.
-        // However, they should serve us wll in the short term as we expect these schemas to stay more or less
-        // static in terms of naming scheme/version/etc., but their sources are likely to change a lot,
-        // both in terms of absoulte location as well as serving implementations.
-        // Thus, we'll swallow these for now and solidify naming/versioning/etc. in the future.
-        assertThat(d.getSchema().getSchemaId().toString(), equalTo("org.ga4gh.schemas.drs.v0.1.0.Object"));
-        assertThat(d.getSchema().getSchemaId().getName(), equalTo("Object"));
-        assertThat(d.getObjects(), not(hasSize(0)));
-    }
-
-    //@Test
-    public void unregisteredDatasetShouldHaveResultsAndSchema() {
-        Dataset d = dataset("postgres.public.participant");
-        assertThat(d.getSchema().getSchemaId().getName(), not(equalTo(null)));
+    @Test
+    public void datasetShouldHaveResultsAndSchema() {
+        String dataset = requiredEnv("E2E_DATASET");
+        Dataset result = dataset(dataset);
+        assertThat(result.getObjects(), not(hasSize(0)));
+        assertThat(result.getSchema().getSchemaJson().size(), not(is(0)));
     }
 
     private Dataset search(String sqlQuery) {
