@@ -38,7 +38,7 @@
 		<dependency>
 			<groupId>org.ga4gh.dataset</groupId>
 			<artifactId>dataset-api-tools</artifactId>
-			<version>0.1.9-4-g4642262</version>
+			<version>0.1.9-6-g1775e1b</version>
 		</dependency>
 		<dependency>
 			<groupId>io.prestosql</groupId>

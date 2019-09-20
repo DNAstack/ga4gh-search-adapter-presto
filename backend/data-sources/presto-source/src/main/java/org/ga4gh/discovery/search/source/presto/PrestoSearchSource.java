@@ -154,7 +154,7 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Schema expectedSchema) {
-        List<Object> results = new ArrayList<>(queryResults.size());
+        List<Map<String, Object>> results = new ArrayList<>(queryResults.size());
         for (ResultRow row : queryResults) {
             Map<String, Object> rowData = new LinkedHashMap<>();
             for (ResultValue value : row.getValues()) {
