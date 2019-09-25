@@ -57,11 +57,11 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             resultProcessor.accept(stmt.executeQuery(prestoSQL));
         } catch (SQLException e) {
             if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
-                log.trace("Encountered SLQException error is recoverable. Renewing authentication credentials and retrying query");
+                log.trace("Encountered SQLException error is recoverable. Renewing authentication credentials and retrying query");
                 authenticator.refreshAccessToken();
                 query(prestoSQL, resultProcessor, false);
             } else {
-                log.trace("Encountered SLQException error is not recoverable, failing query");
+                log.trace("Encountered SQLException error is not recoverable, failing query");
                 throw new RuntimeException(e);
             }
         }
@@ -86,11 +86,11 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             resultProcessor.accept(stmt.executeQuery());
         } catch (SQLException e) {
             if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
-                log.trace("Encountered SLQException error is recoverable. Renewing authentication credentials and retrying query");
+                log.trace("Encountered SQLException error is recoverable. Renewing authentication credentials and retrying query");
                 authenticator.refreshAccessToken();
                 query(prestoSQL, params, resultProcessor, false);
             } else {
-                log.trace("Encountered SLQException error is not recoverable, failing query");
+                log.trace("Encountered SQLException error is not recoverable, failing query");
                 throw new RuntimeException(e);
             }
         }
