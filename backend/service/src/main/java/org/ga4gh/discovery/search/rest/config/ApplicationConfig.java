@@ -6,6 +6,7 @@ import org.ga4gh.discovery.search.source.SearchSource;
 import org.ga4gh.discovery.search.source.presto.PrestoAdapterImpl;
 import org.ga4gh.discovery.search.source.presto.PrestoSearchSource;
 import org.ga4gh.discovery.search.source.presto.SchemaService;
+import org.ga4gh.discovery.search.source.presto.ServiceAccountAuthenticator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,8 +25,20 @@ public class ApplicationConfig {
     @Value("${presto.datasource.username}")
     private String prestoDatasourceUsername;
 
-    @Value("${presto.datasource.password}")
-    private String prestoDatasourcePassword;
+    @Value("${presto.auth.token-url}")
+    private String prestoTokenUrl;
+
+    @Value("${presto.auth.client-id}")
+    private String prestoClientId;
+
+    @Value("${presto.auth.client-secret}")
+    private String prestoClientSecret;
+
+    @Value("${presto.auth.scope}")
+    private String prestoRequiredScopes;
+
+    @Value("${presto.auth.audience}")
+    private String prestoAudiences;
 
     /** Other settings */
     @Value("${cors.urls}")
@@ -35,10 +48,13 @@ public class ApplicationConfig {
     private String securityEnabled;
 
     @Bean
-    public SearchSource getPrestoSearchSource() {
-        return new PrestoSearchSource(
-                new PrestoAdapterImpl(
-                        prestoDatasourceUrl, prestoDatasourceUsername, prestoDatasourcePassword));
+    public ServiceAccountAuthenticator getServiceAccountAuthenticator(){
+        return new ServiceAccountAuthenticator(prestoClientId,prestoClientSecret,prestoRequiredScopes,prestoAudiences,prestoTokenUrl);
+    }
+
+    @Bean
+    public SearchSource getPrestoSearchSource(ServiceAccountAuthenticator accountAuthenticator) {
+        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, prestoDatasourceUsername, accountAuthenticator));
     }
 
     @Bean
