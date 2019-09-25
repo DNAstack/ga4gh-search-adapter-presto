@@ -121,7 +121,14 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             Matcher matcher = errorResponsePattern.matcher(message);
             if (matcher.find()) {
                 int statusCode = Integer.parseInt(matcher.group("statusCode").split("=")[1]);
-                return statusCode == 401 || statusCode == 403;
+
+                if (statusCode == 403) {
+                    throw new ServiceAccountAuthenticationException(
+                        "Application is not authorized to access presto deployment " + url
+                            + ". Please verify sa credentials and presto config");
+                }
+
+                return statusCode == 401;
             }
         }
         return false;
