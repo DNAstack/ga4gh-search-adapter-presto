@@ -80,9 +80,14 @@ public class ServiceAccountAuthenticator {
             } else if (response.isSuccessful()) {
                 throw new IOException("Received successful status code but could not read access_token, response does not have a body");
             } else {
+                String message;
+                if (response.body() != null) {
+                    message = response.body().string();
+                } else {
+                    message = response.message();
+                }
                 throw new ServiceAccountAuthenticationException(
-                    "Could not authenticate service account, statusCode=" + response.code() + ", message=" + response
-                        .message());
+                    "Could not authenticate service account, statusCode=" + response.code() + ", message=" + message);
             }
         }
     }

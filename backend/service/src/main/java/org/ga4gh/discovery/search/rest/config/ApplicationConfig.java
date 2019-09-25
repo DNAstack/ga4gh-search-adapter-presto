@@ -25,19 +25,19 @@ public class ApplicationConfig {
     @Value("${presto.datasource.username}")
     private String prestoDatasourceUsername;
 
-    @Value("${presto.auth.token-url}")
+    @Value("${wallet.auth.token-url}")
     private String prestoTokenUrl;
 
-    @Value("${presto.auth.client-id}")
+    @Value("${wallet.auth.client-id}")
     private String prestoClientId;
 
-    @Value("${presto.auth.client-secret}")
+    @Value("${wallet.auth.client-secret}")
     private String prestoClientSecret;
 
-    @Value("${presto.auth.scope}")
+    @Value("${wallet.auth.scope}")
     private String prestoRequiredScopes;
 
-    @Value("${presto.auth.audience}")
+    @Value("${wallet.auth.audience}")
     private String prestoAudiences;
 
     /** Other settings */
