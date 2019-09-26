@@ -23,6 +23,7 @@
 		<version.spring.boot>2.1.8.RELEASE</version.spring.boot>
 		<version.mysql>5.1.6</version.mysql>
 		<version.guava>27.1-jre</version.guava>
+		<jsonwebtoken.version>0.9.1</jsonwebtoken.version>
 	</properties>
 
 	<modules>

@@ -5,10 +5,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.dataset.SchemaId;
 import org.ga4gh.dataset.exception.SchemaNotFoundException;
-import org.ga4gh.dataset.model.*;
+import org.ga4gh.dataset.model.Dataset;
+import org.ga4gh.dataset.model.DatasetInfo;
+import org.ga4gh.dataset.model.ListDatasetsResponse;
+import org.ga4gh.dataset.model.ListSchemasResponse;
+import org.ga4gh.dataset.model.Schema;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.Type;
@@ -19,33 +35,26 @@ import org.ga4gh.discovery.search.source.SearchSource;
 import org.ga4gh.discovery.search.source.presto.PrestoMetadata.PrestoMetadataBuilder;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
-
-    @Value("${presto.results.limit.max}")
-    private int maxResultsLimit;
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
     private final SchemaService schemaService;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
+        log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         //TODO: better home
+        log.trace("Registering schemas");
         this.schemaService = new SchemaService("http://localhost:8080", "fake", 100);
         schemaService.registerSchema("pgpc-schemas-0.1.0");
         schemaService.registerSchema("bigquery-pgc-data.pgp_variants.view_variants2_beacon", "variant-object-0.1.0");
         schemaService.registerSchema("postgres.public.fact", "fact-object-0.1.0");
         schemaService.registerSchema("ga4gh-drs-0.1.0");
         schemaService.registerSchema("drs.org_ga4gh_drs.objects", "ga4gh-drs-object-0.1.0");
+        log.trace("Done registering schemas");
     }
 
     @Override
@@ -120,11 +129,11 @@ public class PrestoSearchSource implements SearchSource {
 
             }
             DatasetInfo di = DatasetInfo.builder()
-                    .id(t.getName())
-                    //TODO: flaky
-                    .description(schema.getSchemaJson().get("description").asText())
-                    .schema(schema)
-                    .build();
+                .id(t.getName())
+                //TODO: flaky
+                .description(schema.getSchemaJson().get("description").asText())
+                .schema(schema)
+                .build();
             info.add(di);
         }
         return new ListDatasetsResponse(info);
@@ -138,18 +147,18 @@ public class PrestoSearchSource implements SearchSource {
         List<ResultRow> results = new ArrayList<>();
 
         prestoAdapter.query(
-                prestoSqlString,
-                rs -> {
-                    try {
-                        ResultSetMetaData resultSetMetaData = rs.getMetaData();
-                        fields.addAll(extractFields(resultSetMetaData));
-                        while (rs.next()) {
-                            results.add(extractRow(rs, fields));
-                        }
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
+            prestoSqlString,
+            rs -> {
+                try {
+                    ResultSetMetaData resultSetMetaData = rs.getMetaData();
+                    fields.addAll(extractFields(resultSetMetaData));
+                    while (rs.next()) {
+                        results.add(extractRow(rs, fields));
                     }
-                });
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         return createDataset(fields, results, searchRequest.getExpectedSchema());
     }
 
@@ -195,9 +204,9 @@ public class PrestoSearchSource implements SearchSource {
             String[] typeOperators = Metadata.operatorsForType(primitiveType);
             //TODO: This data is not populated correctly -- why?
             String qualifiedTableName = String.format("%s.%s.%s",
-                    resultSetMetaData.getCatalogName(i),
-                    resultSetMetaData.getSchemaName(i),
-                    resultSetMetaData.getTableName(i));
+                resultSetMetaData.getCatalogName(i),
+                resultSetMetaData.getSchemaName(i),
+                resultSetMetaData.getTableName(i));
             String id = qualifiedTableName + "." + columnName;
             //TODO: Temporary workaround while above is unpopulated
             Field f = new Field(columnName, columnName, primitiveType, typeOperators, null, qualifiedTableName);
@@ -205,7 +214,7 @@ public class PrestoSearchSource implements SearchSource {
             fields.add(f);
         }
 
-        return  fields;
+        return fields;
     }
 
     private PrestoMetadata buildPrestoMetadata(PrestoAdapter adapter) {
@@ -221,6 +230,7 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     private List<PrestoCatalog> getCatalogMetadata() {
+        log.trace("Retrieving catalog metadata");
         List<PrestoCatalog.PrestoCatalogBuilder> emptyCatalogs = getCatalogBuilders();
         List<PrestoCatalog> populatedCatalogs = new ArrayList<>(emptyCatalogs.size());
         for (PrestoCatalog.PrestoCatalogBuilder catalog : emptyCatalogs) {
@@ -248,7 +258,8 @@ public class PrestoSearchSource implements SearchSource {
         //TODO: better table blackisting than hardcoded in SQL query
         //TODO: Consolidate blacklisting, there is a weird overlap in how things are blacklisted at the
         // catalog, schema, and table level.
-        String sqlTemplate = "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
+        String sqlTemplate =
+            "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
                 "('information_schema', 'connector_views', 'roles', 'databasechangelog', 'databasechangeloglock', 'billing')";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
@@ -270,6 +281,7 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     private List<PrestoCatalog.PrestoCatalogBuilder> getCatalogBuilders() {
+        log.trace("Retrieving all catalogs and generating builders");
         final String sql = "show catalogs";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null, null));
@@ -295,6 +307,7 @@ public class PrestoSearchSource implements SearchSource {
         if (catalogName == null) {
             return false;
         }
+        log.trace("Attempting to populate schema for catalog: {}", catalog);
         String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
         List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
         List<ResultRow> results = query(sql, fields);
@@ -307,43 +320,44 @@ public class PrestoSearchSource implements SearchSource {
         for (ResultRow row : results) {
             List<ResultValue> values = row.getValues();
             values.stream()
-                    .filter(v -> !blacklist.contains(v.getValue().toString()))
-                    .forEach(v -> schemas.add(new PrestoSchema(v.getValue().toString())));
+                .filter(v -> !blacklist.contains(v.getValue().toString()))
+                .forEach(v -> schemas.add(new PrestoSchema(v.getValue().toString())));
         }
         catalog.schemas(schemas);
+        log.trace("Successfully populated schema for catalog: {}", catalog);
         return true;
     }
 
     private List<ResultRow> query(String sql, List<Field> fields) {
         List<ResultRow> results = new ArrayList<>();
         prestoAdapter.query(
-                sql,
-                rs -> {
-                    try {
-                        while (rs.next()) {
-                            results.add(extractRow(rs, fields));
-                        }
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
+            sql,
+            rs -> {
+                try {
+                    while (rs.next()) {
+                        results.add(extractRow(rs, fields));
                     }
-                });
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         return results;
     }
 
     private List<ResultRow> query(String sql, List<Object> params, List<Field> fields) {
         List<ResultRow> results = new ArrayList<>();
         prestoAdapter.query(
-                sql,
-                params,
-                rs -> {
-                    try {
-                        while (rs.next()) {
-                            results.add(extractRow(rs, fields));
-                        }
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
+            sql,
+            params,
+            rs -> {
+                try {
+                    while (rs.next()) {
+                        results.add(extractRow(rs, fields));
                     }
-                });
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         return results;
     }
 
@@ -358,7 +372,7 @@ public class PrestoSearchSource implements SearchSource {
             return query.getJsonQuery();
         } else {
             throw new IllegalArgumentException(
-                    "Either JSON or SQL query has to be present in search request");
+                "Either JSON or SQL query has to be present in search request");
         }
     }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Base64;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
@@ -12,6 +13,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
+@Slf4j
 public class ServiceAccountAuthenticator {
 
     private final String clientId;
@@ -22,7 +24,7 @@ public class ServiceAccountAuthenticator {
 
     private String accessToken;
 
-    public ServiceAccountAuthenticator(@NonNull String clientId, @NonNull String clientSecret, @NonNull String scope, @NonNull String audience, @NonNull String tokenEndpoint) {
+    public ServiceAccountAuthenticator(@NonNull String clientId, @NonNull String clientSecret, @NonNull String audience, @NonNull String tokenEndpoint, String scope) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.scope = scope;
@@ -39,6 +41,7 @@ public class ServiceAccountAuthenticator {
     public void refreshAccessToken() {
         try {
             accessToken = authorizeServiceAndRetrieveAccessToken();
+            log.trace("Successfully retrieved access token");
         } catch (IOException e) {
             throw new ServiceAccountAuthenticationException(
                 "Encountered error while authenticating service account: " + e.getMessage(), e);
@@ -46,17 +49,19 @@ public class ServiceAccountAuthenticator {
     }
 
     private String authorizeServiceAndRetrieveAccessToken() throws IOException {
-
+        log.trace("Retrieving access token with client {} from {}", clientId, tokenEndpoint);
         String combinedClientCredentials = clientId + ":" + clientSecret;
         String encodedClientCredentials =
             "Basic " + Base64.getEncoder().encodeToString(combinedClientCredentials.getBytes());
 
-        FormBody formBody = new FormBody.Builder().add("grant_type", "client_credentials")
-            .add("scope", scope)
-            .add("audience", audience)
-            .build();
+        FormBody.Builder formBodyBuilder = new FormBody.Builder().add("grant_type", "client_credentials")
+            .add("audience", audience);
 
-        Request request = new Request.Builder().url(tokenEndpoint).method("POST", formBody)
+        if (scope != null) {
+            formBodyBuilder.add("scope", scope);
+        }
+
+        Request request = new Request.Builder().url(tokenEndpoint).method("POST", formBodyBuilder.build())
             .header("Authorization", encodedClientCredentials).build();
 
         return executeRequest(request);

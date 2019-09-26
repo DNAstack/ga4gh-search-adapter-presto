@@ -3,14 +3,14 @@ endpoint:
     enabled: true
     id: health
     sensitive: false
-spring:
-  security:
-    user:
-      password: FpmJj24y9RRRYQnpXXOHEIEJK6lwPjnY09
+
 server:
   tomcat:
     remote-ip-header: "x-forwarded-for"
     protocol-header: "x-forwarded-proto"
+
+cors:
+  urls: http://localhost:8080
 
 app:
   service-info:
@@ -20,3 +20,37 @@ app:
     documentation-url:
     contact-url:
     version:
+
+  auth:
+    presto-oauth-client:
+      token-uri:
+      client-id:
+      client-secret:
+      audience:
+    token-issuers:
+    - issuer-uri: https://wallet.staging.dnastack.com
+      jwk-set-uri: https://wallet.staging.dnastack.com/oauth/jwks
+
+presto:
+  datasource:
+    url: "jdbc:presto://presto.staging.dnastack.com:443"
+    username: "ga4gh-search-adapter-presto"
+  results:
+    limit:
+      max: 100
+---
+
+spring:
+  profiles: basic-auth
+  security:
+    user:
+      password: FpmJj24y9RRRYQnpXXOHEIEJK6lwPjnY09
+
+
+---
+
+spring:
+  profiles: no-auth
+
+security:
+    enabled: false

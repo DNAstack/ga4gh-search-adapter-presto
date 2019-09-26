@@ -3,11 +3,13 @@ package com.dnastack.pgp;
 import io.prestosql.sql.tree.Limit;
 import io.prestosql.sql.tree.Query;
 import io.prestosql.sql.tree.QuerySpecification;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
 import io.restassured.mapper.ObjectMapperType;
 import io.restassured.mapper.factory.Jackson2ObjectMapperFactory;
+import io.restassured.specification.RequestSpecification;
 import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.discovery.search.test.model.SearchQueryHelper;
 import org.ga4gh.discovery.search.test.model.SearchRequest;
@@ -24,6 +26,7 @@ import static org.hamcrest.Matchers.*;
 public class SearchE2eTest extends BaseE2eTest {
 
     private static RestAssuredConfig config;
+
 
     @BeforeClass
     public static void beforeClass() {
@@ -42,6 +45,34 @@ public class SearchE2eTest extends BaseE2eTest {
                                                         return SearchQueryHelper.objectMapper();
                                                     }
                                                 }));
+
+    }
+
+
+    private String getToken(){
+        RequestSpecification specification = new RequestSpecBuilder().setBaseUri(requiredEnv("E2E_WALLET_TOKEN_URI")).build();
+
+        //@formatter:off
+        return given(specification)
+            .config(config)
+            .log()
+            .method()
+            .log()
+            .uri()
+            .auth()
+            .basic(requiredEnv("E2E_WALLET_CLIENT_ID"),requiredEnv("E2E_WALLET_CLIENT_SECRET"))
+            .formParam("grant_type","client_credentials")
+            .formParam("audience",requiredEnv("E2E_WALLET_AUDIENCE"))
+        .post()
+            .then()
+            .log()
+            .ifValidationFails()
+            .statusCode(200)
+            .extract()
+            .jsonPath()
+            .getString("access_token");
+        //@formatter:on
+
     }
 
 //    @Test
@@ -53,7 +84,7 @@ public class SearchE2eTest extends BaseE2eTest {
                         .log()
                         .uri()
                         .auth()
-                        .basic(requiredEnv("E2E_BASIC_USERNAME"), requiredEnv("E2E_BASIC_PASSWORD"))
+                        .oauth2(getToken())
                         .when()
                         .get("/api/fields")
                         .then()
@@ -70,7 +101,7 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void sqlQueryShouldFindSomething() {
         String dataset = requiredEnv("E2E_DATASET");
-        Dataset result = search("SELECT id, name FROM " + dataset + " LIMIT 10");
+        Dataset result = search("SELECT id FROM " + dataset + " LIMIT 10");
         assertThat(result.getObjects(), not(hasSize(0)));
         assertThat(result.getSchema().getSchemaJson().size(), not(is(0)));
     }
@@ -88,13 +119,16 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     private Dataset dataset(String id) {
+        String accessToken = getToken();
+        //@formatter:off
         return given().config(config)
                 .log()
                 .method()
                 .log()
                 .uri()
+                .given()
                 .auth()
-                .basic(requiredEnv("E2E_BASIC_USERNAME"), requiredEnv("E2E_BASIC_PASSWORD"))
+                .oauth2(accessToken)
                 .when()
                 .contentType(ContentType.JSON)
                 .pathParam("id", id)
@@ -105,16 +139,19 @@ public class SearchE2eTest extends BaseE2eTest {
                 .statusCode(200)
                 .extract()
                 .as(Dataset.class);
+        //@formatter:off
     }
 
     private Dataset search(SearchRequest request) {
+        String accessToken = getToken();
+        //@formatter:off
         return given().config(config)
                 .log()
                 .method()
                 .log()
                 .uri()
                 .auth()
-                .basic(requiredEnv("E2E_BASIC_USERNAME"), requiredEnv("E2E_BASIC_PASSWORD"))
+                .oauth2(accessToken)
                 .when()
                 .contentType(ContentType.JSON)
                 .body(request)
@@ -125,6 +162,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 .statusCode(200)
                 .extract()
                 .as(Dataset.class);
+        //@formatter:off
     }
 
     private int getQueryLimit(Query query) {

@@ -57,11 +57,11 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             resultProcessor.accept(stmt.executeQuery(prestoSQL));
         } catch (SQLException e) {
             if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
-                log.trace("Encountered SQLException error is recoverable. Renewing authentication credentials and retrying query");
+                log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
                 authenticator.refreshAccessToken();
                 query(prestoSQL, resultProcessor, false);
             } else {
-                log.trace("Encountered SQLException error is not recoverable, failing query");
+                log.trace("Encountered SQLException is not recoverable, failing query");
                 throw new RuntimeException(e);
             }
         }
@@ -86,23 +86,25 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             resultProcessor.accept(stmt.executeQuery());
         } catch (SQLException e) {
             if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
-                log.trace("Encountered SQLException error is recoverable. Renewing authentication credentials and retrying query");
+                log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
                 authenticator.refreshAccessToken();
                 query(prestoSQL, params, resultProcessor, false);
             } else {
-                log.trace("Encountered SQLException error is not recoverable, failing query");
+                log.trace("Encountered SQLException is not recoverable, failing query");
                 throw new RuntimeException(e);
             }
         }
     }
 
-    public Connection getConnection() throws SQLException {
+    private Connection getConnection() throws SQLException {
         log.trace("Establishing connection to presto server: {}", url);
         Properties connectionProperties = new Properties();
         connectionProperties.setProperty("SSL", "true");
         connectionProperties.setProperty("user", username);
         connectionProperties.setProperty("accessToken", authenticator.getAccessToken());
-        return DriverManager.getConnection(url, connectionProperties);
+        Connection connection = DriverManager.getConnection(url, connectionProperties);
+        log.trace("Successfully established connection to presto server: {}", url);
+        return connection;
 
     }
 
@@ -117,7 +119,7 @@ public class PrestoAdapterImpl implements PrestoAdapter {
 
         if (message != null) {
             Pattern errorResponsePattern = Pattern
-                .compile(".*JsonResponse\\{.*(?<statusCode>statusCode=[0-9]{3}).*}.*");
+                .compile(".*(?<jsonResponse>JsonResponse\\{.*(?<statusCode>statusCode=[0-9]{3}).*}).*");
             Matcher matcher = errorResponsePattern.matcher(message);
             if (matcher.find()) {
                 int statusCode = Integer.parseInt(matcher.group("statusCode").split("=")[1]);
@@ -125,7 +127,7 @@ public class PrestoAdapterImpl implements PrestoAdapter {
                 if (statusCode == 403) {
                     throw new ServiceAccountAuthenticationException(
                         "Application is not authorized to access presto deployment " + url
-                            + ". Please verify sa credentials and presto config");
+                            + ". Please verify sa credentials and presto config. " + matcher.group("jsonResponse"));
                 }
 
                 return statusCode == 401;
