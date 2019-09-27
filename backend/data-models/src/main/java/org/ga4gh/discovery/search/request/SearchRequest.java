@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.ga4gh.dataset.model.Schema;
 
+import java.util.Map;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -19,5 +21,5 @@ public class SearchRequest {
     @JsonProperty("query")
     private String sqlQuery;
 
-    private Schema expectedSchema;
+    private Map<String, Object> expectedSchema;
 }

@@ -54,7 +54,7 @@
 		<dependency>
 			<groupId>org.ga4gh.dataset</groupId>
 			<artifactId>dataset-api-tools</artifactId>
-			<version>0.1.9-6-g1775e1b</version>
+			<version>0.1.9-7-gffe60ea</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -1,30 +1,11 @@
 package org.ga4gh.discovery.search.source.presto;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
-import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.ga4gh.dataset.SchemaId;
-import org.ga4gh.dataset.exception.SchemaNotFoundException;
-import org.ga4gh.dataset.model.Dataset;
-import org.ga4gh.dataset.model.DatasetInfo;
-import org.ga4gh.dataset.model.ListDatasetsResponse;
-import org.ga4gh.dataset.model.ListSchemasResponse;
-import org.ga4gh.dataset.model.Schema;
+import org.ga4gh.dataset.SchemaManager;
+import org.ga4gh.dataset.model.*;
 import org.ga4gh.discovery.search.Field;
 import org.ga4gh.discovery.search.Table;
 import org.ga4gh.discovery.search.Type;
@@ -33,27 +14,26 @@ import org.ga4gh.discovery.search.result.ResultRow;
 import org.ga4gh.discovery.search.result.ResultValue;
 import org.ga4gh.discovery.search.source.SearchSource;
 import org.ga4gh.discovery.search.source.presto.PrestoMetadata.PrestoMetadataBuilder;
-import org.springframework.beans.factory.annotation.Value;
+
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
-    private final SchemaService schemaService;
+    private final SchemaManager schemaManager;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
-        //TODO: better home
         log.trace("Registering schemas");
-        this.schemaService = new SchemaService("http://localhost:8080", "fake", 100);
-        schemaService.registerSchema("pgpc-schemas-0.1.0");
-        schemaService.registerSchema("bigquery-pgc-data.pgp_variants.view_variants2_beacon", "variant-object-0.1.0");
-        schemaService.registerSchema("postgres.public.fact", "fact-object-0.1.0");
-        schemaService.registerSchema("ga4gh-drs-0.1.0");
-        schemaService.registerSchema("drs.org_ga4gh_drs.objects", "ga4gh-drs-object-0.1.0");
+        this.schemaManager = new SchemaManager(false);
         log.trace("Done registering schemas");
     }
 
@@ -89,22 +69,13 @@ public class PrestoSearchSource implements SearchSource {
         }
         SearchRequest datasetRequest = new SearchRequest();
         datasetRequest.setSqlQuery("SELECT * FROM " + id);
-        Schema expectedSchema;
-        try {
-            expectedSchema = schemaService.getSchema(id);
-            datasetRequest.setExpectedSchema(expectedSchema);
-        }
-        //catch (SchemaNotFoundException e) {
-        catch (Exception e) {
-            log.info("Serving a dataset request with no associated ga4gh schema: {}", id);
-        }
-
+        Map<String, Object> expectedSchema = schemaManager.getSchema(id);
+        datasetRequest.setExpectedSchema(expectedSchema);
         return search(datasetRequest);
     }
 
-    private Map<String, Object> generateSchemaMap(List<Field> fields) {
+    private Map<String, Object> generateSchemaProperties(List<Field> fields) {
         Map<String, Object> schemaJson = new LinkedHashMap<>();
-        schemaJson.put("description", "Automatically Generated Schema");
         int position = 0;
         for (Field f : fields) {
             Map<String, Object> props = new LinkedHashMap<>();
@@ -120,18 +91,14 @@ public class PrestoSearchSource implements SearchSource {
     public ListDatasetsResponse getDatasets() {
         List<DatasetInfo> info = new ArrayList<>();
         for (Table t : this.metadata.getTables()) {
-            Schema schema = null;
-            try {
-                schema = schemaService.getSchema(t.getName());
-            } catch (SchemaNotFoundException e) {
-                log.info("Generating schema info for dataset : {}", t.getName());
+            Map<String, Object> schema = schemaManager.getSchema(t.getName());
+            if (schema == null) {
                 schema = generateSchema(this.metadata.getFields(t));
-
             }
             DatasetInfo di = DatasetInfo.builder()
                 .id(t.getName())
                 //TODO: flaky
-                .description(schema.getSchemaJson().get("description").asText())
+                .description(schema.get("description").toString())
                 .schema(schema)
                 .build();
             info.add(di);
@@ -162,7 +129,7 @@ public class PrestoSearchSource implements SearchSource {
         return createDataset(fields, results, searchRequest.getExpectedSchema());
     }
 
-    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Schema expectedSchema) {
+    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Map<String, Object> expectedSchema) {
         List<Map<String, Object>> results = new ArrayList<>(queryResults.size());
         for (ResultRow row : queryResults) {
             Map<String, Object> rowData = new LinkedHashMap<>();
@@ -175,24 +142,19 @@ public class PrestoSearchSource implements SearchSource {
             return new Dataset(expectedSchema, Collections.unmodifiableList(results), null);
         }
 
-        Schema generatedSchema = generateSchema(fields);
+        Map<String, Object> generatedSchema = generateSchema(fields);
         return new Dataset(generatedSchema, Collections.unmodifiableList(results), null);
     }
 
-    private Schema generateSchema(List<Field> fields) {
-        SchemaId schemaId = SchemaId.of("No.Schema.Provided");
-        Map<String, Object> schemaJson = generateSchemaMap(fields);
-        ObjectMapper mapper = new ObjectMapper();
-        String json;
-        JsonNode node;
-        try {
-            json = mapper.writeValueAsString(schemaJson);
-            node = mapper.readTree(json);
-        } catch (IOException e) {
-            //TODO: better
-            return null;
-        }
-        return new Schema(schemaId, node);
+    private Map<String, Object> generateSchema(List<Field> fields) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("$id", "GENERATED_SCHEMA"); // Query ID?
+        schema.put("description", "Automatically generated schema.");
+        schema.put("$ref", null);
+        schema.put("$schema", "http://json-schema.org/draft-07/schema#");
+        Map<String, Object> properties = generateSchemaProperties(fields);
+        schema.put("properties", properties);
+        return schema;
     }
 
     private List<Field> extractFields(ResultSetMetaData resultSetMetaData) throws SQLException {
