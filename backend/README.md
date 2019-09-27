@@ -1,4 +1,4 @@
-# ga4gh-discovery-search-service
+``# ga4gh-discovery-search-service
 
 
 ## Auth Profiles

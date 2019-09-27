@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>com.dnastack.search.adapter</groupId>
+		<groupId>com.dnastack.ga4gh.search.adapter</groupId>
 		<artifactId>ga4gh-search-adapter-presto-parent</artifactId>
 		<version>0.1-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
