@@ -19,6 +19,11 @@ import java.util.Optional;
 import org.ga4gh.discovery.search.model.Field;
 import org.ga4gh.discovery.search.model.Table;
 import org.ga4gh.discovery.search.model.Type;
+import org.ga4gh.discovery.search.presto.FromTablesCollector;
+import org.ga4gh.discovery.search.presto.Metadata;
+import org.ga4gh.discovery.search.presto.ResolvedColumn;
+import org.ga4gh.discovery.search.presto.SelectColumnsCollector;
+import org.ga4gh.discovery.search.presto.TableMetadata;
 import org.junit.Test;
 import org.mockito.Mockito;
 

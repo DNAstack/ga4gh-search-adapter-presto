@@ -5,8 +5,10 @@ import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
+import org.ga4gh.discovery.search.presto.PrestoAdapter;
+import org.ga4gh.discovery.search.presto.PrestoTable;
+import org.ga4gh.discovery.search.presto.PrestoTableMetadata;
 
 /** Simulates presto responses */
 public class MockPrestoAdapter implements PrestoAdapter {

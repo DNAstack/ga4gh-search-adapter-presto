@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.List;
 import org.ga4gh.discovery.search.model.result.ResultRow;
 import org.ga4gh.discovery.search.model.result.SearchResult;
+import org.ga4gh.discovery.search.presto.PrestoSearchSource;
 
 public class PrestoSearchSourceTest {
 

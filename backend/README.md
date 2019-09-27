@@ -15,7 +15,7 @@ the token claims.
 
 Issuer configuration is easy and can be done from environment variables. Additionally, the api allows you to configure multiple
 issuers using either a `jwkset` endpoint or by passing in an actual `RSA` public key. This flexibility allows for adding
-token issuers which do not have a `jwkset` endpoint, such as the `DAM`. The configuration is described by the [AuthConfig](src/main/java/org/ga4gh/discovery/search/rest/security/AuthConfig.java)
+token issuers which do not have a `jwkset` endpoint, such as the `DAM`. The configuration is described by the [AuthConfig](src/main/java/org/ga4gh/discovery/search/security/AuthConfig.java)
 class. 
 
 

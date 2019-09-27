@@ -14,6 +14,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.ga4gh.discovery.search.model.Table;
+import org.ga4gh.discovery.search.presto.FromTablesCollector;
+import org.ga4gh.discovery.search.presto.Metadata;
+import org.ga4gh.discovery.search.presto.TableMetadata;
 import org.junit.Test;
 import org.mockito.Mockito;
 

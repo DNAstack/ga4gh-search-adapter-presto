@@ -3,6 +3,9 @@ package org.ga4gh.discovery.search.source.presto;
 import java.util.Arrays;
 import java.util.Map;
 import com.google.common.collect.ImmutableMap;
+import org.ga4gh.discovery.search.presto.PrestoField;
+import org.ga4gh.discovery.search.presto.PrestoTable;
+import org.ga4gh.discovery.search.presto.PrestoTableMetadata;
 
 public class MockPrestoMetadata {
 
