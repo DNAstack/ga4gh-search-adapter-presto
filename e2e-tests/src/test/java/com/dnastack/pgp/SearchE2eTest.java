@@ -103,7 +103,7 @@ public class SearchE2eTest extends BaseE2eTest {
         String dataset = requiredEnv("E2E_DATASET");
         Dataset result = search("SELECT id FROM " + dataset + " LIMIT 10");
         assertThat(result.getObjects(), not(hasSize(0)));
-        assertThat(result.getSchema().getSchemaJson().size(), not(is(0)));
+        assertThat(result.getSchema().size(), not(is(0)));
     }
 
     @Test
@@ -111,7 +111,7 @@ public class SearchE2eTest extends BaseE2eTest {
         String dataset = requiredEnv("E2E_DATASET");
         Dataset result = dataset(dataset);
         assertThat(result.getObjects(), not(hasSize(0)));
-        assertThat(result.getSchema().getSchemaJson().size(), not(is(0)));
+        assertThat(result.getSchema().size(), not(is(0)));
     }
 
     private Dataset search(String sqlQuery) {
