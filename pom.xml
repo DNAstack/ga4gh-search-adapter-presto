@@ -27,24 +27,12 @@
 	</properties>
 
 	<modules>
-		<module>backend/data-models</module>
-		<module>backend/data-sources/presto-source</module>
-		<module>backend/service</module>
+		<module>backend</module>
 		<module>frontend</module>
 	</modules>
 
 	<dependencyManagement>
 		<dependencies>
-			<dependency>
-				<groupId>com.dnastack.search.adapter</groupId>
-				<artifactId>ga4gh-discovery-search-data-models</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.dnastack.search.adapter</groupId>
-				<artifactId>ga4gh-discovery-search-presto-source</artifactId>
-				<version>${project.version}</version>
-			</dependency>
 			<dependency>
 				<groupId>com.dnastack.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-frontend</artifactId>
