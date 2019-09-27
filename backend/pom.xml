@@ -55,7 +55,7 @@
 			<artifactId>presto-jdbc</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.dnastack.search.adapter</groupId>
+			<groupId>com.dnastack.ga4gh.search.adapter</groupId>
 			<artifactId>ga4gh-discovery-search-frontend</artifactId>
 		</dependency>
 		<dependency>

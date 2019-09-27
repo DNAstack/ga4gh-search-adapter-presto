@@ -15,9 +15,7 @@ WORKDIR /build
 ADD target/pom.xml /build/pom.xml
 ADD target/.mvn/ /build/.mvn/
 ADD target/mvnw /build/mvnw
-ADD target/backend/service/pom.xml /build/backend/service/pom.xml
-ADD target/backend/data-sources/presto-source/pom.xml /build/backend/data-sources/presto-source/pom.xml
-ADD target/backend/data-models/pom.xml /build/backend/data-models/pom.xml
+ADD target/backend/pom.xml /build/backend/pom.xml
 ADD target/frontend/pom.xml /build/frontend/pom.xml
 # Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
 ADD target/.m2 /root/.m2
@@ -26,9 +24,7 @@ RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
 
 # Now add sources, which will bust the cache.
-ADD target/backend/service/src/ /build/backend/service/src/
-ADD target/backend/data-sources/presto-source/src/ /build/backend/data-sources/presto-source/src/
-ADD target/backend/data-models/src/ /build/backend/data-models/src/
+ADD target/backend/src/ /build/backend/src/
 ADD target/frontend/demo/ /build/frontend/demo/
 
 # If this step fails with an error like
@@ -49,7 +45,7 @@ FROM openjdk:8-slim
 ARG APP_NAME
 ARG APP_VERSION
 
-COPY --from=0 /build/backend/service/target/ga4gh-discovery-search-service-*.jar /app.jar
+COPY --from=0 /build/backend/target/ga4gh-discovery-search-service-*.jar /app.jar
 ADD entrypoint.sh /entrypoint.sh
 EXPOSE 8080
 ENTRYPOINT ["/entrypoint.sh"]

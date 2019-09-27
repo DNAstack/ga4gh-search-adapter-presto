@@ -11,7 +11,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 
-	<groupId>com.dnastack.search.adapter</groupId>
+	<groupId>com.dnastack.ga4gh.search.adapter</groupId>
 	<artifactId>ga4gh-discovery-search-e2e-tests</artifactId>
 	<version>0.1-SNAPSHOT</version>
 	<name>GA4GH Discovery Search End-to-end tests</name>
