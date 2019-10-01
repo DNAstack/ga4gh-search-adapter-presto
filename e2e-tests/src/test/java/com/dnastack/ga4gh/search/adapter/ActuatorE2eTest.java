@@ -1,4 +1,4 @@
-package com.dnastack.pgp;
+package com.dnastack.ga4gh.search.adapter;
 
 import org.junit.Test;
 

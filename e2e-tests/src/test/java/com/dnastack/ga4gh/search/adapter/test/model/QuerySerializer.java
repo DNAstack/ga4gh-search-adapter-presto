@@ -1,13 +1,11 @@
-package org.ga4gh.discovery.search.test.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.ga4gh.discovery.search.test.model.SearchQueryHelper.joinTreeToList;
+import static com.dnastack.ga4gh.search.adapter.test.model.SearchQueryHelper.joinTreeToList;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-
-import org.ga4gh.discovery.search.test.model.SearchQueryHelper;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;

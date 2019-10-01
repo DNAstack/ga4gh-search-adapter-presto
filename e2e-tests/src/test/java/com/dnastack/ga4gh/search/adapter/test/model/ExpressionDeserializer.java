@@ -1,12 +1,10 @@
-package org.ga4gh.discovery.search.test.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-
-import org.ga4gh.discovery.search.test.model.Type;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;

@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.model.source;
 
+import com.dnastack.ga4gh.search.adapter.model.request.DatasetRequest;
 import java.util.List;
 import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.dataset.model.ListDatasetsResponse;
@@ -20,7 +21,7 @@ public interface SearchSource {
 
     ListDatasetsResponse getDatasets();
 
-    Dataset getDataset(String id);
+    Dataset getDataset(DatasetRequest datasetRequest);
 
     List<Field> getFields(String table);
 

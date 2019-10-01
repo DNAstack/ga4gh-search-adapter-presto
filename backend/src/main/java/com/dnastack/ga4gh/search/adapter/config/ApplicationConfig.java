@@ -35,6 +35,9 @@ public class ApplicationConfig {
     @Value("${presto.datasource.username}")
     private String prestoDatasourceUsername;
 
+    @Value("${presto.results.default-page-size}")
+    private Integer defaultPageSize;
+
 
     /**
      * Other settings
@@ -52,7 +55,7 @@ public class ApplicationConfig {
 
     @Bean
     public SearchSource getPrestoSearchSource(ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, prestoDatasourceUsername, accountAuthenticator));
+        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, prestoDatasourceUsername, accountAuthenticator),defaultPageSize);
     }
 
     @Bean

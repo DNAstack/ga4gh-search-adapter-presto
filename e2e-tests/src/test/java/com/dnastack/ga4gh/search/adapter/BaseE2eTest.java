@@ -1,4 +1,4 @@
-package com.dnastack.pgp;
+package com.dnastack.ga4gh.search.adapter;
 
 import io.restassured.RestAssured;
 import org.junit.Before;

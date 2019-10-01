@@ -36,8 +36,7 @@ presto:
     url: "jdbc:presto://presto.staging.dnastack.com:443"
     username: "ga4gh-search-adapter-presto"
   results:
-    limit:
-      max: 100
+    default-page-size: 100
 ---
 
 spring:

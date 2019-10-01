@@ -51,7 +51,7 @@ public class PrestoSearchSourceTest {
         MockResultSet tableInfo = new MockResultSet(ImmutableList.of("table_name", "table+schema"), ImmutableList.of("varchar", "varchar"));
         tableInfo.addRow("fact", "public");
         mockPresto.addMockResults(selectTablesQuery, tableInfo);
-        searchSource = new PrestoSearchSource(mockPresto);
+        searchSource = new PrestoSearchSource(mockPresto,100);
     }
 
     //TODO: This is getting really bad

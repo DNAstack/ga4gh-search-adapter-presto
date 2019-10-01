@@ -19,7 +19,7 @@ public class SchemaController {
         return dataSource.getSchemas();
     }
 
-    @RequestMapping(value = "/api/schemas/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = "/api/schema/{id}", method = RequestMethod.GET)
     public Schema getSchema(@PathVariable("id") String id) {
         return dataSource.getSchema(id);
     }

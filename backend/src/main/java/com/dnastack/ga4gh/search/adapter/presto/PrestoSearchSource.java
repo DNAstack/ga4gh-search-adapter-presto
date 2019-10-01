@@ -1,8 +1,18 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.Table;
+import com.dnastack.ga4gh.search.adapter.model.Type;
+import com.dnastack.ga4gh.search.adapter.model.request.DatasetRequest;
+import com.dnastack.ga4gh.search.adapter.model.request.SearchRequest;
+import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.result.ResultValue;
+import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
+import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
 import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
+import java.net.URI;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -20,15 +30,10 @@ import org.ga4gh.dataset.model.Dataset;
 import org.ga4gh.dataset.model.DatasetInfo;
 import org.ga4gh.dataset.model.ListDatasetsResponse;
 import org.ga4gh.dataset.model.ListSchemasResponse;
+import org.ga4gh.dataset.model.Pagination;
 import org.ga4gh.dataset.model.Schema;
-import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.Table;
-import com.dnastack.ga4gh.search.adapter.model.Type;
-import com.dnastack.ga4gh.search.adapter.model.request.SearchRequest;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultValue;
-import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
-import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
+import org.springframework.util.Assert;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -36,14 +41,16 @@ public class PrestoSearchSource implements SearchSource {
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
     private final SchemaManager schemaManager;
+    private final Integer defaultDatasetQuerySize;
 
-    public PrestoSearchSource(PrestoAdapter prestoAdapter) {
+    public PrestoSearchSource(PrestoAdapter prestoAdapter, Integer defaultDatasetQuerySize) {
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         log.trace("Registering schemas");
         this.schemaManager = new SchemaManager(false);
         log.trace("Done registering schemas");
+        this.defaultDatasetQuerySize = defaultDatasetQuerySize;
     }
 
     @Override
@@ -72,15 +79,38 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     @Override
-    public Dataset getDataset(String id) {
-        if (!metadata.hasTable(id)) {
+    public Dataset getDataset(DatasetRequest datasetRequest) {
+        if (!metadata.hasTable(datasetRequest.getId())) {
             return null;
         }
-        SearchRequest datasetRequest = new SearchRequest();
-        datasetRequest.setSqlQuery("SELECT * FROM " + id);
-        Map<String, Object> expectedSchema = schemaManager.getSchema(id);
-        datasetRequest.setExpectedSchema(expectedSchema);
-        return search(datasetRequest);
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.setSqlQuery(buildDatasetQuery(datasetRequest));
+        Map<String, Object> expectedSchema = schemaManager.getSchema(datasetRequest.getId());
+        searchRequest.setExpectedSchema(expectedSchema);
+        return search(searchRequest,datasetRequest);
+    }
+
+
+    private String buildDatasetQuery(DatasetRequest datasetRequest) {
+
+        StringBuilder builder = new StringBuilder("SELECT * FROM");
+        builder.append(" ").append(datasetRequest.getId()).append(" ");
+
+        if (datasetRequest.getPageSize() == null) {
+            datasetRequest.setPageSize(defaultDatasetQuerySize);
+        } else {
+            Assert.isTrue(datasetRequest.getPageSize() >= 0, "pageSize must be greater or equal to 0");
+        }
+
+        if (datasetRequest.getPage() == null) {
+            datasetRequest.setPage(1);
+        } else {
+            Assert.isTrue(datasetRequest.getPageSize() >= 0, "page must be greater or equal to 0");
+        }
+
+        builder.append("OFFSET ").append((datasetRequest.getPage() - 1) * datasetRequest.getPageSize()).append(" ");
+        builder.append("LIMIT ").append(datasetRequest.getPageSize() + 1);
+        return builder.toString();
     }
 
     private Map<String, Object> generateSchemaProperties(List<Field> fields) {
@@ -115,13 +145,27 @@ public class PrestoSearchSource implements SearchSource {
         return new ListDatasetsResponse(info);
     }
 
+
     @Override
     public Dataset search(SearchRequest searchRequest) {
         String prestoSqlString = searchRequest.getSqlQuery();
         log.info("Received SQL: {}", prestoSqlString);
         List<Field> fields = new ArrayList<>();
         List<ResultRow> results = new ArrayList<>();
+        performPrestoSearchQuery(prestoSqlString, fields, results);
+        return createDataset(fields, results, searchRequest.getExpectedSchema(), null);
+    }
 
+    private Dataset search(SearchRequest searchRequest, DatasetRequest datasetRequest) {
+        String prestoSqlString = searchRequest.getSqlQuery();
+        log.info("Received SQL: {}", prestoSqlString);
+        List<Field> fields = new ArrayList<>();
+        List<ResultRow> results = new ArrayList<>();
+        performPrestoSearchQuery(prestoSqlString, fields, results);
+        return createDataset(fields, results, searchRequest.getExpectedSchema(), datasetRequest);
+    }
+
+    private void performPrestoSearchQuery(String prestoSqlString, List<Field> fields, List<ResultRow> results) {
         prestoAdapter.query(
             prestoSqlString,
             rs -> {
@@ -135,24 +179,44 @@ public class PrestoSearchSource implements SearchSource {
                     throw new RuntimeException(e);
                 }
             });
-        return createDataset(fields, results, searchRequest.getExpectedSchema());
     }
 
-    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Map<String, Object> expectedSchema) {
-        List<Map<String, Object>> results = new ArrayList<>(queryResults.size());
-        for (ResultRow row : queryResults) {
+    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Map<String, Object> expectedSchema, DatasetRequest datasetRequest) {
+        boolean hasNextPage = datasetRequest != null && datasetRequest.getPageSize() < queryResults.size();
+        int resultSize = hasNextPage ? datasetRequest.getPageSize() : queryResults.size();
+        List<Map<String, Object>> results = new ArrayList<>(resultSize);
+        for (int i = 0; i < resultSize; i++) {
+            ResultRow row = queryResults.get(i);
             Map<String, Object> rowData = new LinkedHashMap<>();
             for (ResultValue value : row.getValues()) {
                 rowData.put(value.getField().getName(), value.getValue());
             }
             results.add(rowData);
         }
+
+        URI previousPageUri = null;
+        URI nextPageUri = null;
+        if (datasetRequest != null) {
+            if (datasetRequest.getPage() > 1) {
+                previousPageUri = UriComponentsBuilder.fromHttpUrl(datasetRequest.getUrl())
+                    .queryParam("page", datasetRequest.getPage() - 1)
+                    .queryParam("pageSize", datasetRequest.getPageSize())
+                    .build().toUri();
+            }
+            if (hasNextPage) {
+                nextPageUri = UriComponentsBuilder.fromHttpUrl(datasetRequest.getUrl())
+                    .queryParam("page", datasetRequest.getPage() + 1)
+                    .queryParam("pageSize", datasetRequest.getPageSize())
+                    .build().toUri();
+            }
+        }
+        Pagination pagination = new Pagination(previousPageUri, nextPageUri);
         if (expectedSchema != null) {
-            return new Dataset(expectedSchema, Collections.unmodifiableList(results), null);
+            return new Dataset(expectedSchema, Collections.unmodifiableList(results), pagination);
         }
 
         Map<String, Object> generatedSchema = generateSchema(fields);
-        return new Dataset(generatedSchema, Collections.unmodifiableList(results), null);
+        return new Dataset(generatedSchema, Collections.unmodifiableList(results), pagination);
     }
 
     private Map<String, Object> generateSchema(List<Field> fields) {

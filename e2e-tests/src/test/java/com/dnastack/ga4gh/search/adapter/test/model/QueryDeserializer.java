@@ -1,8 +1,8 @@
-package org.ga4gh.discovery.search.test.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.ga4gh.discovery.search.test.model.SearchQueryHelper.joinListToTree;
-import static org.ga4gh.discovery.search.test.model.ExpressionDeserializer.expressionFromNode;
+import static com.dnastack.ga4gh.search.adapter.test.model.SearchQueryHelper.joinListToTree;
+import static com.dnastack.ga4gh.search.adapter.test.model.ExpressionDeserializer.expressionFromNode;
 
 import java.io.IOException;
 import java.util.List;

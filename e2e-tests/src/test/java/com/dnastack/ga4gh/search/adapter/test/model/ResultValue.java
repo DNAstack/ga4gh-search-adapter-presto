@@ -1,6 +1,5 @@
-package org.ga4gh.discovery.search.test.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
-import org.ga4gh.discovery.search.test.model.Field;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

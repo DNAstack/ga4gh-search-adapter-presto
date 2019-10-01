@@ -1,4 +1,4 @@
-package org.ga4gh.discovery.search.test.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
 import java.util.List;
 import lombok.AllArgsConstructor;
