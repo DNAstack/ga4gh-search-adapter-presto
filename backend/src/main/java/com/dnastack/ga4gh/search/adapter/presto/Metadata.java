@@ -15,8 +15,9 @@ import java.util.Set;
 import com.dnastack.ga4gh.search.adapter.model.Field;
 import com.dnastack.ga4gh.search.adapter.model.Table;
 import com.dnastack.ga4gh.search.adapter.model.Type;
+import lombok.extern.slf4j.Slf4j;
 
-//@AllArgsConstructor
+@Slf4j
 public class Metadata {
 
     private final Map<String, Table> tables = new HashMap<>();
@@ -177,6 +178,8 @@ public class Metadata {
         } else if (prestoType.startsWith("row(")) {
             return Type.JSON;
         }
-        throw new RuntimeException("Unknown mapping for Presto field type " + prestoType);
+
+        log.warn("Unable to understand presto type {}, returning type STRING", prestoType);
+        return Type.STRING;
     }
 }
