@@ -11,7 +11,7 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
-import com.dnastack.ga4gh.search.adapter.presto.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,9 +48,7 @@ public class ApplicationConfig {
     @Bean
     public ServiceAccountAuthenticator getServiceAccountAuthenticator(AuthConfig authConfig) {
         OauthClientConfig clientConfig = authConfig.getPrestoOauthClient();
-        return new ServiceAccountAuthenticator(clientConfig.getClientId(), clientConfig
-            .getClientSecret(), clientConfig
-            .getAudience(), clientConfig.getTokenUri(),clientConfig.getScopes());
+        return new ServiceAccountAuthenticator(clientConfig);
     }
 
     @Bean

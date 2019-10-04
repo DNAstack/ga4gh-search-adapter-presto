@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
 import com.google.common.collect.ImmutableList;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -123,14 +124,7 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             Matcher matcher = errorResponsePattern.matcher(message);
             if (matcher.find()) {
                 int statusCode = Integer.parseInt(matcher.group("statusCode").split("=")[1]);
-
-                if (statusCode == 403) {
-                    throw new ServiceAccountAuthenticationException(
-                        "Application is not authorized to access presto deployment " + url
-                            + ". Please verify sa credentials and presto config. " + matcher.group("jsonResponse"));
-                }
-
-                return statusCode == 401;
+                return statusCode == 401 || statusCode == 403;
             }
         }
         return false;

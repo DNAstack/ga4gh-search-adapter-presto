@@ -18,8 +18,8 @@
 		<spring-cloud.version>Greenwich.RC2</spring-cloud.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-		<version.presto>311</version.presto>
-		<version.presto.parser>311</version.presto.parser>
+		<version.presto>315</version.presto>
+		<version.presto.parser>315</version.presto.parser>
 		<version.spring.boot>2.1.8.RELEASE</version.spring.boot>
 		<version.mysql>5.1.6</version.mysql>
 		<version.guava>27.1-jre</version.guava>

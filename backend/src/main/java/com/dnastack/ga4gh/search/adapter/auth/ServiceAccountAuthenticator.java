@@ -1,10 +1,11 @@
-package com.dnastack.ga4gh.search.adapter.presto;
+package com.dnastack.ga4gh.search.adapter.auth;
 
+import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Base64;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Call;
 import okhttp3.FormBody;
@@ -14,33 +15,47 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 @Slf4j
+@SuppressWarnings( "Duplicates")
 public class ServiceAccountAuthenticator {
 
+    private final static Long TOKEN_BUFFER = 60L;
     private final String clientId;
     private final String clientSecret;
-    private final String scope;
+    private final String scopes;
     private final String audience;
     private final String tokenEndpoint;
 
-    private String accessToken;
+    private AuthTokenResponse tokenResponse;
+    private Long tokenRetrievedAt = 0L;
 
-    public ServiceAccountAuthenticator(@NonNull String clientId, @NonNull String clientSecret, @NonNull String audience, @NonNull String tokenEndpoint, String scope) {
-        this.clientId = clientId;
-        this.clientSecret = clientSecret;
-        this.scope = scope;
-        this.audience = audience;
-        this.tokenEndpoint = tokenEndpoint;
+    public ServiceAccountAuthenticator(OauthClientConfig config) {
+        this.clientId = config.getClientId();
+        this.clientSecret = config.getClientSecret();
+        this.scopes = config.getScopes();
+        this.audience = config.getAudience();
+        this.tokenEndpoint = config.getTokenUri();
         refreshAccessToken();
     }
 
 
     public String getAccessToken() {
-        return accessToken;
+        Long now = Instant.now().getEpochSecond();
+        if (tokenResponse == null) {
+            refreshAccessToken();
+        } else if (tokenResponse.getExpiresIn() != null && now > (tokenRetrievedAt + tokenResponse.getExpiresIn()
+            - TOKEN_BUFFER)) {
+            log.trace("Access token has expired, or will be expiring within the buffer window. Refreshing token now");
+            refreshAccessToken();
+        } else if (tokenResponse.getExpiresIn() == null) {
+            log.trace("Token response does not have any expiry information. Optimistically assuming token is valid");
+        }
+        return tokenResponse.getAccessToken();
     }
 
     public void refreshAccessToken() {
         try {
-            accessToken = authorizeServiceAndRetrieveAccessToken();
+            tokenResponse = authorizeServiceAndRetrieveAccessToken();
+            tokenRetrievedAt = Instant.now().getEpochSecond();
             log.trace("Successfully retrieved access token");
         } catch (IOException e) {
             throw new ServiceAccountAuthenticationException(
@@ -48,7 +63,7 @@ public class ServiceAccountAuthenticator {
         }
     }
 
-    private String authorizeServiceAndRetrieveAccessToken() throws IOException {
+    private AuthTokenResponse authorizeServiceAndRetrieveAccessToken() throws IOException {
         log.trace("Retrieving access token with client {} from {}", clientId, tokenEndpoint);
         String combinedClientCredentials = clientId + ":" + clientSecret;
         String encodedClientCredentials =
@@ -57,8 +72,8 @@ public class ServiceAccountAuthenticator {
         FormBody.Builder formBodyBuilder = new FormBody.Builder().add("grant_type", "client_credentials")
             .add("audience", audience);
 
-        if (scope != null) {
-            formBodyBuilder.add("scope", scope);
+        if (scopes != null && !scopes.isEmpty()) {
+            formBodyBuilder.add("scope", scopes);
         }
 
         Request request = new Request.Builder().url(tokenEndpoint).method("POST", formBodyBuilder.build())
@@ -68,17 +83,18 @@ public class ServiceAccountAuthenticator {
     }
 
 
-    private String executeRequest(Request request) throws IOException {
+    private AuthTokenResponse executeRequest(Request request) throws IOException {
         OkHttpClient httpClient = new OkHttpClient();
         Call call = httpClient.newCall(request);
         try (Response response = call.execute()) {
             if (response.isSuccessful() && response.body() != null) {
                 ResponseBody body = response.body();
                 ObjectMapper mapper = new ObjectMapper();
-                JsonNode node = mapper.readTree(body.string());
+                String bodyString = body.string();
+                JsonNode node = mapper.readTree(bodyString);
 
                 if (node.has("access_token")) {
-                    return node.get("access_token").asText();
+                    return mapper.readValue(bodyString, AuthTokenResponse.class);
                 } else {
                     throw new IOException("Received successful status code but could not read access_token, property does not exist in body");
                 }
@@ -96,5 +112,4 @@ public class ServiceAccountAuthenticator {
             }
         }
     }
-
 }

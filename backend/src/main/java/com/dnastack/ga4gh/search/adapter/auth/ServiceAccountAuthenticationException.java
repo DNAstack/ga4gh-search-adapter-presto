@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter.presto;
+package com.dnastack.ga4gh.search.adapter.auth;
 
 public class ServiceAccountAuthenticationException extends RuntimeException {
 
