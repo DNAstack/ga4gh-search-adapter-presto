@@ -1,17 +1,18 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
-import io.prestosql.sql.tree.Query;
-import java.util.ArrayList;
-import java.util.List;
+import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.model.serde.QueryDeserializer;
 import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
+import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
+import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
+import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
-import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
-import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
-import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
+import io.prestosql.sql.tree.Query;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,8 +53,8 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public SearchSource getPrestoSearchSource(ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, prestoDatasourceUsername, accountAuthenticator),defaultPageSize);
+    public SearchSource getPrestoSearchSource(PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
+        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
     }
 
     @Bean
@@ -94,7 +95,7 @@ public class ApplicationConfig {
 
     @Bean
     @Profile("!basic-auth & !no-auth")
-    public WebSecurityConfigurerAdapter securityConfigurerBearerAuth(){
+    public WebSecurityConfigurerAdapter securityConfigurerBearerAuth() {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
@@ -116,7 +117,7 @@ public class ApplicationConfig {
 
     @Bean
     @Profile("basic-auth")
-    public WebSecurityConfigurerAdapter securityConfigurerDefaultAuth(){
+    public WebSecurityConfigurerAdapter securityConfigurerDefaultAuth() {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
@@ -145,7 +146,7 @@ public class ApplicationConfig {
 
     @Bean
     @Profile("no-auth")
-    public WebSecurityConfigurerAdapter securityConfigurerNoAuth(){
+    public WebSecurityConfigurerAdapter securityConfigurerNoAuth() {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {

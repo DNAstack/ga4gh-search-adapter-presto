@@ -23,6 +23,7 @@ import io.restassured.mapper.ObjectMapperType;
 import io.restassured.mapper.factory.Jackson2ObjectMapperFactory;
 import io.restassured.specification.RequestSpecification;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.List;
 import org.ga4gh.dataset.model.Dataset;
 import org.junit.BeforeClass;
@@ -115,7 +116,7 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void datasetShouldHaveResultsAndSchema() {
         String dataset = requiredEnv("E2E_DATASET");
-        Dataset result = dataset(dataset,1,10);
+        Dataset result = dataset(dataset,10);
         assertThat(result.getObjects(), hasSize(10));
         assertThat(result.getSchema().size(), not(is(0)));
         assertThat(result.getPagination(),notNullValue());
@@ -124,15 +125,15 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void datasetPaginationShouldWork() {
         String dataset = requiredEnv("E2E_DATASET");
-        Dataset result = dataset(dataset,1,20);
+        Dataset result = dataset(dataset,20);
         assertThat(result.getObjects(), hasSize(20));
         assertThat(result.getPagination(),notNullValue());
         assertThat(result.getSchema().size(), not(is(0)));
 
-        Dataset page1 = dataset(dataset,1,10);
-        Dataset page2 = dataset(dataset,2,10);
+        Dataset page1 = dataset(dataset,10);
 
         assertThat(page1.getObjects(),hasSize(10));
+        Dataset page2 = dataset(page1.getPagination().getNextPageUrl());
         assertThat(page2.getObjects(),hasSize(10));
 
         for (int i = 0; i< 10; i++){
@@ -148,7 +149,7 @@ public class SearchE2eTest extends BaseE2eTest {
         return search(new SearchRequest(null, sqlQuery));
     }
 
-    private Dataset dataset(String id, int page, int pageSize) {
+    private Dataset dataset(String id, int pageSize) {
         String accessToken = getToken();
         //@formatter:off
         return given().config(config)
@@ -161,7 +162,6 @@ public class SearchE2eTest extends BaseE2eTest {
             .oauth2(accessToken)
             .when()
             .contentType(ContentType.JSON)
-            .queryParam("page",page)
             .queryParam("pageSize",pageSize)
             .pathParam("id", id)
         .get("/api/dataset/{id}")
@@ -172,6 +172,30 @@ public class SearchE2eTest extends BaseE2eTest {
             .extract()
             .as(Dataset.class);
         //@formatter:off
+    }
+
+    private Dataset dataset(URI nextPageUri){
+        String accessToken = getToken();
+        //@formatter:off
+        return given().config(config)
+            .log()
+            .method()
+            .log()
+            .uri()
+            .given()
+            .auth()
+            .oauth2(accessToken)
+            .when()
+            .contentType(ContentType.JSON)
+        .get(nextPageUri.getPath())
+            .then()
+            .log()
+            .ifValidationFails()
+            .statusCode(200)
+            .extract()
+            .as(Dataset.class);
+        //@formatter:off
+
     }
 
     private Dataset search(SearchRequest request) {

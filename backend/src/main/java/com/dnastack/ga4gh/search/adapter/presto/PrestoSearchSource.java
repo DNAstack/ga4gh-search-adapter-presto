@@ -3,7 +3,6 @@ package com.dnastack.ga4gh.search.adapter.presto;
 import com.dnastack.ga4gh.search.adapter.model.Field;
 import com.dnastack.ga4gh.search.adapter.model.Table;
 import com.dnastack.ga4gh.search.adapter.model.Type;
-import com.dnastack.ga4gh.search.adapter.model.request.DatasetRequest;
 import com.dnastack.ga4gh.search.adapter.model.request.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
 import com.dnastack.ga4gh.search.adapter.model.result.ResultValue;
@@ -13,10 +12,9 @@ import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
 import java.net.URI;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.dataset.SchemaManager;
 import org.ga4gh.dataset.model.Dataset;
@@ -32,7 +31,9 @@ import org.ga4gh.dataset.model.ListDatasetsResponse;
 import org.ga4gh.dataset.model.ListSchemasResponse;
 import org.ga4gh.dataset.model.Pagination;
 import org.ga4gh.dataset.model.Schema;
-import org.springframework.util.Assert;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Slf4j
@@ -41,16 +42,32 @@ public class PrestoSearchSource implements SearchSource {
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
     private final SchemaManager schemaManager;
-    private final Integer defaultDatasetQuerySize;
+    private final static String RESULT_SET_RELATIVE_URL = "/api/dsresults/%s";
 
-    public PrestoSearchSource(PrestoAdapter prestoAdapter, Integer defaultDatasetQuerySize) {
+
+    private final PagingResultSetConsumerCache consumerCache;
+
+    public PrestoSearchSource(PrestoAdapter prestoAdapter) {
+        consumerCache = null;
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         log.trace("Registering schemas");
         this.schemaManager = new SchemaManager(false);
         log.trace("Done registering schemas");
-        this.defaultDatasetQuerySize = defaultDatasetQuerySize;
+    }
+    public PrestoSearchSource(PrestoAdapter prestoAdapter, PagingResultSetConsumerCache consumerCache) {
+        this.consumerCache = consumerCache;
+        log.trace("Building presto search source");
+        this.prestoAdapter = prestoAdapter;
+        this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
+        log.trace("Registering schemas");
+        this.schemaManager = new SchemaManager(false);
+        log.trace("Done registering schemas");
+    }
+
+    public boolean hasConsumerCache() {
+        return consumerCache != null;
     }
 
     @Override
@@ -79,37 +96,22 @@ public class PrestoSearchSource implements SearchSource {
     }
 
     @Override
-    public Dataset getDataset(DatasetRequest datasetRequest) {
-        if (!metadata.hasTable(datasetRequest.getId())) {
+    public Dataset getDataset(String id, Integer pageSize) {
+        if (!metadata.hasTable(id)) {
             return null;
         }
         SearchRequest searchRequest = new SearchRequest();
-        searchRequest.setSqlQuery(buildDatasetQuery(datasetRequest));
-        Map<String, Object> expectedSchema = schemaManager.getSchema(datasetRequest.getId());
+        searchRequest.setSqlQuery(buildDatasetQuery(id));
+        Map<String, Object> expectedSchema = schemaManager.getSchema(id);
         searchRequest.setExpectedSchema(expectedSchema);
-        return search(searchRequest,datasetRequest);
+        return search(searchRequest, pageSize);
     }
 
 
-    private String buildDatasetQuery(DatasetRequest datasetRequest) {
+    private String buildDatasetQuery(String id) {
 
         StringBuilder builder = new StringBuilder("SELECT * FROM");
-        builder.append(" ").append(datasetRequest.getId()).append(" ");
-
-        if (datasetRequest.getPageSize() == null) {
-            datasetRequest.setPageSize(defaultDatasetQuerySize);
-        } else {
-            Assert.isTrue(datasetRequest.getPageSize() >= 0, "pageSize must be greater or equal to 0");
-        }
-
-        if (datasetRequest.getPage() == null) {
-            datasetRequest.setPage(1);
-        } else {
-            Assert.isTrue(datasetRequest.getPageSize() >= 0, "page must be greater or equal to 0");
-        }
-
-        builder.append("OFFSET ").append((datasetRequest.getPage() - 1) * datasetRequest.getPageSize()).append(" ");
-        builder.append("LIMIT ").append(datasetRequest.getPageSize() + 1);
+        builder.append(" ").append(id).append(" ");
         return builder.toString();
     }
 
@@ -147,46 +149,56 @@ public class PrestoSearchSource implements SearchSource {
 
 
     @Override
-    public Dataset search(SearchRequest searchRequest) {
+    public Dataset search(SearchRequest searchRequest, Integer pageSize) {
         String prestoSqlString = searchRequest.getSqlQuery();
         log.info("Received SQL: {}", prestoSqlString);
-        List<Field> fields = new ArrayList<>();
-        List<ResultRow> results = new ArrayList<>();
-        performPrestoSearchQuery(prestoSqlString, fields, results);
-        return createDataset(fields, results, searchRequest.getExpectedSchema(), null);
+        PageResult pageResult = performPrestoSearchQuery(prestoSqlString, pageSize);
+        return createDataset(pageResult, searchRequest.getExpectedSchema());
     }
 
-    private Dataset search(SearchRequest searchRequest, DatasetRequest datasetRequest) {
-        String prestoSqlString = searchRequest.getSqlQuery();
-        log.info("Received SQL: {}", prestoSqlString);
-        List<Field> fields = new ArrayList<>();
-        List<ResultRow> results = new ArrayList<>();
-        performPrestoSearchQuery(prestoSqlString, fields, results);
-        return createDataset(fields, results, searchRequest.getExpectedSchema(), datasetRequest);
-    }
 
-    private void performPrestoSearchQuery(String prestoSqlString, List<Field> fields, List<ResultRow> results) {
-        prestoAdapter.query(
-            prestoSqlString,
-            rs -> {
-                try {
-                    ResultSetMetaData resultSetMetaData = rs.getMetaData();
-                    fields.addAll(extractFields(resultSetMetaData));
-                    while (rs.next()) {
-                        results.add(extractRow(rs, fields));
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+    @Override
+    public Dataset getPaginatedResponse(String token) {
+        if (hasConsumerCache()) {
+            try {
+
+                String decodedToken = new String(Base64.getDecoder().decode(token));
+                String[] tokenParts = decodedToken.split(":");
+                if (tokenParts.length != 2) {
+                    throw new IllegalArgumentException("Invalid token");
                 }
-            });
+                PagingResultSetConsumer consumer = consumerCache.get(tokenParts[0]);
+                return createDataset(consumer.nextPage(tokenParts[1]), null);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            throw new InvalidCacheEntry("Could not retreive paginated response, caching result sets is not configured");
+        }
     }
 
-    private Dataset createDataset(List<Field> fields, List<ResultRow> queryResults, Map<String, Object> expectedSchema, DatasetRequest datasetRequest) {
-        boolean hasNextPage = datasetRequest != null && datasetRequest.getPageSize() < queryResults.size();
-        int resultSize = hasNextPage ? datasetRequest.getPageSize() : queryResults.size();
-        List<Map<String, Object>> results = new ArrayList<>(resultSize);
-        for (int i = 0; i < resultSize; i++) {
-            ResultRow row = queryResults.get(i);
+    private PageResult performPrestoSearchQuery(String prestoSqlString, Integer pageSize) {
+        try {
+
+            PagingResultSetConsumer consumer = prestoAdapter.query(prestoSqlString, pageSize);
+            if (hasConsumerCache()) {
+                consumerCache.add(consumer);
+            }
+            return consumer.firtsPage();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String formPagedResultString(PageResult result) {
+        String id = result.getConsumerId() + ":" + result.getNextPageToken();
+        return Base64.getEncoder().encodeToString(id.getBytes());
+    }
+
+    private Dataset createDataset(PageResult pageResult, Map<String, Object> expectedSchema) {
+        boolean hasNextPage = pageResult.getNextPageToken() != null;
+        List<Map<String, Object>> results = new ArrayList<>(pageResult.getResults().size());
+        for (ResultRow row : pageResult.getResults()) {
             Map<String, Object> rowData = new LinkedHashMap<>();
             for (ResultValue value : row.getValues()) {
                 rowData.put(value.getField().getName(), value.getValue());
@@ -194,28 +206,18 @@ public class PrestoSearchSource implements SearchSource {
             results.add(rowData);
         }
 
-        URI previousPageUri = null;
         URI nextPageUri = null;
-        if (datasetRequest != null) {
-            if (datasetRequest.getPage() > 1) {
-                previousPageUri = UriComponentsBuilder.fromHttpUrl(datasetRequest.getUrl())
-                    .queryParam("page", datasetRequest.getPage() - 1)
-                    .queryParam("pageSize", datasetRequest.getPageSize())
-                    .build().toUri();
-            }
-            if (hasNextPage) {
-                nextPageUri = UriComponentsBuilder.fromHttpUrl(datasetRequest.getUrl())
-                    .queryParam("page", datasetRequest.getPage() + 1)
-                    .queryParam("pageSize", datasetRequest.getPageSize())
-                    .build().toUri();
-            }
+        if (hasNextPage) {
+            nextPageUri = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path(String.format(RESULT_SET_RELATIVE_URL, formPagedResultString(pageResult)))
+                .build().toUri();
         }
-        Pagination pagination = new Pagination(previousPageUri, nextPageUri);
+        Pagination pagination = new Pagination(null, nextPageUri);
         if (expectedSchema != null) {
             return new Dataset(expectedSchema, Collections.unmodifiableList(results), pagination);
         }
 
-        Map<String, Object> generatedSchema = generateSchema(fields);
+        Map<String, Object> generatedSchema = generateSchema(pageResult.getFields());
         return new Dataset(generatedSchema, Collections.unmodifiableList(results), pagination);
     }
 
@@ -228,28 +230,6 @@ public class PrestoSearchSource implements SearchSource {
         Map<String, Object> properties = generateSchemaProperties(fields);
         schema.put("properties", properties);
         return schema;
-    }
-
-    private List<Field> extractFields(ResultSetMetaData resultSetMetaData) throws SQLException {
-        List<Field> fields = new ArrayList<>(resultSetMetaData.getColumnCount());
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            String columnName = resultSetMetaData.getColumnName(i);
-            String prestoType = resultSetMetaData.getColumnTypeName(i);
-            Type primitiveType = Metadata.prestoToPrimitiveType(prestoType);
-            String[] typeOperators = Metadata.operatorsForType(primitiveType);
-            //TODO: This data is not populated correctly -- why?
-            String qualifiedTableName = String.format("%s.%s.%s",
-                resultSetMetaData.getCatalogName(i),
-                resultSetMetaData.getSchemaName(i),
-                resultSetMetaData.getTableName(i));
-            String id = qualifiedTableName + "." + columnName;
-            //TODO: Temporary workaround while above is unpopulated
-            Field f = new Field(columnName, columnName, primitiveType, typeOperators, null, qualifiedTableName);
-            //Field f = new Field(id, columnName, primitiveType, typeOperators, null, qualifiedTableName);
-            fields.add(f);
-        }
-
-        return fields;
     }
 
     private PrestoMetadata buildPrestoMetadata(PrestoAdapter adapter) {
@@ -365,34 +345,31 @@ public class PrestoSearchSource implements SearchSource {
 
     private List<ResultRow> query(String sql, List<Field> fields) {
         List<ResultRow> results = new ArrayList<>();
-        prestoAdapter.query(
-            sql,
-            rs -> {
-                try {
-                    while (rs.next()) {
-                        results.add(extractRow(rs, fields));
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+        PagingResultSetConsumer consumer = prestoAdapter.query(sql);
+        consumer.consumeAll(rs -> {
+            try {
+                while (rs.next()) {
+                    results.add(PagingResultSetConsumer.extractRow(rs, fields));
                 }
-            });
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
         return results;
     }
 
     private List<ResultRow> query(String sql, List<Object> params, List<Field> fields) {
         List<ResultRow> results = new ArrayList<>();
-        prestoAdapter.query(
-            sql,
-            params,
-            rs -> {
-                try {
-                    while (rs.next()) {
-                        results.add(extractRow(rs, fields));
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+        PagingResultSetConsumer consumer = prestoAdapter.query(sql, params);
+        consumer.consumeAll(rs -> {
+            try {
+                while (rs.next()) {
+                    results.add(PagingResultSetConsumer.extractRow(rs, fields));
                 }
-            });
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
         return results;
     }
 
@@ -416,13 +393,5 @@ public class PrestoSearchSource implements SearchSource {
         return (Query) new SqlParser().createStatement(sql, new ParsingOptions());
     }
 
-    private ResultRow extractRow(ResultSet rs, List<Field> fields) throws SQLException {
-        List<ResultValue> values = new ArrayList<>();
 
-        for (int i = 1; i <= fields.size(); i++) {
-            values.add(new ResultValue(fields.get(i - 1), rs.getString(i)));
-        }
-
-        return new ResultRow(values);
-    }
 }

@@ -1,16 +1,20 @@
 package com.dnastack.ga4gh.search.adapter.source.presto;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
+
+import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumer;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoTable;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoTableMetadata;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-/** Simulates presto responses */
+/**
+ * Simulates presto responses
+ */
 public class MockPrestoAdapter implements PrestoAdapter {
 
     private final Map<String, PrestoTableMetadata> metadata;
@@ -28,16 +32,37 @@ public class MockPrestoAdapter implements PrestoAdapter {
     }
 
     @Override
-    public void query(String prestoSQL, Consumer<ResultSet> resultProcessor) {
-        ResultSet resultSet = mockResultSests.get(prestoSQL);
-        checkArgument(resultSet != null, "No mock result set for query '" + prestoSQL + "'");
-        resultProcessor.accept(resultSet);
+    public PagingResultSetConsumer query(String prestoSQL) {
+        return query(prestoSQL, 100);
+    }
+
+
+    @Override
+    public PagingResultSetConsumer query(String prestoSQL, Integer pageSize) {
+        try {
+            ResultSet resultSet = mockResultSests.get(prestoSQL);
+            checkArgument(resultSet != null, "No mock result set for query '" + prestoSQL + "'");
+            return new PagingResultSetConsumer(resultSet, 100);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
-    public void query(String prestoSQL, List<Object> params, Consumer<ResultSet> resultProcessor) {
-        //TODO: impl params handling
-        query(prestoSQL, resultProcessor);
+    public PagingResultSetConsumer query(String prestoSQL, List<Object> params) {
+        return query(prestoSQL, params, 100);
+    }
+
+
+    @Override
+    public PagingResultSetConsumer query(String prestoSQL, List<Object> params, Integer pageSize) {
+        try {
+            ResultSet resultSet = mockResultSests.get(prestoSQL);
+            checkArgument(resultSet != null, "No mock result set for query '" + prestoSQL + "'");
+            return new PagingResultSetConsumer(resultSet, 100);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void addMockResults(String sql, ResultSet resultSet) {
