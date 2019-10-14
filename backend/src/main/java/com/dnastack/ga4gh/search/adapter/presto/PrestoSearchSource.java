@@ -62,7 +62,9 @@ public class PrestoSearchSource implements SearchSource {
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
         log.trace("Registering schemas");
+        //TODO: should be configurable !!
         this.schemaManager = new SchemaManager(false);
+        schemaManager.registerSchema("ga4gh_dataset_sample.datasets.subjects", URI.create("https://dnastack.github.io/pgp-canada-schema/Subject.json"));
         log.trace("Done registering schemas");
     }
 
