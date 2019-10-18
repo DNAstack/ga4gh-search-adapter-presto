@@ -50,6 +50,5 @@ spring:
 
 spring:
   profiles: no-auth
-
-security:
+  security:
     enabled: false
