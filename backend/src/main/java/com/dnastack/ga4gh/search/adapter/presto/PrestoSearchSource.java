@@ -125,7 +125,6 @@ public class PrestoSearchSource implements SearchSource {
             }
             DatasetInfo di = DatasetInfo.builder()
                 .id(t.getName())
-                //TODO: flaky
                 .description(schema.getOrDefault("description", "No Description").toString())
                 .schema(schema)
                 .build();
@@ -160,7 +159,7 @@ public class PrestoSearchSource implements SearchSource {
                 throw new RuntimeException(e);
             }
         } else {
-            throw new InvalidCacheEntry("Could not retreive paginated response, caching result sets is not configured");
+            throw new InvalidCacheEntry("Could not retrieve paginated response, caching result sets is not configured");
         }
     }
 
