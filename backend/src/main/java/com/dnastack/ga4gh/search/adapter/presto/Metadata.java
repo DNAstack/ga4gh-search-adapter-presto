@@ -30,7 +30,6 @@ public class Metadata {
             //TODO: Qualified name or name?
             this.tables.put(qualifiedName, new Table(qualifiedName, prestoTable.getSchema()));
         });
-        //TODO: HACK CITY
     }
 
     public List<PrestoCatalog> getCatalogs() {
@@ -38,14 +37,11 @@ public class Metadata {
     }
 
     public List<Field> getFields(Table table) {
-        //TODO: better impl
         PrestoTable prestoTable = this.prestoMetadata.getPrestoTable(table.getName());
-        List<Field> fields = toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
-        return fields;
+        return toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
     }
 
     public List<Field> getFields() {
-        //TODO: better impl
         List<Field> fields = new ArrayList<>();
         for (Table t : this.getTables()) {
             fields.addAll(getFields(t));
