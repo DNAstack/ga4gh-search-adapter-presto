@@ -298,14 +298,12 @@ public class PrestoSearchSource implements SearchSource {
         return catalogBuilders;
     }
 
-    //TODO: better signature
     private boolean tryPopulateSchemas(PrestoCatalog.PrestoCatalogBuilder catalog) {
         String catalogName = catalog.build().getName();
-        //TODO: better enforcement of partial build state requirements
         if (catalogName == null) {
             return false;
         }
-        log.trace("Attempting to populate schema for catalog: {}", catalog);
+        log.trace("Attempting to populate schema for catalog: {}", catalogName);
         String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
         List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
         List<ResultRow> results;
