@@ -11,30 +11,15 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBui
 import io.prestosql.sql.parser.ParsingOptions;
 import io.prestosql.sql.parser.SqlParser;
 import io.prestosql.sql.tree.Query;
-import java.net.URI;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.ga4gh.dataset.SchemaManager;
-import org.ga4gh.dataset.model.Dataset;
-import org.ga4gh.dataset.model.DatasetInfo;
-import org.ga4gh.dataset.model.ListDatasetsResponse;
-import org.ga4gh.dataset.model.ListSchemasResponse;
-import org.ga4gh.dataset.model.Pagination;
-import org.ga4gh.dataset.model.Schema;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.ga4gh.dataset.model.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
@@ -272,12 +257,8 @@ public class PrestoSearchSource implements SearchSource {
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
-        //TODO: better table blackisting than hardcoded in SQL query
-        //TODO: Consolidate blacklisting, there is a weird overlap in how things are blacklisted at the
-        // catalog, schema, and table level.
         String sqlTemplate =
-            "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
-                "('information_schema', 'connector_views', 'roles', 'databasechangelog', 'databasechangeloglock', 'billing')";
+            "select table_name, table_schema from \"%s\".information_schema.tables";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
@@ -286,11 +267,12 @@ public class PrestoSearchSource implements SearchSource {
             String sql = String.format(sqlTemplate, catalog.getName());
             List<ResultRow> catalogTables = query(sql, fields);
             for (ResultRow table : catalogTables) {
-                //TODO: Better string manip
-                String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
-                String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                if (catalog.getSchema().stream().anyMatch(schema -> schema.getName().equals(tableSchema))) {
+                    String tableName = table.getValues().get(0).getValue().toString();
+                    String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
+                    tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                }
             }
         }
 
@@ -327,12 +309,22 @@ public class PrestoSearchSource implements SearchSource {
         log.trace("Attempting to populate schema for catalog: {}", catalog);
         String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
         List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
-        List<ResultRow> results = query(sql, fields);
+        List<ResultRow> results;
+        try {
+            results = query(sql, fields);
+        } catch (RuntimeException e) {
+            if (e.getCause().getClass() == SQLException.class) {
+                log.error("Skipping catalog {} due to errors querying it.", catalogName);
+                return false;
+            }
+            else {
+                throw e;
+            }
+        }
 
         HashSet<String> blacklist = new HashSet<>();
-        blacklist.add("information");
-        blacklist.add("information_schema");
-        blacklist.add("billing");
+        Collections.addAll(blacklist, "information", "information_schema", "billing", "connector_views",
+                "roles", "databasechangelog", "databasechangeloglock", "billing");
         List<PrestoSchema> schemas = new ArrayList<>();
         for (ResultRow row : results) {
             List<ResultValue> values = row.getValues();
