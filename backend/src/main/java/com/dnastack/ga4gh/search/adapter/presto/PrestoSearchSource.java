@@ -366,21 +366,6 @@ public class PrestoSearchSource implements SearchSource {
         return results;
     }
 
-    private Query getQuery(SearchRequest query) {
-        if (query.getSqlQuery() != null) {
-            if (query.getJsonQuery() != null) {
-                log.warn("Received both JSON and SQL query, ignoring JSON");
-            }
-            return parseQuery(query.getSqlQuery());
-        } else if (query.getJsonQuery() != null) {
-            log.debug("Processing JSON query");
-            return query.getJsonQuery();
-        } else {
-            throw new IllegalArgumentException(
-                "Either JSON or SQL query has to be present in search request");
-        }
-    }
-
     private Query parseQuery(String sql) {
         log.debug("Processing SQL query: {}", sql);
         return (Query) new SqlParser().createStatement(sql, new ParsingOptions());
