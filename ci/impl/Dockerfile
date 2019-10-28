@@ -16,7 +16,6 @@ ADD target/pom.xml /build/pom.xml
 ADD target/.mvn/ /build/.mvn/
 ADD target/mvnw /build/mvnw
 ADD target/backend/pom.xml /build/backend/pom.xml
-ADD target/frontend/pom.xml /build/frontend/pom.xml
 # Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
 ADD target/.m2 /root/.m2
 
@@ -25,7 +24,6 @@ RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
 
 # Now add sources, which will bust the cache.
 ADD target/backend/src/ /build/backend/src/
-ADD target/frontend/demo/ /build/frontend/demo/
 
 # If this step fails with an error like
 #     Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:2.22.1:test
