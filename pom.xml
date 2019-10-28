@@ -34,11 +34,6 @@
 		<dependencies>
 			<dependency>
 				<groupId>com.dnastack.ga4gh.search.adapter</groupId>
-				<artifactId>ga4gh-discovery-search-frontend</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.dnastack.ga4gh.search.adapter</groupId>
 				<artifactId>ga4gh-discovery-search-service</artifactId>
 				<version>${project.version}</version>
 			</dependency>

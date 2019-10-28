@@ -55,10 +55,6 @@
 			<artifactId>presto-jdbc</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.dnastack.ga4gh.search.adapter</groupId>
-			<artifactId>ga4gh-discovery-search-frontend</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
@@ -139,22 +135,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-resources-plugin</artifactId>
 				<executions>
-					<execution>
-						<id>default-copy-resources</id>
-						<phase>process-resources</phase>
-						<goals>
-							<goal>copy-resources</goal>
-						</goals>
-						<configuration>
-							<overwrite>true</overwrite>
-							<outputDirectory>${project.build.directory}/classes/static/</outputDirectory>
-							<resources>
-								<resource>
-									<directory>../../frontend/demo/dist/ga4gh-search-app/</directory>
-								</resource>
-							</resources>
-						</configuration>
-					</execution>
 					<execution>
 						<id>copy-spring-boot-only</id>
 						<goals>
