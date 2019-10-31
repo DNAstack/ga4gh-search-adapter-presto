@@ -238,12 +238,8 @@ public class PrestoSearchSource implements SearchSource {
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
-        //TODO: better table blackisting than hardcoded in SQL query
-        //TODO: Consolidate blacklisting, there is a weird overlap in how things are blacklisted at the
-        // catalog, schema, and table level.
         String sqlTemplate =
-            "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
-                "('information_schema', 'connector_views', 'roles', 'databasechangelog', 'databasechangeloglock', 'billing')";
+            "select table_name, table_schema from \"%s\".information_schema.tables";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
@@ -253,10 +249,12 @@ public class PrestoSearchSource implements SearchSource {
             List<ResultRow> catalogTables = query(sql, fields);
             for (ResultRow table : catalogTables) {
                 //TODO: Better string manip
-                String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
-                String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                if (catalog.getSchema().stream().anyMatch(schema -> schema.getName().equals(tableSchema))) {
+                    String tableName = table.getValues().get(0).getValue().toString();
+                    String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
+                    tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
+                }
             }
         }
 
