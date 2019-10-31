@@ -15,7 +15,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 @Slf4j
-@SuppressWarnings( "Duplicates")
+@SuppressWarnings("Duplicates")
 public class ServiceAccountAuthenticator {
 
     private final static Long TOKEN_BUFFER = 60L;

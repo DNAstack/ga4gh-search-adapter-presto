@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter.model;
+package com.dnastack.ga4gh.search.adapter.test.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;

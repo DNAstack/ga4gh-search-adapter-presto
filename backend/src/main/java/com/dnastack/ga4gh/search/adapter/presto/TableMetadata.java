@@ -9,14 +9,13 @@ import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.Table;
 
 @Getter
 @AllArgsConstructor
 @EqualsAndHashCode(of = {"table"})
 public class TableMetadata {
 
-    private final Table table;
+    private final TableReference table;
     private final List<Field> fields;
 
     public String getTableName() {

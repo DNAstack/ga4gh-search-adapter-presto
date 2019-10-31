@@ -12,10 +12,11 @@ server:
 cors:
   urls: http://localhost:8080
 
+
 app:
   service-info:
     id:
-    name:
+    name: "GA4GH Discovery Search API"
     description:
     documentation-url:
     contact-url:
@@ -37,6 +38,11 @@ presto:
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100
+info:
+  build:
+    name: "GA4GH Discovery Search API"
+    version: 1.0
+
 ---
 
 spring:

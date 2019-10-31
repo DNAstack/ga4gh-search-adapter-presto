@@ -4,6 +4,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
 
+import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.Type;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -12,15 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.Table;
-import com.dnastack.ga4gh.search.adapter.model.Type;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class Metadata {
 
-    private final Map<String, Table> tables = new HashMap<>();
+    private final Map<String, TableReference> tables = new HashMap<>();
 
     private final PrestoMetadata prestoMetadata;
 
@@ -28,7 +28,7 @@ public class Metadata {
         this.prestoMetadata = prestoMetadata;
         this.prestoMetadata.getTables().forEach((qualifiedName, prestoTable) -> {
             //TODO: Qualified name or name?
-            this.tables.put(qualifiedName, new Table(qualifiedName, prestoTable.getSchema()));
+            this.tables.put(qualifiedName, new TableReference(qualifiedName, prestoTable.getSchema()));
         });
     }
 
@@ -36,14 +36,23 @@ public class Metadata {
         return this.prestoMetadata.getCatalogs();
     }
 
-    public List<Field> getFields(Table table) {
+
+
+    public List<Field> getFields(@NonNull String tableName){
+        return getFields(getTable(tableName));
+    }
+
+    public List<Field> getFields(TableReference table) {
+        //TODO: Implement caching
         PrestoTable prestoTable = this.prestoMetadata.getPrestoTable(table.getName());
-        return toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
+        List<Field> fields = toModelFields(table.getName(), this.prestoMetadata.getFields(prestoTable));
+        return fields;
     }
 
     public List<Field> getFields() {
+        //TODO: implement caching
         List<Field> fields = new ArrayList<>();
-        for (Table t : this.getTables()) {
+        for (TableReference t : this.getTables()) {
             fields.addAll(getFields(t));
         }
         return fields;
@@ -57,28 +66,28 @@ public class Metadata {
         return findTable(tableName).isPresent();
     }
 
-    public List<Table> getTables() {
+    public List<TableReference> getTables() {
         return tables.values().stream().sorted().collect(toList());
     }
 
-    public Table getTable(String tableName) {
-        Table table = tables.getOrDefault(tableName, null);
+    public TableReference getTable(String tableName) {
+        TableReference table = tables.getOrDefault(tableName, null);
         checkArgument(table != null, format("Table %s not found", tableName));
         return table;
     }
 
-    public Optional<Table> findTable(String tableName) {
+    public Optional<TableReference> findTable(String tableName) {
         return tables.values().stream().filter(t -> t.getName().equals(tableName)).findAny();
     }
 
     public TableMetadata getTableMetadata(String tableName) {
-        Table table = tables.get(tableName);
+        TableReference table = tables.get(tableName);
         Preconditions.checkArgument(
                 table != null, String.format("Table %s doesn't exist", tableName));
         return toModelMetadata(table, prestoMetadata.getTableMetadata(tableName));
     }
 
-    public TableMetadata toModelMetadata(Table table, PrestoTableMetadata prestoTableMetadata) {
+    public TableMetadata toModelMetadata(TableReference table, PrestoTableMetadata prestoTableMetadata) {
         return new TableMetadata(
                 table, toModelFields(table.getName(), prestoTableMetadata.getFields()));
     }

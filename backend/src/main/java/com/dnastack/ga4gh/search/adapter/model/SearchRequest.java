@@ -1,6 +1,8 @@
-package com.dnastack.ga4gh.search.adapter.test.model;
+package com.dnastack.ga4gh.search.adapter.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.prestosql.sql.tree.Query;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

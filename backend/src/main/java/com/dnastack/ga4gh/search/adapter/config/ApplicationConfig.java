@@ -1,8 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
+import com.dnastack.ga4gh.search.adapter.api.SearchSource;
 import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
-import com.dnastack.ga4gh.search.adapter.model.serde.QueryDeserializer;
-import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
@@ -10,7 +9,6 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
-import io.prestosql.sql.tree.Query;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +58,6 @@ public class ApplicationConfig {
     @Bean
     public Jackson2ObjectMapperBuilder objectMapperBuilder() {
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
-        builder.deserializerByType(Query.class, new QueryDeserializer());
         return builder;
     }
 

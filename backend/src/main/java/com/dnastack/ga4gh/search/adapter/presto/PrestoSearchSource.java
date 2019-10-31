@@ -1,32 +1,35 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.api.SearchSource;
 import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.ListTableResponse;
+import com.dnastack.ga4gh.search.adapter.model.Pagination;
+import com.dnastack.ga4gh.search.adapter.model.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.ResultValue;
+import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.model.Table;
+import com.dnastack.ga4gh.search.adapter.model.TableData;
 import com.dnastack.ga4gh.search.adapter.model.Type;
-import com.dnastack.ga4gh.search.adapter.model.request.SearchRequest;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultValue;
-import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
-import io.prestosql.sql.parser.ParsingOptions;
-import io.prestosql.sql.parser.SqlParser;
-import io.prestosql.sql.tree.Query;
-import lombok.extern.slf4j.Slf4j;
-import org.ga4gh.dataset.SchemaManager;
-import org.ga4gh.dataset.model.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
 import java.net.URI;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
 public class PrestoSearchSource implements SearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final Metadata metadata;
-    private final SchemaManager schemaManager;
     private final static String RESULT_SET_RELATIVE_URL = "/api/dsresults/%s";
 
 
@@ -37,63 +40,61 @@ public class PrestoSearchSource implements SearchSource {
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
-        log.trace("Registering schemas");
-        this.schemaManager = new SchemaManager(false);
-        log.trace("Done registering schemas");
     }
+
     public PrestoSearchSource(PrestoAdapter prestoAdapter, PagingResultSetConsumerCache consumerCache) {
         this.consumerCache = consumerCache;
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
         this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
-        log.trace("Registering schemas");
-        //TODO: should be configurable !!
-        this.schemaManager = new SchemaManager(false);
-        schemaManager.registerSchema("ga4gh_dataset_sample.datasets.subjects", URI.create("https://dnastack.github.io/pgp-canada-schema/Subject.json"));
-        log.trace("Done registering schemas");
     }
 
     public boolean hasConsumerCache() {
         return consumerCache != null;
     }
 
-    @Override
-    public List<Table> getTables() {
-        return metadata.getTables();
-    }
 
-    //TODO: TOO SLOW
     @Override
     public List<Field> getFields(String tableName) {
         if (tableName == null) {
             return metadata.getFields();
         }
-        Table table = metadata.getTable(tableName);
+        TableReference table = metadata.getTable(tableName);
         return metadata.getFields(table);
     }
 
+
     @Override
-    public Schema getSchema(String id) {
-        return null;
+    public ListTableResponse getTables() {
+        ListTableResponse listTableResponse = new ListTableResponse();
+        List<Table> tables = new ArrayList<>();
+        for (TableReference tableReference : metadata.getTables()) {
+            Map<String, Object> dataModel = generateSchema(metadata.getFields(tableReference));
+            tables.add(new Table(tableReference.getName(), null, dataModel));
+        }
+        listTableResponse.setTables(tables);
+        return listTableResponse;
     }
 
     @Override
-    public ListSchemasResponse getSchemas() {
-        return null;
+    public Table getTable(String tableName) {
+        if (!metadata.hasTable(tableName)) {
+            return null;
+        }
+
+        Map<String, Object> dataModel = generateSchemaProperties(metadata.getFields(tableName));
+        return new Table(tableName, null, dataModel);
     }
 
     @Override
-    public Dataset getDataset(String id, Integer pageSize) {
-        if (!metadata.hasTable(id)) {
+    public TableData getTableData(String tableName, Integer pageSize) {
+        if (!metadata.hasTable(tableName)) {
             return null;
         }
         SearchRequest searchRequest = new SearchRequest();
-        searchRequest.setSqlQuery(buildDatasetQuery(id));
-        Map<String, Object> expectedSchema = schemaManager.getSchema(id);
-        searchRequest.setExpectedSchema(expectedSchema);
+        searchRequest.setSqlQuery(buildDatasetQuery(tableName));
         return search(searchRequest, pageSize);
     }
-
 
     private String buildDatasetQuery(String id) {
 
@@ -116,35 +117,16 @@ public class PrestoSearchSource implements SearchSource {
 
 
     @Override
-    public ListDatasetsResponse getDatasets() {
-        List<DatasetInfo> info = new ArrayList<>();
-        for (Table t : this.metadata.getTables()) {
-            Map<String, Object> schema = schemaManager.getSchema(t.getName());
-            if (schema == null) {
-                schema = generateSchema(this.metadata.getFields(t));
-            }
-            DatasetInfo di = DatasetInfo.builder()
-                .id(t.getName())
-                .description(schema.getOrDefault("description", "No Description").toString())
-                .schema(schema)
-                .build();
-            info.add(di);
-        }
-        return new ListDatasetsResponse(info);
-    }
-
-
-    @Override
-    public Dataset search(SearchRequest searchRequest, Integer pageSize) {
+    public TableData search(SearchRequest searchRequest, Integer pageSize) {
         String prestoSqlString = searchRequest.getSqlQuery();
         log.info("Received SQL: {}", prestoSqlString);
         PageResult pageResult = performPrestoSearchQuery(prestoSqlString, pageSize);
-        return createDataset(pageResult, searchRequest.getExpectedSchema());
+        return createTableDataResposne(pageResult);
     }
 
 
     @Override
-    public Dataset getPaginatedResponse(String token) {
+    public TableData getPaginatedResponse(String token) {
         if (hasConsumerCache()) {
             try {
 
@@ -154,12 +136,12 @@ public class PrestoSearchSource implements SearchSource {
                     throw new IllegalArgumentException("Invalid token");
                 }
                 PagingResultSetConsumer consumer = consumerCache.get(tokenParts[0]);
-                return createDataset(consumer.nextPage(tokenParts[1]), null);
+                return createTableDataResposne(consumer.nextPage(tokenParts[1]));
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            throw new InvalidCacheEntry("Could not retrieve paginated response, caching result sets is not configured");
+            throw new InvalidCacheEntry("Could not retreive paginated response, caching result sets is not configured");
         }
     }
 
@@ -181,7 +163,7 @@ public class PrestoSearchSource implements SearchSource {
         return Base64.getEncoder().encodeToString(id.getBytes());
     }
 
-    private Dataset createDataset(PageResult pageResult, Map<String, Object> expectedSchema) {
+    private TableData createTableDataResposne(PageResult pageResult) {
         boolean hasNextPage = pageResult.getNextPageToken() != null;
         List<Map<String, Object>> results = new ArrayList<>(pageResult.getResults().size());
         for (ResultRow row : pageResult.getResults()) {
@@ -198,13 +180,9 @@ public class PrestoSearchSource implements SearchSource {
                 .path(String.format(RESULT_SET_RELATIVE_URL, formPagedResultString(pageResult)))
                 .build().toUri();
         }
-        Pagination pagination = new Pagination(null, nextPageUri);
-        if (expectedSchema != null) {
-            return new Dataset(expectedSchema, Collections.unmodifiableList(results), pagination);
-        }
-
+        Pagination pagination = new Pagination(nextPageUri,null );
         Map<String, Object> generatedSchema = generateSchema(pageResult.getFields());
-        return new Dataset(generatedSchema, Collections.unmodifiableList(results), pagination);
+        return new TableData(generatedSchema, Collections.unmodifiableList(results), pagination);
     }
 
     private Map<String, Object> generateSchema(List<Field> fields) {
@@ -235,8 +213,12 @@ public class PrestoSearchSource implements SearchSource {
         List<PrestoCatalog.PrestoCatalogBuilder> emptyCatalogs = getCatalogBuilders();
         List<PrestoCatalog> populatedCatalogs = new ArrayList<>(emptyCatalogs.size());
         for (PrestoCatalog.PrestoCatalogBuilder catalog : emptyCatalogs) {
-            if (tryPopulateSchemas(catalog)) {
-                populatedCatalogs.add(catalog.build());
+            try {
+                if (tryPopulateSchemas(catalog)) {
+                    populatedCatalogs.add(catalog.build());
+                }
+            } catch (Exception sqlException) {
+                log.error("Encountered error while populating schemas for catalog " + catalog.build().getName());
             }
         }
         return populatedCatalogs;
@@ -256,8 +238,12 @@ public class PrestoSearchSource implements SearchSource {
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
+        //TODO: better table blackisting than hardcoded in SQL query
+        //TODO: Consolidate blacklisting, there is a weird overlap in how things are blacklisted at the
+        // catalog, schema, and table level.
         String sqlTemplate =
-            "select table_name, table_schema from \"%s\".information_schema.tables";
+            "select table_name, table_schema from \"%s\".information_schema.tables WHERE table_schema NOT IN " +
+                "('information_schema', 'connector_views', 'roles', 'databasechangelog', 'databasechangeloglock', 'billing')";
         List<Field> fields = new ArrayList<>();
         fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
         fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
@@ -266,12 +252,11 @@ public class PrestoSearchSource implements SearchSource {
             String sql = String.format(sqlTemplate, catalog.getName());
             List<ResultRow> catalogTables = query(sql, fields);
             for (ResultRow table : catalogTables) {
+                //TODO: Better string manip
+                String tableName = table.getValues().get(0).getValue().toString();
                 String tableSchema = table.getValues().get(1).getValue().toString();
-                if (catalog.getSchema().stream().anyMatch(schema -> schema.getName().equals(tableSchema))) {
-                    String tableName = table.getValues().get(0).getValue().toString();
-                    String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
-                    tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
-                }
+                String id = String.format("%s.%s.%s", catalog.getName(), tableSchema, tableName);
+                tables.put(id, new PrestoTable(tableName, tableSchema, catalog.getName(), tableSchema, tableName));
             }
         }
 
@@ -298,30 +283,22 @@ public class PrestoSearchSource implements SearchSource {
         return catalogBuilders;
     }
 
+    //TODO: better signature
     private boolean tryPopulateSchemas(PrestoCatalog.PrestoCatalogBuilder catalog) {
         String catalogName = catalog.build().getName();
+        //TODO: better enforcement of partial build state requirements
         if (catalogName == null) {
             return false;
         }
-        log.trace("Attempting to populate schema for catalog: {}", catalogName);
+        log.trace("Attempting to populate schema for catalog: {}", catalog);
         String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
         List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
-        List<ResultRow> results;
-        try {
-            results = query(sql, fields);
-        } catch (RuntimeException e) {
-            if (e.getCause().getClass() == SQLException.class) {
-                log.error("Skipping catalog {} due to errors querying it.", catalogName);
-                return false;
-            }
-            else {
-                throw e;
-            }
-        }
+        List<ResultRow> results = query(sql, fields);
 
         HashSet<String> blacklist = new HashSet<>();
-        Collections.addAll(blacklist, "information", "information_schema", "billing", "connector_views",
-                "roles", "databasechangelog", "databasechangeloglock", "billing");
+        blacklist.add("information");
+        blacklist.add("information_schema");
+        blacklist.add("billing");
         List<PrestoSchema> schemas = new ArrayList<>();
         for (ResultRow row : results) {
             List<ResultValue> values = row.getValues();
@@ -363,11 +340,5 @@ public class PrestoSearchSource implements SearchSource {
         });
         return results;
     }
-
-    private Query parseQuery(String sql) {
-        log.debug("Processing SQL query: {}", sql);
-        return (Query) new SqlParser().createStatement(sql, new ParsingOptions());
-    }
-
 
 }

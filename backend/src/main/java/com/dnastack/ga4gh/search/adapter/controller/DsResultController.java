@@ -1,8 +1,8 @@
 package com.dnastack.ga4gh.search.adapter.controller;
 
-import com.dnastack.ga4gh.search.adapter.model.source.SearchSource;
+import com.dnastack.ga4gh.search.adapter.api.SearchSource;
+import com.dnastack.ga4gh.search.adapter.model.TableData;
 import lombok.extern.slf4j.Slf4j;
-import org.ga4gh.dataset.model.Dataset;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +17,7 @@ public class DsResultController {
     SearchSource dataSource;
 
     @RequestMapping(value = "/api/dsresults/{nextPageToken}", method = RequestMethod.GET)
-    public Dataset getNextPaginatedResposne(@PathVariable("nextPageToken") String nextPageToken) {
+    public TableData getNextPaginatedResposne(@PathVariable("nextPageToken") String nextPageToken) {
         return dataSource.getPaginatedResponse(nextPageToken);
 
     }

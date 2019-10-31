@@ -1,7 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.ResultRow;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;

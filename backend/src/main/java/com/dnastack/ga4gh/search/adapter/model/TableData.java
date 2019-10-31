@@ -1,6 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,20 +12,15 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
-public class Table implements Comparable<Table> {
-
-    @JsonProperty("name")
-    private String name;
-
-    @JsonProperty("description")
-    private String description;
+public class TableData {
 
     @JsonProperty("data_model")
     private Map<String, Object> dataModel;
 
-    @Override
-    public int compareTo(Table o) {
-        return this.name.compareTo(o.name);
-    }
+    @JsonProperty("data")
+    private List<Map<String, Object>> data;
+
+    @JsonProperty("pagination")
+    private Pagination pagination;
 
 }

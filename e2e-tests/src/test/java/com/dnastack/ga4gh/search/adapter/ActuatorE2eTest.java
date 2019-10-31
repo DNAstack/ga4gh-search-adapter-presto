@@ -21,7 +21,7 @@ public class ActuatorE2eTest extends BaseE2eTest {
                 .log()
                 .ifValidationFails()
                 .statusCode(200)
-                .body("build.name", equalTo("GA4GH Discovery Search Frontend"))
+                .body("build.name", equalTo("GA4GH Discovery Search API"))
                 .body("build.version", notNullValue());
     }
 

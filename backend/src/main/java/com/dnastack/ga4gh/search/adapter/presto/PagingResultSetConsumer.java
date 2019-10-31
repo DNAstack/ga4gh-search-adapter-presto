@@ -2,8 +2,8 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.model.Field;
 import com.dnastack.ga4gh.search.adapter.model.Type;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultRow;
-import com.dnastack.ga4gh.search.adapter.model.result.ResultValue;
+import com.dnastack.ga4gh.search.adapter.model.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.ResultValue;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
