@@ -1,7 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.controller;
 
-import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.api.SearchSource;
+import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.model.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;

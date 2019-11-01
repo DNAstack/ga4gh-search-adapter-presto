@@ -3,12 +3,12 @@ package com.dnastack.ga4gh.search.adapter.presto;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 
+import com.dnastack.ga4gh.search.adapter.model.Field;
 import java.util.List;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
-import com.dnastack.ga4gh.search.adapter.model.Field;
 
 @Getter
 @AllArgsConstructor

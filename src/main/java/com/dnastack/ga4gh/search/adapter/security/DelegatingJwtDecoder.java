@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.security;
 
+import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import java.text.ParseException;
@@ -9,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;

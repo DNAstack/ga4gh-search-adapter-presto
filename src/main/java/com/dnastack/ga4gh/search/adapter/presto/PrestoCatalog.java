@@ -1,10 +1,9 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-
 import java.util.Collections;
 import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 @Builder
 @AllArgsConstructor

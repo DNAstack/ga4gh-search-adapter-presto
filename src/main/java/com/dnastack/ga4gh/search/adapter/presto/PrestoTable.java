@@ -1,7 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.google.common.collect.ImmutableList;
-
 import io.prestosql.sql.tree.Identifier;
 import io.prestosql.sql.tree.QualifiedName;
 import lombok.AllArgsConstructor;

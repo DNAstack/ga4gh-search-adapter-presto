@@ -13,24 +13,14 @@ WORKDIR /build
 # This allows Docker to reuse the cached image with all dependencies resolved.
 
 ADD target/pom.xml /build/pom.xml
+ADD target/src /build/src
 ADD target/.mvn/ /build/.mvn/
 ADD target/mvnw /build/mvnw
-ADD target/backend/pom.xml /build/backend/pom.xml
 # Allows us to pass settings.xml configured on local machine or CI server to access private Nexus repo
 ADD target/.m2 /root/.m2
 
 RUN ./mvnw -B de.qaware.maven:go-offline-maven-plugin:resolve-dependencies
 RUN ./mvnw -B versions:set -DnewVersion=${APP_VERSION}
-
-# Now add sources, which will bust the cache.
-ADD target/backend/src/ /build/backend/src/
-
-# If this step fails with an error like
-#     Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:2.22.1:test
-#     (default-test) on project xxx: Unable to generate classpath:
-#     org.apache.maven.artifact.resolver.MultipleArtifactsNotFoundException: Missing:
-# then update the version number of surefire-junit4 in pom.xml under the
-# dynamicDependencies section of go-offline-maven-plugin configuration.
 RUN ./mvnw -B -X package
 
 ##
@@ -43,7 +33,6 @@ FROM openjdk:8-slim
 ARG APP_NAME
 ARG APP_VERSION
 
-COPY --from=0 /build/backend/target/ga4gh-discovery-search-service-*.jar /app.jar
-ADD entrypoint.sh /entrypoint.sh
+COPY --from=0 /build/target/ga4gh-discovery-search-service-*.jar /app.jar
 EXPOSE 8080
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["java","-jar", "app.jar"]

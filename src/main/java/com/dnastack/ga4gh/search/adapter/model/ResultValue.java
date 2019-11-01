@@ -3,7 +3,6 @@ package com.dnastack.ga4gh.search.adapter.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.dnastack.ga4gh.search.adapter.model.Field;
 
 /** @author mfiume */
 @Data
