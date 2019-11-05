@@ -318,6 +318,7 @@ public class PrestoSearchSource implements SearchSource {
                     results.add(PagingResultSetConsumer.extractRow(rs, fields));
                 }
             } catch (SQLException e) {
+                log.error("Error executing query: {}", sql);
                 throw new RuntimeException(e);
             }
         });
