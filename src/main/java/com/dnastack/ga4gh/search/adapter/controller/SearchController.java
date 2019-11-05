@@ -16,7 +16,7 @@ public class SearchController {
     @Autowired
     SearchSource dataSource;
 
-    @RequestMapping(value = "/api/search", method = RequestMethod.POST)
+    @RequestMapping(value = "/search", method = RequestMethod.POST)
     public TableData search(@RequestBody SearchRequest request, @RequestParam(required = false) Integer pageSize) {
         return dataSource.search(request, pageSize);
     }

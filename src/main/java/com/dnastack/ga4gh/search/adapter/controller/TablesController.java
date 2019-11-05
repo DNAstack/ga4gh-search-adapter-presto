@@ -19,19 +19,19 @@ public class TablesController {
     @Autowired
     SearchSource dataSource;
 
-    @RequestMapping(value = "/api/tables", method = RequestMethod.GET)
+    @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ListTableResponse getTables() {
         return dataSource.getTables();
     }
 
 
-    @RequestMapping(value = "/api/table/{table_name}/info", method = RequestMethod.GET)
+    @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public Table getTableInfo(@PathVariable("table_name") String tableName) {
         return dataSource.getTable(tableName);
     }
 
 
-    @RequestMapping(value = "/api/table/{table_name}/data", method = RequestMethod.GET)
+    @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
     public TableData getTableData(@PathVariable("table_name") String tableName, @RequestParam(value = "pageSize", required = false) Integer pageSize) {
         return dataSource.getTableData(tableName, pageSize);
     }
