@@ -323,7 +323,7 @@ public class PrestoSearchSource implements SearchSource {
                 }
             } catch (SQLException e) {
                 log.error("Error executing query: {}", sql);
-                throw new RuntimeException(e);
+                throw new RuntimeException(sql, e);
             }
         });
         return results;
