@@ -180,7 +180,7 @@ public class PrestoSearchSource implements SearchSource {
                 .path(String.format(RESULT_SET_RELATIVE_URL, formPagedResultString(pageResult)))
                 .build().toUri();
         }
-        Pagination pagination = new Pagination(nextPageUri,null );
+        Pagination pagination = new Pagination(nextPageUri, null);
         Map<String, Object> generatedSchema = generateSchema(pageResult.getFields());
         return new TableData(generatedSchema, Collections.unmodifiableList(results), pagination);
     }
@@ -230,8 +230,12 @@ public class PrestoSearchSource implements SearchSource {
         ConcurrentHashMap<PrestoTable, List<PrestoField>> fieldMetadata = new ConcurrentHashMap<>();
         // TODO: This is maybe a temporary workaround, re-evaluate using common pool (or customize?)
         t.parallelStream().forEach(prestoTable -> {
-            PrestoTableMetadata metadata = prestoAdapter.getMetadata(prestoTable);
-            fieldMetadata.put(prestoTable, metadata.getFields());
+            try {
+                PrestoTableMetadata metadata = prestoAdapter.getMetadata(prestoTable);
+                fieldMetadata.put(prestoTable, metadata.getFields());
+            } catch (RuntimeException e) {
+                log.error("Failed to add metadata for table: " + prestoTable.getName());
+            }
         });
         return Collections.unmodifiableMap(fieldMetadata);
     }
