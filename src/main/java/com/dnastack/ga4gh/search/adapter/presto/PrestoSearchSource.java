@@ -250,7 +250,14 @@ public class PrestoSearchSource implements SearchSource {
 
         for (PrestoCatalog catalog : catalogs) {
             String sql = String.format(sqlTemplate, catalog.getName());
-            List<ResultRow> catalogTables = query(sql, fields);
+            List<ResultRow> catalogTables;
+            try {
+                catalogTables = query(sql, fields);
+            } catch (RuntimeException e) {
+                log.error("Failed to get table info for catalog: {}. Skipping.", catalog.getName());
+                continue;
+            }
+            //List<ResultRow> catalogTables = query(sql, fields);
             for (ResultRow table : catalogTables) {
                 //TODO: Better string manip
                 String tableSchema = table.getValues().get(1).getValue().toString();
