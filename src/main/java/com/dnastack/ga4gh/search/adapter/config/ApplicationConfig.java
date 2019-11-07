@@ -98,7 +98,7 @@ public class ApplicationConfig {
             protected void configure(HttpSecurity http) throws Exception {
                 http.authorizeRequests()
                     .antMatchers("/actuator/health", "/actuator/info", "/service-info").permitAll()
-                    .antMatchers("/api/**")
+                    .antMatchers("/**")
                     .authenticated()
                     .and()
                     .oauth2ResourceServer()
