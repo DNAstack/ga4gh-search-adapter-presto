@@ -126,8 +126,8 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     }
 
     /**
-     * If the Incoming request has authenticaiton information, use the attached user principal as the username to pass
-     * to presto, otherwise, set  the a deafault username
+     * If the Incoming request has authentication information, use the attached user principal as the username to pass
+     * to presto, otherwise, set  the a default username
      */
     private String getUserNameForPrestoRequest() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
