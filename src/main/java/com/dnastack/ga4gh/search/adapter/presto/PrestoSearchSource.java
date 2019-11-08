@@ -82,7 +82,7 @@ public class PrestoSearchSource implements SearchSource {
             return null;
         }
 
-        Map<String, Object> dataModel = generateSchemaProperties(metadata.getFields(tableName));
+        Map<String, Object> dataModel = generateSchema(metadata.getFields(tableName));
         return new Table(tableName, null, dataModel);
     }
 
