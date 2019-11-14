@@ -2,9 +2,10 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.model.Field;
 import com.dnastack.ga4gh.search.adapter.model.ResultRow;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 @AllArgsConstructor

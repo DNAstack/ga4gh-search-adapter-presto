@@ -2,6 +2,8 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import java.util.List;
 import java.util.Optional;
+
+import com.dnastack.ga4gh.search.adapter.model.Field;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -10,13 +12,9 @@ import lombok.Getter;
 public class PrestoTableMetadata {
 
     private final PrestoTable table;
-    private final List<PrestoField> fields;
+    private final List<Field> fields;
 
-    public boolean hasField(String fieldName) {
-        return getField(fieldName).isPresent();
-    }
-
-    public Optional<PrestoField> getField(String fieldName) {
+    public Optional<Field> getField(String fieldName) {
         return fields.stream().filter(f -> f.getName().equals(fieldName)).findAny();
     }
 }

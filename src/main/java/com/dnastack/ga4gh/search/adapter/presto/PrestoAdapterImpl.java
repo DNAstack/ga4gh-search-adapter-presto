@@ -1,6 +1,8 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.Type;
 import com.google.common.collect.ImmutableList;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -26,27 +28,6 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     public PrestoAdapterImpl(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator) {
         this.prestoDatasourceUrl = prestoDatasourceUrl;
         this.authenticator = accountAuthenticator;
-    }
-
-    @Override
-    public PrestoTableMetadata getMetadata(PrestoTable table) {
-        ImmutableList.Builder<PrestoField> listBuilder = ImmutableList.<PrestoField>builder();
-        String query = "show columns from" + table.getQualifiedName();
-        PagingResultSetConsumer resultSetConsumer = query(query, DEFAULT_PAGE_SIZE);
-        resultSetConsumer.consumeAll(
-            resultSet -> {
-                try {
-                    while (resultSet.next()) {
-                        listBuilder.add(
-                            new PrestoField(
-                                resultSet.getString(1), resultSet.getString(2)));
-                    }
-                } catch (SQLException e) {
-                    throw new RuntimeException(
-                        "Error while retrieving data from result set", e);
-                }
-            });
-        return new PrestoTableMetadata(table, listBuilder.build());
     }
 
 
@@ -138,7 +119,6 @@ public class PrestoAdapterImpl implements PrestoAdapter {
         }
     }
 
-
     private boolean isAuthenticationFailure(SQLException e) {
         Throwable cause = e.getCause();
         String message;
@@ -159,6 +139,4 @@ public class PrestoAdapterImpl implements PrestoAdapter {
         }
         return false;
     }
-
-
 }

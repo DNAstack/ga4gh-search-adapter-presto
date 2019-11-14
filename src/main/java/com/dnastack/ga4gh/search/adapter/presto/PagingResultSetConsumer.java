@@ -4,6 +4,8 @@ import com.dnastack.ga4gh.search.adapter.model.Field;
 import com.dnastack.ga4gh.search.adapter.model.ResultRow;
 import com.dnastack.ga4gh.search.adapter.model.ResultValue;
 import com.dnastack.ga4gh.search.adapter.model.Type;
+import lombok.NonNull;
+
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -11,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import lombok.NonNull;
 
 public class PagingResultSetConsumer {
 
@@ -20,6 +21,7 @@ public class PagingResultSetConsumer {
 
     private ResultSet resultSet;
     private int currentPage = 0;
+    //private List<Field> fields;
     private List<Field> fields;
     private boolean hasNext;
     private String nextPageToken;
@@ -115,8 +117,8 @@ public class PagingResultSetConsumer {
         for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
             String columnName = resultSetMetaData.getColumnName(i);
             String prestoType = resultSetMetaData.getColumnTypeName(i);
-            Type primitiveType = Metadata.prestoToPrimitiveType(prestoType);
-            String[] typeOperators = Metadata.operatorsForType(primitiveType);
+            Type primitiveType = PrestoMetadata.prestoToPrimitiveType(prestoType);
+            String[] typeOperators = PrestoMetadata.operatorsForType(primitiveType);
             //TODO: This data is not populated correctly -- why?
             String qualifiedTableName = String.format("%s.%s.%s",
                 resultSetMetaData.getCatalogName(i),
@@ -125,7 +127,6 @@ public class PagingResultSetConsumer {
             String id = qualifiedTableName + "." + columnName;
             //TODO: Temporary workaround while above is unpopulated
             Field f = new Field(columnName, columnName, primitiveType, typeOperators, null, qualifiedTableName);
-            //Field f = new Field(id, columnName, primitiveType, typeOperators, null, qualifiedTableName);
             fields.add(f);
         }
 

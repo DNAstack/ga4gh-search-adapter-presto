@@ -4,8 +4,6 @@ import java.util.List;
 
 public interface PrestoAdapter {
 
-    PrestoTableMetadata getMetadata(PrestoTable table);
-
     PagingResultSetConsumer query(String prestoSQL);
 
     PagingResultSetConsumer query(String prestoSQL, Integer pageSize);

@@ -1,6 +1,5 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
-import com.dnastack.ga4gh.search.adapter.api.SearchSource;
 import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
@@ -9,8 +8,6 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
-import java.util.ArrayList;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +19,9 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @EnableWebSecurity
@@ -37,7 +37,6 @@ public class ApplicationConfig {
     @Value("${presto.results.default-page-size}")
     private Integer defaultPageSize;
 
-
     /**
      * Other settings
      */
@@ -51,7 +50,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public SearchSource getPrestoSearchSource(PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
+    public PrestoSearchSource getPrestoSearchSource(PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
         return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
     }
 

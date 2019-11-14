@@ -8,7 +8,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class PrestoTable {
+public class PrestoTable implements Comparable<PrestoTable> {
 
     private final String name;
     private final String schema;
@@ -24,7 +24,17 @@ public class PrestoTable {
                         new Identifier(escape(prestoTable), true)));
     }
 
+    public String toQualifiedString() {
+        return String.format("%s.%s.%s", prestoCatalog, prestoSchema, prestoTable);
+    }
+
     private String escape(String identifier) {
         return "\"" + identifier + "\"";
+    }
+
+    //TODO (fizz): Should compare qualified names?
+    @Override
+    public int compareTo(PrestoTable o) {
+        return this.name.compareTo(o.name);
     }
 }

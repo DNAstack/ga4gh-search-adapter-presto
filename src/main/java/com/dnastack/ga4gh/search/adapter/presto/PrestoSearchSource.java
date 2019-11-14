@@ -1,103 +1,68 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.api.SearchSource;
-import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.ListTableResponse;
-import com.dnastack.ga4gh.search.adapter.model.Pagination;
-import com.dnastack.ga4gh.search.adapter.model.ResultRow;
-import com.dnastack.ga4gh.search.adapter.model.ResultValue;
-import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
-import com.dnastack.ga4gh.search.adapter.model.Table;
-import com.dnastack.ga4gh.search.adapter.model.TableData;
-import com.dnastack.ga4gh.search.adapter.model.Type;
+import com.dnastack.ga4gh.search.adapter.model.*;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
-import java.net.URI;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Slf4j
-public class PrestoSearchSource implements SearchSource {
+public class PrestoSearchSource {
 
     private final PrestoAdapter prestoAdapter;
-    private final Metadata metadata;
+    private final PrestoMetadata prestoMetadata;
     private final static String RESULT_SET_RELATIVE_URL = "/api/dsresults/%s";
+    private static final int DEFAULT_PAGE_SIZE = 100;
 
 
     private final PagingResultSetConsumerCache consumerCache;
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter) {
-        consumerCache = null;
-        log.trace("Building presto search source");
-        this.prestoAdapter = prestoAdapter;
-        this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
+        this(prestoAdapter, null);
     }
 
     public PrestoSearchSource(PrestoAdapter prestoAdapter, PagingResultSetConsumerCache consumerCache) {
         this.consumerCache = consumerCache;
         log.trace("Building presto search source");
         this.prestoAdapter = prestoAdapter;
-        this.metadata = new Metadata(buildPrestoMetadata(prestoAdapter));
+        this.prestoMetadata = buildPrestoMetadata(prestoAdapter);
     }
 
     public boolean hasConsumerCache() {
         return consumerCache != null;
     }
 
-
-    @Override
-    public List<Field> getFields(String tableName) {
-        if (tableName == null) {
-            return metadata.getFields();
-        }
-        TableReference table = metadata.getTable(tableName);
-        return metadata.getFields(table);
-    }
-
-
-    @Override
     public ListTableResponse getTables() {
         ListTableResponse listTableResponse = new ListTableResponse();
         List<Table> tables = new ArrayList<>();
-        for (TableReference tableReference : metadata.getTables()) {
-            Map<String, Object> dataModel = generateSchema(metadata.getFields(tableReference));
-            tables.add(new Table(tableReference.getName(), null, dataModel));
+        for (PrestoTable tableReference : prestoMetadata.getTables().values()) {
+            Map<String, Object> dataModel = generateSchema(prestoMetadata.getFields(tableReference));
+            tables.add(new Table(tableReference.toQualifiedString(), null, dataModel));
         }
         listTableResponse.setTables(tables);
         return listTableResponse;
     }
 
-    @Override
     public Table getTable(String tableName) {
-        if (!metadata.hasTable(tableName)) {
-            return null;
-        }
-
-        Map<String, Object> dataModel = generateSchema(metadata.getFields(tableName));
+        PrestoTable table = prestoMetadata.getTable(tableName);
+        Map<String, Object> dataModel = generateSchema(prestoMetadata.getFields(table));
+        //TODO: table.getName?
         return new Table(tableName, null, dataModel);
     }
 
-    @Override
     public TableData getTableData(String tableName, Integer pageSize) {
-        if (!metadata.hasTable(tableName)) {
-            return null;
-        }
+        PrestoTable table = prestoMetadata.getTable(tableName);
         SearchRequest searchRequest = new SearchRequest();
-        searchRequest.setSqlQuery(buildDatasetQuery(tableName));
+        searchRequest.setSqlQuery(buildDatasetQuery(table.getQualifiedName().toString()));
         return search(searchRequest, pageSize);
     }
 
     private String buildDatasetQuery(String id) {
-
         StringBuilder builder = new StringBuilder("SELECT * FROM");
         builder.append(" ").append(id).append(" ");
         return builder.toString();
@@ -108,24 +73,20 @@ public class PrestoSearchSource implements SearchSource {
         int position = 0;
         for (Field f : fields) {
             Map<String, Object> props = new LinkedHashMap<>();
-            props.put("type", f.getType().toString());
+            props.put("type", f.getType());
             props.put("x-ga4gh-position", position++);
             schemaJson.put(f.getName(), props);
         }
         return schemaJson;
     }
 
-
-    @Override
     public TableData search(SearchRequest searchRequest, Integer pageSize) {
         String prestoSqlString = searchRequest.getSqlQuery();
         log.info("Received SQL: {}", prestoSqlString);
         PageResult pageResult = performPrestoSearchQuery(prestoSqlString, pageSize);
-        return createTableDataResposne(pageResult);
+        return createTableDataResponse(pageResult);
     }
 
-
-    @Override
     public TableData getPaginatedResponse(String token) {
         if (hasConsumerCache()) {
             try {
@@ -136,7 +97,7 @@ public class PrestoSearchSource implements SearchSource {
                     throw new IllegalArgumentException("Invalid token");
                 }
                 PagingResultSetConsumer consumer = consumerCache.get(tokenParts[0]);
-                return createTableDataResposne(consumer.nextPage(tokenParts[1]));
+                return createTableDataResponse(consumer.nextPage(tokenParts[1]));
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
@@ -163,7 +124,7 @@ public class PrestoSearchSource implements SearchSource {
         return Base64.getEncoder().encodeToString(id.getBytes());
     }
 
-    private TableData createTableDataResposne(PageResult pageResult) {
+    private TableData createTableDataResponse(PageResult pageResult) {
         boolean hasNextPage = pageResult.getNextPageToken() != null;
         List<Map<String, Object>> results = new ArrayList<>(pageResult.getResults().size());
         for (ResultRow row : pageResult.getResults()) {
@@ -200,7 +161,7 @@ public class PrestoSearchSource implements SearchSource {
         PrestoMetadataBuilder prestoMetadata = PrestoMetadata.builder();
         List<PrestoCatalog> catalogs = getCatalogMetadata();
         Map<String, PrestoTable> tables = getTableMetadata(catalogs);
-        Map<PrestoTable, List<PrestoField>> fields = getFieldMetadata(tables);
+        Map<PrestoTable, List<Field>> fields = getFieldMetadata(tables);
         prestoMetadata.presto(adapter);
         prestoMetadata.catalogs(catalogs);
         prestoMetadata.tables(tables);
@@ -224,20 +185,43 @@ public class PrestoSearchSource implements SearchSource {
         return populatedCatalogs;
     }
 
-    private Map<PrestoTable, List<PrestoField>> getFieldMetadata(Map<String, PrestoTable> tables) {
+    private Map<PrestoTable, List<Field>> getFieldMetadata(Map<String, PrestoTable> tables) {
         List<PrestoTable> t = new ArrayList<>();
         tables.forEach((k, v) -> t.add(v));
-        ConcurrentHashMap<PrestoTable, List<PrestoField>> fieldMetadata = new ConcurrentHashMap<>();
+        ConcurrentHashMap<PrestoTable, List<Field>> fieldMetadata = new ConcurrentHashMap<>();
         // TODO: This is maybe a temporary workaround, re-evaluate using common pool (or customize?)
-        t.parallelStream().forEach(prestoTable -> {
+        t.stream().forEach(prestoTable -> {
+        //t.parallelStream().forEach(prestoTable -> {
             try {
-                PrestoTableMetadata metadata = prestoAdapter.getMetadata(prestoTable);
+                PrestoTableMetadata metadata = getFieldMetadata(prestoTable);
                 fieldMetadata.put(prestoTable, metadata.getFields());
             } catch (RuntimeException e) {
                 log.error("Failed to add metadata for table: " + prestoTable.getName());
             }
         });
         return Collections.unmodifiableMap(fieldMetadata);
+    }
+
+    public PrestoTableMetadata getFieldMetadata(PrestoTable table) {
+        ImmutableList.Builder<Field> listBuilder = ImmutableList.builder();
+        String query = "show columns from" + table.getQualifiedName();
+        PagingResultSetConsumer resultSetConsumer = prestoAdapter.query(query, DEFAULT_PAGE_SIZE);
+        resultSetConsumer.consumeAll(
+                resultSet -> {
+                    try {
+                        while (resultSet.next()) {
+                            String columnName = resultSet.getString(1);
+                            String columnType = resultSet.getString(2);
+                            Type t = PrestoMetadata.prestoToPrimitiveType(columnType);
+                            Field f = new Field(columnName, columnName, t, PrestoMetadata.operatorsForType(t), null, table.toQualifiedString());
+                            listBuilder.add(f);
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException(
+                                "Error while retrieving data from result set", e);
+                    }
+                });
+        return new PrestoTableMetadata(table, listBuilder.build());
     }
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
@@ -257,7 +241,6 @@ public class PrestoSearchSource implements SearchSource {
                 log.error("Failed to get table info for catalog: {}. Skipping.", catalog.getName());
                 continue;
             }
-            //List<ResultRow> catalogTables = query(sql, fields);
             for (ResultRow table : catalogTables) {
                 //TODO: Better string manip
                 String tableSchema = table.getValues().get(1).getValue().toString();
@@ -350,5 +333,4 @@ public class PrestoSearchSource implements SearchSource {
         });
         return results;
     }
-
 }
