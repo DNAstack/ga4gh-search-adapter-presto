@@ -21,7 +21,6 @@ public class PrestoMetadata {
     private final PrestoAdapter presto;
     private final List<PrestoCatalog> catalogs;
     private final Map<String, PrestoTable> tables;
-    private final Map<String, TableReference> tablesReferences = new HashMap<>();
     private Map<PrestoTable, List<Field>> fields;
 
     public List<Field> getFields(PrestoTable table) {
