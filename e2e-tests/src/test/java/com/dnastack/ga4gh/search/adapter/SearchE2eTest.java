@@ -26,15 +26,14 @@ import org.junit.Test;
 public class SearchE2eTest extends BaseE2eTest {
 
     private static RestAssuredConfig config;
-    private static String table;
     private static String clientId;
     private static String clientSecret;
     private static String audience;
-
+    private static String table;
 
     @BeforeClass
     public static void beforeClass() {
-        table = requiredEnv("E2E_TABLE");
+
         clientId = requiredEnv("E2E_WALLET_CLIENT_ID");
         clientSecret = requiredEnv("E2E_WALLET_CLIENT_SECRET");
         audience = requiredEnv("E2E_WALLET_AUDIENCE");
@@ -45,11 +44,28 @@ public class SearchE2eTest extends BaseE2eTest {
                         .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
                         .jackson2ObjectMapperFactory(
                             (cls, charset) -> new ObjectMapper()));
+        table = optionalEnv("E2E_TABLE", getE2eTable());
+    }
+
+    private static String getE2eTable(){
+        String accessToken = getToken();
+
+        //@formatter:off
+        return
+            given()
+                .config(config)
+                .log().method()
+                .log().uri()
+                .auth().oauth2(accessToken)
+                .contentType(ContentType.JSON)
+            .when()
+                    .get("/tables")
+            .path("tables[0].name").toString();
+        //@formatter:on
 
     }
 
-
-    private String getToken() {
+    private static String getToken() {
         RequestSpecification specification = new RequestSpecBuilder().setBaseUri(requiredEnv("E2E_WALLET_TOKEN_URI"))
             .build();
 
@@ -83,48 +99,40 @@ public class SearchE2eTest extends BaseE2eTest {
         String accessToken = getToken();
 
         //@formatter:off
-        given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
+        given()
+            .config(config)
+            .log().method()
+            .log().uri()
+            .auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
             .body(request)
-        .post("/search")
-            .then()
-            .log()
-            .ifValidationFails()
+        .when()
+            .post("/search")
+        .then()
+            .log().ifValidationFails()
             .statusCode(200)
-            .body("data.size()",greaterThan(0))
             .body("data_model", not(empty()));
         //@formatter:on
     }
 
 
     @Test
-    public void listingTables_ShouldContainTargetTable() {
+    public void listingTables_ShouldContainTables() {
         String accessToken = getToken();
 
         //@formatter:off
-        given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
+        given()
+            .config(config)
+            .log().method()
+            .log().uri()
+            .auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-        .get("/tables")
-            .then()
-            .log()
-            .ifValidationFails()
+        .when()
+            .get("/tables")
+        .then()
+            .log().ifValidationFails()
             .statusCode(200)
-            .body("tables.size()",greaterThan(0))
-            .body("tables.name",hasItem(table));
+            .body("tables.size()",greaterThan(0));
         //@formatter:on
     }
 
@@ -133,19 +141,16 @@ public class SearchE2eTest extends BaseE2eTest {
         String accessToken = getToken();
 
         //@formatter:off
-        given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
+        given()
+            .config(config)
+            .log().method()
+            .log().uri()
+            .auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-        .get("/table/{table_name}/info",table)
-            .then()
-            .log()
-            .ifValidationFails()
+        .when()
+            .get("/table/{table_name}/info",table)
+        .then()
+            .log().ifValidationFails()
             .statusCode(200)
             .body("name",equalTo(table))
             .body("data_model",not(empty()));
@@ -157,19 +162,16 @@ public class SearchE2eTest extends BaseE2eTest {
         String accessToken = getToken();
 
         //@formatter:off
-        given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
+        given()
+            .config(config)
+            .log().method()
+            .log().uri()
+            .auth().oauth2(accessToken)
             .contentType(ContentType.JSON)
-        .get("/table/{table_name}/data",table)
-            .then()
-            .log()
-            .ifValidationFails()
+        .when()
+            .get("/table/{table_name}/data",table)
+        .then()
+            .log().ifValidationFails()
             .statusCode(200)
             .body("data.size()",greaterThan(0))
             .body("data_model",not(empty()));
@@ -180,70 +182,65 @@ public class SearchE2eTest extends BaseE2eTest {
     public void getTableData_PaginationShouldWork() {
         String accessToken = getToken();
         //@formatter:off
-        ObjectNode tableData = given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
-            .contentType(ContentType.JSON)
-            .queryParam("pageSize",2)
-        .get("/table/{table_name}/data",table)
-            .then()
-            .log()
-            .ifValidationFails()
-            .statusCode(200)
-            .body("data.size()",equalTo(2))
-            .body("data_model",not(empty()))
-            .extract()
-            .as(ObjectNode.class);
+        ObjectNode tableData =
+                given()
+                    .config(config)
+                    .log().method()
+                    .log().uri()
+                    .auth().oauth2(accessToken)
+                    .contentType(ContentType.JSON)
+                    .queryParam("pageSize",2)
+                .when()
+                    .get("/table/{table_name}/data",table)
+                .then()
+                    .log().ifValidationFails()
+                    .statusCode(200)
+                    .body("data.size()",equalTo(2))
+                    .body("data_model",not(empty()))
+                    .extract()
+                    .as(ObjectNode.class);
         //@formatter:on
 
         //@formatter:off
-        ObjectNode firstPage = given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
-            .contentType(ContentType.JSON)
-            .queryParam("pageSize",1)
-        .get("/table/{table_name}/data",table)
-            .then()
-            .log()
-            .ifValidationFails()
-            .statusCode(200)
-            .body("data.size()",equalTo(1))
-            .body("data_model",not(empty()))
-            .body("pagination.next_page_url",is(not(isEmptyOrNullString())))
-            .extract()
-            .as(ObjectNode.class);
+        ObjectNode firstPage =
+                given()
+                    .config(config)
+                    .log().method()
+                    .log().uri()
+                    .auth().oauth2(accessToken)
+                    .contentType(ContentType.JSON)
+                    .queryParam("pageSize",1)
+                .when()
+                    .get("/table/{table_name}/data",table)
+                .then()
+                    .log().ifValidationFails()
+                    .statusCode(200)
+                    .body("data.size()",equalTo(1))
+                    .body("data_model",not(empty()))
+                    .body("pagination.next_page_url",is(not(isEmptyOrNullString())))
+                    .extract()
+                    .as(ObjectNode.class);
         //@formatter:on
+
         String nextPageUrl = URI.create(firstPage.get("pagination").get("next_page_url").asText()).getPath();
         //@formatter:off
-        ObjectNode secondPage = given().config(config)
-            .log()
-            .method()
-            .log()
-            .uri()
-            .auth()
-            .oauth2(accessToken)
-            .when()
-            .contentType(ContentType.JSON)
-            .queryParam("pageSize",2)
-        .get(nextPageUrl)
-            .then()
-            .log()
-            .ifValidationFails()
-            .statusCode(200)
-            .body("data.size()",equalTo(1))
-            .body("data_model",not(empty()))
-            .extract()
-            .as(ObjectNode.class);
+        ObjectNode secondPage =
+                given()
+                    .config(config)
+                    .log().method()
+                    .log().uri()
+                    .auth().oauth2(accessToken)
+                    .contentType(ContentType.JSON)
+                    .queryParam("pageSize",2)
+                .when()
+                    .get(nextPageUrl)
+                .then()
+                    .log().ifValidationFails()
+                    .statusCode(200)
+                    .body("data.size()",equalTo(1))
+                    .body("data_model",not(empty()))
+                    .extract()
+                    .as(ObjectNode.class);
         //@formatter:on
 
         assertEquals(firstPage.withArray("data").get(0), tableData.withArray("data").get(0));

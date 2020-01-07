@@ -4,11 +4,12 @@ import static org.junit.Assert.fail;
 
 import io.restassured.RestAssured;
 import org.junit.Before;
+import org.junit.BeforeClass;
 
 public class BaseE2eTest {
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeClass
+    public static void setUp() throws Exception {
         RestAssured.baseURI = requiredEnv("E2E_BASE_URI");
     }
 
