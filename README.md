@@ -6,7 +6,7 @@ This branch implements the [GA4GH Search API](https://github.com/DNAstack/ga4gh-
 
 Prerequisites
 
-- Java 1.8
+- Java 1.8 (Newer versions do not work)
 - tested with Maven 3.5.4
 
 
