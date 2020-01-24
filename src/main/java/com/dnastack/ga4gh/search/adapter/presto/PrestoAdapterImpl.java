@@ -1,9 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
-import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.Type;
-import com.google.common.collect.ImmutableList;
+import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -83,7 +80,7 @@ public class PrestoAdapterImpl implements PrestoAdapter {
             }
             return new PagingResultSetConsumer(stmt.executeQuery(), pageSize);
         } catch (SQLException e) {
-            if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
+            if (shouldRetryOnAuthFailure && isAuthenticationFailure(e) && authenticator.requiresAuthentication()) {
                 log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
                 authenticator.refreshAccessToken();
                 return query(prestoSQL, params, pageSize, false);
@@ -99,7 +96,11 @@ public class PrestoAdapterImpl implements PrestoAdapter {
         Properties connectionProperties = new Properties();
         connectionProperties.setProperty("SSL", "true");
         connectionProperties.setProperty("user", getUserNameForPrestoRequest());
-        connectionProperties.setProperty("accessToken", authenticator.getAccessToken());
+
+        if (authenticator.requiresAuthentication()) {
+            connectionProperties.setProperty("accessToken", authenticator.getAccessToken());
+        }
+
         Connection connection = DriverManager.getConnection(prestoDatasourceUrl, connectionProperties);
         log.trace("Successfully established connection to presto server: {}", prestoDatasourceUrl);
         return connection;

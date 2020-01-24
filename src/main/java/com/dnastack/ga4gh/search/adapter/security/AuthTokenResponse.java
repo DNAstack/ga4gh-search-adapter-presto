@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter.auth;
+package com.dnastack.ga4gh.search.adapter.security;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

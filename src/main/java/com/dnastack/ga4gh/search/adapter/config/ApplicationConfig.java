@@ -1,6 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
-import com.dnastack.ga4gh.search.adapter.auth.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
@@ -8,6 +8,8 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,9 +21,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
 @EnableWebSecurity
@@ -46,7 +45,11 @@ public class ApplicationConfig {
     @Bean
     public ServiceAccountAuthenticator getServiceAccountAuthenticator(AuthConfig authConfig) {
         OauthClientConfig clientConfig = authConfig.getPrestoOauthClient();
-        return new ServiceAccountAuthenticator(clientConfig);
+        if (clientConfig == null) {
+            return new ServiceAccountAuthenticator();
+        } else {
+            return new ServiceAccountAuthenticator(clientConfig);
+        }
     }
 
     @Bean

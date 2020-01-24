@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter.auth;
+package com.dnastack.ga4gh.search.adapter.security;
 
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,9 +24,11 @@ public class ServiceAccountAuthenticator {
     private final String scopes;
     private final String audience;
     private final String tokenEndpoint;
+    private final boolean shouldAuthenticate;
 
     private AuthTokenResponse tokenResponse;
     private Long tokenRetrievedAt = 0L;
+
 
     public ServiceAccountAuthenticator(OauthClientConfig config) {
         this.clientId = config.getClientId();
@@ -34,12 +36,27 @@ public class ServiceAccountAuthenticator {
         this.scopes = config.getScopes();
         this.audience = config.getAudience();
         this.tokenEndpoint = config.getTokenUri();
+        this.shouldAuthenticate = true;
         refreshAccessToken();
     }
 
+    public ServiceAccountAuthenticator() {
+        this.clientId = null;
+        this.clientSecret = null;
+        this.scopes = null;
+        this.audience = null;
+        this.tokenEndpoint = null;
+        this.shouldAuthenticate = false;
+
+    }
+
+
+    public boolean requiresAuthentication() {
+        return shouldAuthenticate;
+    }
 
     public String getAccessToken() {
-        Long now = Instant.now().getEpochSecond();
+        long now = Instant.now().getEpochSecond();
         if (tokenResponse == null) {
             refreshAccessToken();
         } else if (tokenResponse.getExpiresIn() != null && now > (tokenRetrievedAt + tokenResponse.getExpiresIn()

@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 public class AuthConfig {
 
 
-    OauthClientConfig prestoOauthClient;
+    OauthClientConfig prestoOauthClient = null;
 
     List<IssuerConfig> tokenIssuers = new ArrayList<>();
 

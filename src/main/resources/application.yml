@@ -23,18 +23,18 @@ app:
     version:
 
   auth:
-    presto-oauth-client:
-      token-uri:
-      client-id:
-      client-secret:
-      audience:
     token-issuers:
-    - issuer-uri: https://wallet.staging.dnastack.com
+      - issuer-uri: https://wallet.staging.dnastack.com
       jwk-set-uri: https://wallet.staging.dnastack.com/oauth/jwks
+#    presto-oauth-client:
+#      token-uri:
+#      client-id:
+#      client-secret:
+#      audience:
 
 presto:
   datasource:
-    url: "jdbc:presto://presto.staging.dnastack.com:443"
+    url: "jdbc:presto://presto-public.staging.dnastack.com:443"
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100

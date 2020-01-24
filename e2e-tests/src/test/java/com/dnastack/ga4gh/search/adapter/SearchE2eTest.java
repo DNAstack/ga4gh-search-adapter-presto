@@ -4,7 +4,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
@@ -34,9 +33,9 @@ public class SearchE2eTest extends BaseE2eTest {
     @BeforeClass
     public static void beforeClass() {
 
-        clientId = requiredEnv("E2E_WALLET_CLIENT_ID");
-        clientSecret = requiredEnv("E2E_WALLET_CLIENT_SECRET");
-        audience = requiredEnv("E2E_WALLET_AUDIENCE");
+        clientId = optionalEnv("E2E_WALLET_CLIENT_ID", null);
+        clientSecret = optionalEnv("E2E_WALLET_CLIENT_SECRET", null);
+        audience = optionalEnv("E2E_WALLET_AUDIENCE", null);
         config =
             RestAssuredConfig.config()
                 .objectMapperConfig(
@@ -44,19 +43,14 @@ public class SearchE2eTest extends BaseE2eTest {
                         .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
                         .jackson2ObjectMapperFactory(
                             (cls, charset) -> new ObjectMapper()));
+
         table = optionalEnv("E2E_TABLE", getE2eTable());
     }
 
-    private static String getE2eTable(){
-        String accessToken = getToken();
-
+    private static String getE2eTable() {
         //@formatter:off
         return
-            given()
-                .config(config)
-                .log().method()
-                .log().uri()
-                .auth().oauth2(accessToken)
+            getRequest()
                 .contentType(ContentType.JSON)
             .when()
                     .get("/tables")
@@ -91,19 +85,29 @@ public class SearchE2eTest extends BaseE2eTest {
 
     }
 
+    private static RequestSpecification getRequest() {
+        if (clientId != null && clientSecret != null) {
+            return given()
+                .config(config)
+                .log().method()
+                .log().uri()
+                .auth().oauth2(getToken());
+        } else {
+            return given()
+                .config(config)
+                .log().method()
+                .log().uri();
+        }
+    }
+
 
     @Test
     public void sqlQueryShouldFindSomething() {
 
         SearchRequest request = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
-        String accessToken = getToken();
 
         //@formatter:off
-        given()
-            .config(config)
-            .log().method()
-            .log().uri()
-            .auth().oauth2(accessToken)
+        getRequest()
             .contentType(ContentType.JSON)
             .body(request)
         .when()
@@ -118,14 +122,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void listingTables_ShouldContainTables() {
-        String accessToken = getToken();
 
         //@formatter:off
-        given()
-            .config(config)
-            .log().method()
-            .log().uri()
-            .auth().oauth2(accessToken)
+        getRequest()
             .contentType(ContentType.JSON)
         .when()
             .get("/tables")
@@ -138,14 +137,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableInfo_ShouldReturnTableAndSchema() {
-        String accessToken = getToken();
 
         //@formatter:off
-        given()
-            .config(config)
-            .log().method()
-            .log().uri()
-            .auth().oauth2(accessToken)
+        getRequest()
             .contentType(ContentType.JSON)
         .when()
             .get("/table/{table_name}/info",table)
@@ -159,14 +153,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableData_shouldReturnDataAndDataModel() {
-        String accessToken = getToken();
 
         //@formatter:off
-        given()
-            .config(config)
-            .log().method()
-            .log().uri()
-            .auth().oauth2(accessToken)
+        getRequest()
             .contentType(ContentType.JSON)
         .when()
             .get("/table/{table_name}/data",table)
@@ -180,14 +169,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableData_PaginationShouldWork() {
-        String accessToken = getToken();
         //@formatter:off
         ObjectNode tableData =
-                given()
-                    .config(config)
-                    .log().method()
-                    .log().uri()
-                    .auth().oauth2(accessToken)
+                getRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",2)
                 .when()
@@ -203,11 +187,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
         //@formatter:off
         ObjectNode firstPage =
-                given()
-                    .config(config)
-                    .log().method()
-                    .log().uri()
-                    .auth().oauth2(accessToken)
+                getRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",1)
                 .when()
@@ -225,11 +205,7 @@ public class SearchE2eTest extends BaseE2eTest {
         String nextPageUrl = URI.create(firstPage.get("pagination").get("next_page_url").asText()).getPath();
         //@formatter:off
         ObjectNode secondPage =
-                given()
-                    .config(config)
-                    .log().method()
-                    .log().uri()
-                    .auth().oauth2(accessToken)
+                getRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",2)
                 .when()
