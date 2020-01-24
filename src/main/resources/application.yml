@@ -22,15 +22,16 @@ app:
     contact-url:
     version:
 
-  auth:
-    token-issuers:
-      - issuer-uri: https://wallet.staging.dnastack.com
-      jwk-set-uri: https://wallet.staging.dnastack.com/oauth/jwks
+# Sample Auth configuration
+#  auth:
+#    token-issuers:
+#      - issuer-uri: https://wallet.staging.dnastack.com
+#      jwk-set-uri: https://wallet.staging.dnastack.com/oauth/jwks
 #    presto-oauth-client:
-#      token-uri:
-#      client-id:
-#      client-secret:
-#      audience:
+#      token-uri: https://wallet.staging.dnastack.com/oauth/token
+#      client-id: some-client
+#      client-secret: my-secret
+#      audience: the-audience
 
 presto:
   datasource:
