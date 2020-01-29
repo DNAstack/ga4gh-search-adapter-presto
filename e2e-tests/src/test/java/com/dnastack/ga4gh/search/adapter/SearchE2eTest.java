@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.isEmptyOrNullString;
 import static org.hamcrest.Matchers.not;
@@ -119,6 +120,35 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:on
     }
 
+    @Test
+    public void searchHistoryShouldReturnLastRequest(){
+        SearchRequest request = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
+
+        //@formatter:off
+        getRequest()
+            .contentType(ContentType.JSON)
+            .body(request)
+        .when()
+            .post("/search")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body("data_model", not(empty()));
+        //@formatter:on
+
+        //@formatter:off
+        getRequest()
+            .contentType(ContentType.JSON)
+            .body(request)
+        .when()
+            .get("/search/history")
+        .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .body("search_history.size()", greaterThanOrEqualTo(1))
+            .body("search_history[0].query",equalTo(request.getSqlQuery()));
+        //@formatter:on
+    }
 
     @Test
     public void listingTables_ShouldContainTables() {

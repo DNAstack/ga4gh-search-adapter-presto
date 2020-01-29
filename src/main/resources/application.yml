@@ -25,8 +25,8 @@ app:
 # Sample Auth configuration
 #  auth:
 #    token-issuers:
-#      - issuer-uri: https://wallet.staging.dnastack.com
-#      jwk-set-uri: https://wallet.staging.dnastack.com/oauth/jwks
+#      - issuer-uri: https://wallet.prod.dnastack.com
+#        jwk-set-uri: https://wallet.prod.dnastack.com/oauth/jwks
 #    presto-oauth-client:
 #      token-uri: https://wallet.staging.dnastack.com/oauth/token
 #      client-id: some-client
@@ -44,6 +44,12 @@ info:
     name: "GA4GH Discovery Search API"
     version: 1.0
 
+spring:
+  datasource:
+    username: ga4gh-search-adapter-presto
+    password: ""
+    url: jdbc:postgresql://localhost/ga4gh-search-adapter-presto
+
 ---
 
 spring:
@@ -58,4 +64,6 @@ spring:
 spring:
   profiles: no-auth
   security:
+    enabled: false
+  liquibase:
     enabled: false

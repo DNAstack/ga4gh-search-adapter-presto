@@ -1,34 +1,51 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.model.*;
+import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
+import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.ListTableResponse;
+import com.dnastack.ga4gh.search.adapter.model.Pagination;
+import com.dnastack.ga4gh.search.adapter.model.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.ResultValue;
+import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
+import com.dnastack.ga4gh.search.adapter.model.Table;
+import com.dnastack.ga4gh.search.adapter.model.TableData;
+import com.dnastack.ga4gh.search.adapter.model.Type;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
 import com.google.common.collect.ImmutableList;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
 import java.net.URI;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
 public class PrestoSearchSource {
 
     private final PrestoAdapter prestoAdapter;
     private final PrestoMetadata prestoMetadata;
+    private final SearchHistoryService searchHistoryService;
     private final static String RESULT_SET_RELATIVE_URL = "/api/dsresults/%s";
     private static final int DEFAULT_PAGE_SIZE = 100;
 
 
     private final PagingResultSetConsumerCache consumerCache;
 
-    public PrestoSearchSource(PrestoAdapter prestoAdapter) {
-        this(prestoAdapter, null);
+    public PrestoSearchSource(SearchHistoryService searchHistoryService, PrestoAdapter prestoAdapter) {
+        this(searchHistoryService, prestoAdapter, null);
     }
 
-    public PrestoSearchSource(PrestoAdapter prestoAdapter, PagingResultSetConsumerCache consumerCache) {
+    public PrestoSearchSource(SearchHistoryService searchHistoryService, PrestoAdapter prestoAdapter, PagingResultSetConsumerCache consumerCache) {
         this.consumerCache = consumerCache;
         log.trace("Building presto search source");
+        this.searchHistoryService = searchHistoryService;
         this.prestoAdapter = prestoAdapter;
         this.prestoMetadata = buildPrestoMetadata(prestoAdapter);
     }
@@ -106,16 +123,22 @@ public class PrestoSearchSource {
         }
     }
 
+
     private PageResult performPrestoSearchQuery(String prestoSqlString, Integer pageSize) {
         try {
 
             PagingResultSetConsumer consumer = prestoAdapter.query(prestoSqlString, pageSize);
+            searchHistoryService.addSearchHistory(prestoSqlString, true);
             if (hasConsumerCache()) {
                 consumerCache.add(consumer);
             }
             return consumer.firtsPage();
         } catch (SQLException e) {
+            searchHistoryService.addSearchHistory(prestoSqlString, false);
             throw new RuntimeException(e);
+        } catch (Exception ex) {
+            searchHistoryService.addSearchHistory(prestoSqlString, false);
+            throw ex;
         }
     }
 
@@ -191,7 +214,7 @@ public class PrestoSearchSource {
         ConcurrentHashMap<PrestoTable, List<Field>> fieldMetadata = new ConcurrentHashMap<>();
         // TODO: This is maybe a temporary workaround, re-evaluate using common pool (or customize?)
         t.stream().forEach(prestoTable -> {
-        //t.parallelStream().forEach(prestoTable -> {
+            //t.parallelStream().forEach(prestoTable -> {
             try {
                 PrestoTableMetadata metadata = getFieldMetadata(prestoTable);
                 fieldMetadata.put(prestoTable, metadata.getFields());
@@ -207,20 +230,21 @@ public class PrestoSearchSource {
         String query = "show columns from" + table.getQualifiedName();
         PagingResultSetConsumer resultSetConsumer = prestoAdapter.query(query, DEFAULT_PAGE_SIZE);
         resultSetConsumer.consumeAll(
-                resultSet -> {
-                    try {
-                        while (resultSet.next()) {
-                            String columnName = resultSet.getString(1);
-                            String columnType = resultSet.getString(2);
-                            Type t = PrestoMetadata.prestoToPrimitiveType(columnType);
-                            Field f = new Field(columnName, columnName, t, PrestoMetadata.operatorsForType(t), null, table.toQualifiedString());
-                            listBuilder.add(f);
-                        }
-                    } catch (SQLException e) {
-                        throw new RuntimeException(
-                                "Error while retrieving data from result set", e);
+            resultSet -> {
+                try {
+                    while (resultSet.next()) {
+                        String columnName = resultSet.getString(1);
+                        String columnType = resultSet.getString(2);
+                        Type t = PrestoMetadata.prestoToPrimitiveType(columnType);
+                        Field f = new Field(columnName, columnName, t, PrestoMetadata.operatorsForType(t), null, table
+                            .toQualifiedString());
+                        listBuilder.add(f);
                     }
-                });
+                } catch (SQLException e) {
+                    throw new RuntimeException(
+                        "Error while retrieving data from result set", e);
+                }
+            });
         return new PrestoTableMetadata(table, listBuilder.build());
     }
 

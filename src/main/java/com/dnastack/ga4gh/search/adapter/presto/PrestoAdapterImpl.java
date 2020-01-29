@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @Slf4j
 public class PrestoAdapterImpl implements PrestoAdapter {
@@ -114,7 +116,14 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     private String getUserNameForPrestoRequest() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
-            return authentication.getPrincipal().toString();
+            Object principal = authentication.getPrincipal();
+            if (principal instanceof User) {
+                return ((User) principal).getUsername();
+            } else if (principal instanceof Jwt) {
+                return ((Jwt) principal).getSubject();
+            } else {
+                return principal.toString();
+            }
         } else {
             return DEFAULT_PRESTO_USER_NAME;
         }

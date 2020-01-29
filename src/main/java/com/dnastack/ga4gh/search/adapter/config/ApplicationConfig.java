@@ -1,6 +1,8 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
-import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.data.InMemorySearchHistoryService;
+import com.dnastack.ga4gh.search.adapter.data.PersistentSearchHistoryService;
+import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
@@ -8,13 +10,17 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
+import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import java.util.ArrayList;
 import java.util.List;
+import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -23,6 +29,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 
+@Slf4j
 @EnableWebSecurity
 @Configuration
 public class ApplicationConfig {
@@ -53,15 +60,16 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public PrestoSearchSource getPrestoSearchSource(PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoSearchSource(new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
+    public PrestoSearchSource getPrestoSearchSource(SearchHistoryService searchHistoryService, PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
+        return new PrestoSearchSource(searchHistoryService, new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
     }
 
-    @Bean
-    public Jackson2ObjectMapperBuilder objectMapperBuilder() {
-        Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
-        return builder;
-    }
+    //    @Bean
+    //    public Jackson2ObjectMapperBuilder objectMapperBuilder() {
+    //        Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
+    //        builder.modules(new JavaTimeModule());
+    //        return builder;
+    //    }
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -152,6 +160,29 @@ public class ApplicationConfig {
                 http.authorizeRequests().anyRequest().permitAll().and().csrf().disable();
             }
         };
+    }
+
+
+    @Bean
+    @Profile("!no-auth")
+    public Jdbi jdbi(DataSource dataSource) {
+        return Jdbi.create(dataSource)
+            .installPlugin(new SqlObjectPlugin());
+    }
+
+
+    @Bean
+    @Profile("!no-auth")
+    public SearchHistoryService persistentSearchHistory(Jdbi jdbi) {
+        log.info("Using persistent query storage");
+        return new PersistentSearchHistoryService(jdbi);
+    }
+
+    @Bean
+    @Profile("no-auth")
+    public SearchHistoryService inMemorySearchHistory() {
+        log.info("Using in memory query storage. Only keeping at most 10 queries");
+        return new InMemorySearchHistoryService(10);
     }
 
     private String[] parseCorsUrls() {
