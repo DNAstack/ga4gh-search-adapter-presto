@@ -64,12 +64,6 @@ public class ApplicationConfig {
         return new PrestoSearchSource(searchHistoryService, new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
     }
 
-    //    @Bean
-    //    public Jackson2ObjectMapperBuilder objectMapperBuilder() {
-    //        Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
-    //        builder.modules(new JavaTimeModule());
-    //        return builder;
-    //    }
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
@@ -169,7 +163,6 @@ public class ApplicationConfig {
         return Jdbi.create(dataSource)
             .installPlugin(new SqlObjectPlugin());
     }
-
 
     @Bean
     @Profile("!no-auth")
