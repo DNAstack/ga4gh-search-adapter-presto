@@ -69,3 +69,7 @@ spring:
     enabled: false
   datasource:
     continue-on-error: true
+management:
+  health:
+    db:
+      enabled=false:

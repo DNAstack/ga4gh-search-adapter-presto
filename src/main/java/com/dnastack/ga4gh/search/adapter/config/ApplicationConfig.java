@@ -11,12 +11,15 @@ import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.util.ArrayList;
 import java.util.List;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +45,16 @@ public class ApplicationConfig {
 
     @Value("${presto.results.default-page-size}")
     private Integer defaultPageSize;
+
+
+    @Value("${spring.datasource.url}")
+    private String pgUrl;
+
+    @Value("${spring.datasource.username}")
+    private String pgUsername;
+
+    @Value("${spring.datasource.password}")
+    private String pgPassword;
 
     /**
      * Other settings
@@ -156,6 +169,19 @@ public class ApplicationConfig {
         };
     }
 
+
+    @Bean
+    @Profile("!no-auth")
+    public DataSource hakariDataSource() {
+        PGSimpleDataSource pgDataSource = new PGSimpleDataSource();
+        pgDataSource.setUrl(pgUrl);
+        pgDataSource.setUser(pgUsername);
+        pgDataSource.setPassword(pgPassword);
+        HikariConfig hikariConfig = new HikariConfig();
+        hikariConfig.setMaximumPoolSize(6);
+        hikariConfig.setDataSource(pgDataSource);
+        return new HikariDataSource(hikariConfig);
+    }
 
     @Bean
     @Profile("!no-auth")
