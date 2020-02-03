@@ -10,6 +10,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.stackdriver.StackdriverConfig;
+import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,9 +30,35 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     private static final String DEFAULT_PRESTO_USER_NAME = "ga4gh-search-adapter-presto";
     private static final int DEFAULT_PAGE_SIZE = 100;
 
+    private final MeterRegistry registry;
+    private final Counter queryCounter;
+
     public PrestoAdapterImpl(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator) {
         this.prestoDatasourceUrl = prestoDatasourceUrl;
         this.authenticator = accountAuthenticator;
+
+        StackdriverConfig stackdriverConfig = new StackdriverConfig() {
+            @Override
+            public String get(String s) {
+                return null;
+            }
+
+            @Override
+            public String projectId() {
+                return "striking-effort-817";
+            }
+        };
+
+        this.registry = StackdriverMeterRegistry.builder(stackdriverConfig).build();
+
+        this.registry.config().commonTags("staging", "fizz-test-002");
+
+        this.queryCounter = Counter.builder("queries.performed")
+                .description("Number of queries performed")
+                .tags("fizz_test","001")
+                .register(registry);
+
+        log.info("Finished setting up registry successfully.");
     }
 
 
@@ -41,6 +73,8 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     }
 
     public PagingResultSetConsumer query(String prestoSQL, Integer pageSize, boolean shouldRetryOnAuthFailure) {
+        log.info("Incrementing query counter...");
+        this.queryCounter.increment();
         try (Connection connection = getConnection()) {
             pageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
             Statement stmt = connection.createStatement();
