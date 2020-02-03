@@ -59,6 +59,7 @@ public class PrestoMetadata {
     //TODO: Verify these type mappings (via test?)
     static Type prestoToPrimitiveType(String prestoType) {
         if (prestoType.equals("integer")
+                || prestoType.equals("smallint")
                 || prestoType.equals("double")
                 || prestoType.equals("bigint")) {
             return Type.NUMBER;
@@ -72,14 +73,15 @@ public class PrestoMetadata {
             return Type.DATE;
         } else if (prestoType.startsWith("boolean")) {
             return Type.BOOLEAN;
-        } else if (prestoType.startsWith("varchar")) {
+        } else if (prestoType.startsWith("varchar") || prestoType.startsWith("char")
+                || prestoType.startsWith("varbinary")) {
             return Type.STRING;
         } else if (prestoType.startsWith("array(varchar") || prestoType.startsWith("array(date")
                 || prestoType.startsWith("array(timestamp")) { // oof
             return Type.STRING_ARRAY;
         } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
-        } else if (prestoType.startsWith("array(double")
+        } else if (prestoType.startsWith("array(double") || prestoType.startsWith("array(bigint)")
                 || prestoType.startsWith("array(int") || prestoType.equals(Type.NUMBER_ARRAY.toString())) {
             return Type.NUMBER_ARRAY;
             // TODO: Double check correctness of below, was a best guess
