@@ -3,6 +3,7 @@ package com.dnastack.ga4gh.search.adapter.config;
 import com.dnastack.ga4gh.search.adapter.data.InMemorySearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.PersistentSearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
+import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
@@ -13,9 +14,6 @@ import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import java.util.ArrayList;
-import java.util.List;
-import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
@@ -30,6 +28,10 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Slf4j
@@ -73,8 +75,8 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public PrestoSearchSource getPrestoSearchSource(SearchHistoryService searchHistoryService, PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoSearchSource(searchHistoryService, new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator), consumerCache);
+    public PrestoSearchSource getPrestoSearchSource(SearchHistoryService searchHistoryService, PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator, Monitor monitor) {
+        return new PrestoSearchSource(searchHistoryService, new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator, monitor), consumerCache);
     }
 
 

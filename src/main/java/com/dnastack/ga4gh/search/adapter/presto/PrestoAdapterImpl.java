@@ -1,20 +1,19 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import io.micrometer.core.instrument.Counter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.sql.*;
+import java.util.List;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class PrestoAdapterImpl implements PrestoAdapter {
@@ -23,12 +22,14 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     private final ServiceAccountAuthenticator authenticator;
     private static final String DEFAULT_PRESTO_USER_NAME = "ga4gh-search-adapter-presto";
     private static final int DEFAULT_PAGE_SIZE = 100;
+    private final Counter queryCounter;
 
-    public PrestoAdapterImpl(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator) {
+    public PrestoAdapterImpl(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator, Monitor monitor) {
         this.prestoDatasourceUrl = prestoDatasourceUrl;
         this.authenticator = accountAuthenticator;
+        this.queryCounter = monitor.registerCounter("search.queries.queries_performed",
+                "The raw number of queries performed.");
     }
-
 
     @Override
     public PagingResultSetConsumer query(String prestoSQL) {
@@ -41,6 +42,7 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     }
 
     public PagingResultSetConsumer query(String prestoSQL, Integer pageSize, boolean shouldRetryOnAuthFailure) {
+        this.queryCounter.increment();
         try (Connection connection = getConnection()) {
             pageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
             Statement stmt = connection.createStatement();
