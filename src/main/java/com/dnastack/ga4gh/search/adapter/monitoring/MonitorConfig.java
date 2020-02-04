@@ -5,6 +5,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 @Getter
 @Setter
 @Configuration
@@ -19,11 +21,13 @@ public class MonitorConfig {
     @Setter
     public static class StackDriver {
         String projectId;
+        Duration step;
     }
 
     @Getter
     @Setter
     public static class AzureMonitor {
         boolean enabled;
+        Duration step;
     }
 }

@@ -9,6 +9,7 @@ import io.micrometer.stackdriver.StackdriverMeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,13 +58,13 @@ public class Monitor {
 
         String environment = null;
         if (config.getStackDriver() != null) {
-            StackdriverConfig stackdriverConfig = configureStackDriver(config.getStackDriver().getProjectId());
+            StackdriverConfig stackdriverConfig = configureStackDriver(config);
             registry = StackdriverMeterRegistry.builder(stackdriverConfig).build();
             initialized = true;
         }
 
         if (config.getAzureMonitor() != null) {
-            AzureMonitorConfig azureMonitorConfig = configureAzureMonitor();
+            AzureMonitorConfig azureMonitorConfig = configureAzureMonitor(config);
             registry = AzureMonitorMeterRegistry.builder(azureMonitorConfig).build();
             initialized = true;
         }
@@ -83,7 +84,7 @@ public class Monitor {
         log.info("Finished setting up registry successfully.");
     }
 
-    private StackdriverConfig configureStackDriver(String projectId) {
+    private StackdriverConfig configureStackDriver(MonitorConfig config) {
         return new StackdriverConfig() {
             @Override
             public String get(String s) {
@@ -92,13 +93,28 @@ public class Monitor {
 
             @Override
             public String projectId() {
-                return projectId;
+                return config.getStackDriver().getProjectId();
+            }
+
+            @Override
+            public Duration step() {
+                return config.getStackDriver().getStep();
             }
         };
     }
 
 
-    private AzureMonitorConfig configureAzureMonitor() {
-        return s -> null;
+    private AzureMonitorConfig configureAzureMonitor(MonitorConfig config) {
+        return new AzureMonitorConfig() {
+            @Override
+            public String get(String s) {
+                return null;
+            }
+
+            @Override
+            public Duration step() {
+                return config.getAzureMonitor().getStep();
+            }
+        };
     }
 }
