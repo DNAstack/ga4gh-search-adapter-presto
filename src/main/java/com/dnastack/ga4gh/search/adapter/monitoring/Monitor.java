@@ -58,15 +58,22 @@ public class Monitor {
             StackdriverConfig stackdriverConfig = configureStackDriver(this.config.getStackDriver().getProjectId());
             registry = StackdriverMeterRegistry.builder(stackdriverConfig).build();
             environment = this.config.getEnvironment();
+            initialized = true;
+        }
+
+        if (!initialized) {
+            log.warn("Attempted to initialize monitoring with no registry configured. " +
+                    "Re-initialization will not be attempted until the service restarts.");
+            initialized = true;
+            return;
         }
 
         if (environment == null || environment.trim().isEmpty()) {
-            throw new RuntimeException("Failed to initialize monitor as environment was not populated.");
+            throw new RuntimeException("Failed to initialize monitoring as environment was not populated.");
         }
 
         registry.config().commonTags("environment", environment);
         log.info("Finished setting up registry successfully.");
-        initialized = true;
     }
 
     private StackdriverConfig configureStackDriver(String projectId) {
