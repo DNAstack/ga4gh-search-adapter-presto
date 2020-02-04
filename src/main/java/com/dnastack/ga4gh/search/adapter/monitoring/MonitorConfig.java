@@ -13,10 +13,17 @@ public class MonitorConfig {
 
     String environment = null;
     StackDriver stackDriver = null;
+    AzureMonitor azureMonitor = null;
 
     @Getter
     @Setter
     public static class StackDriver {
         String projectId;
+    }
+
+    @Getter
+    @Setter
+    public static class AzureMonitor {
+        boolean enabled;
     }
 }

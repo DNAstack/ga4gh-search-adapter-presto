@@ -1,5 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.monitoring;
 
+import io.micrometer.azuremonitor.AzureMonitorConfig;
+import io.micrometer.azuremonitor.AzureMonitorMeterRegistry;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.stackdriver.StackdriverConfig;
@@ -14,9 +16,9 @@ import java.util.Map;
 @Configuration
 public class Monitor {
 
-    private static MeterRegistry registry;
-    private static final Map<String, Counter> counters = new HashMap<>();
-    private static boolean initialized = false;
+    private MeterRegistry registry;
+    private final Map<String, Counter> counters = new HashMap<>();
+    private boolean initialized = false;
     private MonitorConfig config;
 
     public Monitor(MonitorConfig config) {
@@ -54,10 +56,15 @@ public class Monitor {
         }
 
         String environment = null;
-        if (this.config.getStackDriver() != null) {
-            StackdriverConfig stackdriverConfig = configureStackDriver(this.config.getStackDriver().getProjectId());
+        if (config.getStackDriver() != null) {
+            StackdriverConfig stackdriverConfig = configureStackDriver(config.getStackDriver().getProjectId());
             registry = StackdriverMeterRegistry.builder(stackdriverConfig).build();
-            environment = this.config.getEnvironment();
+            initialized = true;
+        }
+
+        if (config.getAzureMonitor() != null) {
+            AzureMonitorConfig azureMonitorConfig = configureAzureMonitor();
+            registry = AzureMonitorMeterRegistry.builder(azureMonitorConfig).build();
             initialized = true;
         }
 
@@ -68,11 +75,11 @@ public class Monitor {
             return;
         }
 
-        if (environment == null || environment.trim().isEmpty()) {
+        if (config.getEnvironment() == null || config.getEnvironment().trim().isEmpty()) {
             throw new RuntimeException("Failed to initialize monitoring as environment was not populated.");
         }
 
-        registry.config().commonTags("environment", environment);
+        registry.config().commonTags("environment", config.getEnvironment());
         log.info("Finished setting up registry successfully.");
     }
 
@@ -88,5 +95,10 @@ public class Monitor {
                 return projectId;
             }
         };
+    }
+
+
+    private AzureMonitorConfig configureAzureMonitor() {
+        return s -> null;
     }
 }
