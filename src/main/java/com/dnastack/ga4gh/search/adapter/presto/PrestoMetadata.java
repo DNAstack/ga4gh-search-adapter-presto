@@ -81,7 +81,7 @@ public class PrestoMetadata {
             return Type.STRING_ARRAY;
         } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
             return Type.JSON;
-        } else if (prestoType.startsWith("array(double") || prestoType.startsWith("array(bigint)")
+        } else if (prestoType.startsWith("array(double") || prestoType.startsWith("array(bigint")
                 || prestoType.startsWith("array(int") || prestoType.equals(Type.NUMBER_ARRAY.toString())) {
             return Type.NUMBER_ARRAY;
             // TODO: Double check correctness of below, was a best guess
