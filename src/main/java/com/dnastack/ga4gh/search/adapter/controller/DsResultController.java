@@ -17,7 +17,7 @@ public class DsResultController {
     PrestoSearchSource dataSource;
 
     @RequestMapping(value = "/api/dsresults/{nextPageToken}", method = RequestMethod.GET)
-    public TableData getNextPaginatedResposne(@PathVariable("nextPageToken") String nextPageToken) {
+    public TableData getNextPaginatedResponse(@PathVariable("nextPageToken") String nextPageToken) {
         return dataSource.getPaginatedResponse(nextPageToken);
 
     }

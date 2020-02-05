@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,55 +36,28 @@ public class PrestoMetadata {
         return table;
     }
 
-    static String[] operatorsForType(Type type) {
-        switch (type) {
-            case NUMBER:
-                return new String[] {"=", "!=", "<", "<=", ">", ">="};
-            case STRING:
-                return new String[] {"=", "!=", "contains", "like"};
-            case DATE:
-                return new String[] {"=", "!=", "<", "<=", ">", ">="};
-            case STRING_ARRAY:
-                return new String[] {"all", "in", "none"};
-            case BOOLEAN:
-                return new String[] {};
-            case JSON:
-                return new String[] {"=", "!="};
-            default:
-                return new String[0];
-        }
-    }
-
-    //TODO: Verify these type mappings (via test?)
     static Type prestoToPrimitiveType(String prestoType) {
-        if (prestoType.equals("integer")
-                || prestoType.equals("smallint")
-                || prestoType.equals("double")
-                || prestoType.equals("bigint")) {
-            return Type.NUMBER;
-        } else if (prestoType.equals("timestamp")) {
-            return Type.DATE;
-            //TODO: Is this accurate? Need to special case?
-        } else if (prestoType.equals("timestamp with time zone")) {
-            return Type.DATE;
-            //TODO: This or the above is definitely wrong
-        } else if (prestoType.equals("date")) {
-            return Type.DATE;
-        } else if (prestoType.startsWith("boolean")) {
-            return Type.BOOLEAN;
-        } else if (prestoType.startsWith("varchar") || prestoType.startsWith("char")
-                || prestoType.startsWith("varbinary")) {
-            return Type.STRING;
-        } else if (prestoType.startsWith("array(varchar") || prestoType.startsWith("array(date")
-                || prestoType.startsWith("array(timestamp")) { // oof
-            return Type.STRING_ARRAY;
-        } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
-            return Type.JSON;
-        } else if (prestoType.startsWith("array(double") || prestoType.startsWith("array(bigint")
-                || prestoType.startsWith("array(int") || prestoType.equals(Type.NUMBER_ARRAY.toString())) {
+        boolean isArray = prestoType.startsWith("array(");
+        String prestoTypeConcat = (isArray) ? prestoType.substring(prestoType.indexOf('(') + 1) : prestoType;
+
+        if (prestoTypeConcat.startsWith("int") || prestoTypeConcat.startsWith("tinyint") ||
+                prestoTypeConcat.startsWith("smallint") || prestoTypeConcat.startsWith("bigint") ||
+                prestoTypeConcat.startsWith("double") || prestoTypeConcat.startsWith("real")) {
+            return (isArray) ? Type.NUMBER_ARRAY : Type.NUMBER;
+        } else if (prestoTypeConcat.startsWith(Type.NUMBER_ARRAY.toString())) {
             return Type.NUMBER_ARRAY;
-            // TODO: Double check correctness of below, was a best guess
-        } else if (prestoType.startsWith("row(")) {
+        } else if (prestoTypeConcat.startsWith("timestamp") || prestoTypeConcat.startsWith("timestamp with time zone") ||
+                prestoTypeConcat.startsWith("date") || prestoTypeConcat.startsWith("time")) {
+            return (isArray) ? Type.DATETIME_ARRAY : Type.DATETIME;
+        } else if (prestoTypeConcat.startsWith("varchar") || prestoTypeConcat.startsWith("char")) {
+            return (isArray) ? Type.STRING_ARRAY : Type.STRING;
+        } else if (prestoTypeConcat.startsWith("row(")) {
+            return (isArray) ? Type.ARRAY_ROW : Type.ROW;
+        } else if (prestoTypeConcat.startsWith("boolean")) {
+            return Type.BOOLEAN;
+        } else if (prestoTypeConcat.startsWith("varbinary")) {
+            return Type.VARBINARY;
+        } else if (prestoTypeConcat.startsWith("json")) {
             return Type.JSON;
         }
 

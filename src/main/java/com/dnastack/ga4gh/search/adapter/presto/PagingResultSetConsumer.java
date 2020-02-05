@@ -118,15 +118,14 @@ public class PagingResultSetConsumer {
             String columnName = resultSetMetaData.getColumnName(i);
             String prestoType = resultSetMetaData.getColumnTypeName(i);
             Type primitiveType = PrestoMetadata.prestoToPrimitiveType(prestoType);
-            String[] typeOperators = PrestoMetadata.operatorsForType(primitiveType);
             //TODO: This data is not populated correctly -- why?
             String qualifiedTableName = String.format("%s.%s.%s",
-                resultSetMetaData.getCatalogName(i),
-                resultSetMetaData.getSchemaName(i),
-                resultSetMetaData.getTableName(i));
+                    resultSetMetaData.getCatalogName(i),
+                    resultSetMetaData.getSchemaName(i),
+                    resultSetMetaData.getTableName(i));
             String id = qualifiedTableName + "." + columnName;
             //TODO: Temporary workaround while above is unpopulated
-            Field f = new Field(columnName, columnName, primitiveType, typeOperators, null, qualifiedTableName);
+            Field f = new Field(columnName, columnName, primitiveType, null, qualifiedTableName);
             fields.add(f);
         }
 
