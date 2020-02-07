@@ -63,7 +63,7 @@ public enum Type {
             return "row";
         }
     },
-    ARRAY_ROW {
+    ROW_ARRAY {
         @Override
         public String toString() {
             return "row[]";
