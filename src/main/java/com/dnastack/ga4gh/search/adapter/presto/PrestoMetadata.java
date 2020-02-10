@@ -46,13 +46,12 @@ public class PrestoMetadata {
         } else if (!prestoType.startsWith("array") && prestoType.contains("(")) {
             prestoTypeModified = prestoType.substring(0, prestoType.indexOf('('));
         }
-        Type t  = prestoToTypeMap.getOrDefault(prestoTypeModified , null);
-        if (t != null) {
-            return t;
+        Type t  = prestoToTypeMap.get(prestoTypeModified);
+        if (t == null) {
+            log.warn("Unable to understand presto type {}, returning type STRING", prestoType);
+            return Type.STRING;
         }
-        log.warn("Unable to understand presto type {}, returning type STRING", prestoType);
-        return Type.STRING;
-
+        return t;
     }
 
     private static Map<String, Type> initPrestoToTypeMap() {
