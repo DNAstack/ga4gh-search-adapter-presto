@@ -11,7 +11,6 @@ public class Field {
     private String id;
     private String name;
     private Type type;
-    private String[] operators;
     private String[] options;
     private String table;
 }

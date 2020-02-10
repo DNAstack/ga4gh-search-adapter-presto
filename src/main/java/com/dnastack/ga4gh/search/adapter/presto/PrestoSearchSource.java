@@ -1,30 +1,16 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
-import com.dnastack.ga4gh.search.adapter.model.Field;
-import com.dnastack.ga4gh.search.adapter.model.ListTableResponse;
-import com.dnastack.ga4gh.search.adapter.model.Pagination;
-import com.dnastack.ga4gh.search.adapter.model.ResultRow;
-import com.dnastack.ga4gh.search.adapter.model.ResultValue;
-import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
-import com.dnastack.ga4gh.search.adapter.model.Table;
-import com.dnastack.ga4gh.search.adapter.model.TableData;
-import com.dnastack.ga4gh.search.adapter.model.Type;
+import com.dnastack.ga4gh.search.adapter.model.*;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
 import com.google.common.collect.ImmutableList;
-import java.net.URI;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.sql.SQLException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class PrestoSearchSource {
@@ -161,8 +147,8 @@ public class PrestoSearchSource {
         URI nextPageUri = null;
         if (hasNextPage) {
             nextPageUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path(String.format(RESULT_SET_RELATIVE_URL, formPagedResultString(pageResult)))
-                .build().toUri();
+                    .path(String.format(RESULT_SET_RELATIVE_URL, formPagedResultString(pageResult)))
+                    .build().toUri();
         }
         Pagination pagination = new Pagination(nextPageUri, null);
         Map<String, Object> generatedSchema = generateSchema(pageResult.getFields());
@@ -230,31 +216,31 @@ public class PrestoSearchSource {
         String query = "show columns from" + table.getQualifiedName();
         PagingResultSetConsumer resultSetConsumer = prestoAdapter.query(query, DEFAULT_PAGE_SIZE);
         resultSetConsumer.consumeAll(
-            resultSet -> {
-                try {
-                    while (resultSet.next()) {
-                        String columnName = resultSet.getString(1);
-                        String columnType = resultSet.getString(2);
-                        Type t = PrestoMetadata.prestoToPrimitiveType(columnType);
-                        Field f = new Field(columnName, columnName, t, PrestoMetadata.operatorsForType(t), null, table
-                            .toQualifiedString());
-                        listBuilder.add(f);
+                resultSet -> {
+                    try {
+                        while (resultSet.next()) {
+                            String columnName = resultSet.getString(1);
+                            String columnType = resultSet.getString(2);
+                            Type t = PrestoMetadata.prestoToPrimitiveType(columnType);
+                            Field f = new Field(columnName, columnName, t, null, table
+                                    .toQualifiedString());
+                            listBuilder.add(f);
+                        }
+                    } catch (SQLException e) {
+                        throw new RuntimeException(
+                                "Error while retrieving data from result set", e);
                     }
-                } catch (SQLException e) {
-                    throw new RuntimeException(
-                        "Error while retrieving data from result set", e);
-                }
-            });
+                });
         return new PrestoTableMetadata(table, listBuilder.build());
     }
 
     private Map<String, PrestoTable> getTableMetadata(List<PrestoCatalog> catalogs) {
         Map<String, PrestoTable> tables = new HashMap<>();
         String sqlTemplate =
-            "select table_name, table_schema from \"%s\".information_schema.tables";
+                "select table_name, table_schema from \"%s\".information_schema.tables";
         List<Field> fields = new ArrayList<>();
-        fields.add(new Field("table_name", "Table Name", Type.STRING, null, null, null));
-        fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null, null));
+        fields.add(new Field("table_name", "Table Name", Type.STRING, null, null));
+        fields.add(new Field("table_schema", "Table Schema", Type.STRING, null, null));
 
         for (PrestoCatalog catalog : catalogs) {
             String sql = String.format(sqlTemplate, catalog.getName());
@@ -283,7 +269,7 @@ public class PrestoSearchSource {
         log.trace("Retrieving all catalogs and generating builders");
         final String sql = "show catalogs";
         List<Field> fields = new ArrayList<>();
-        fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null, null));
+        fields.add(new Field("Catalog", "Catalog", Type.STRING, null, null));
         List<ResultRow> results = query(sql, fields);
         List<PrestoCatalog.PrestoCatalogBuilder> catalogBuilders = new ArrayList<>();
         HashSet<String> blacklist = new HashSet<>();
@@ -308,7 +294,7 @@ public class PrestoSearchSource {
         }
         log.trace("Attempting to populate schema for catalog: {}", catalog);
         String sql = String.format("SHOW SCHEMAS FROM \"%s\"", catalogName);
-        List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null, null));
+        List<Field> fields = Collections.singletonList(new Field("Schema", "Schema", Type.STRING, null, null));
         List<ResultRow> results = query(sql, fields);
 
         HashSet<String> blacklist = new HashSet<>();
@@ -319,8 +305,8 @@ public class PrestoSearchSource {
         for (ResultRow row : results) {
             List<ResultValue> values = row.getValues();
             values.stream()
-                .filter(v -> !blacklist.contains(v.getValue().toString()))
-                .forEach(v -> schemas.add(new PrestoSchema(v.getValue().toString())));
+                    .filter(v -> !blacklist.contains(v.getValue().toString()))
+                    .forEach(v -> schemas.add(new PrestoSchema(v.getValue().toString())));
         }
         catalog.schemas(schemas);
         log.trace("Successfully populated schema for catalog: {}", catalog);

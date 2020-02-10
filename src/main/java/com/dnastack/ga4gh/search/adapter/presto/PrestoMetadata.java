@@ -22,6 +22,7 @@ public class PrestoMetadata {
     private final List<PrestoCatalog> catalogs;
     private final Map<String, PrestoTable> tables;
     private Map<PrestoTable, List<Field>> fields;
+    private static Map<String, Type> prestoToTypeMap = initPrestoToTypeMap();
 
     public List<Field> getFields(PrestoTable table) {
         return fields.get(table);
@@ -37,59 +38,61 @@ public class PrestoMetadata {
         return table;
     }
 
-    static String[] operatorsForType(Type type) {
-        switch (type) {
-            case NUMBER:
-                return new String[] {"=", "!=", "<", "<=", ">", ">="};
-            case STRING:
-                return new String[] {"=", "!=", "contains", "like"};
-            case DATE:
-                return new String[] {"=", "!=", "<", "<=", ">", ">="};
-            case STRING_ARRAY:
-                return new String[] {"all", "in", "none"};
-            case BOOLEAN:
-                return new String[] {};
-            case JSON:
-                return new String[] {"=", "!="};
-            default:
-                return new String[0];
+
+    static Type prestoToPrimitiveType(String prestoType) {
+        String prestoTypeModified = prestoType;
+        if (prestoType.startsWith("array(row")) {
+            prestoTypeModified = "array(row";
+        } else if (!prestoType.startsWith("array") && prestoType.contains("(")) {
+            prestoTypeModified = prestoType.substring(0, prestoType.indexOf('('));
         }
+        Type t  = prestoToTypeMap.get(prestoTypeModified);
+        if (t == null) {
+            log.warn("Unable to understand presto type {}, returning type STRING", prestoType);
+            return Type.STRING;
+        }
+        return t;
     }
 
-    //TODO: Verify these type mappings (via test?)
-    static Type prestoToPrimitiveType(String prestoType) {
-        if (prestoType.equals("integer")
-                || prestoType.equals("smallint")
-                || prestoType.equals("double")
-                || prestoType.equals("bigint")) {
-            return Type.NUMBER;
-        } else if (prestoType.equals("timestamp")) {
-            return Type.DATE;
-            //TODO: Is this accurate? Need to special case?
-        } else if (prestoType.equals("timestamp with time zone")) {
-            return Type.DATE;
-            //TODO: This or the above is definitely wrong
-        } else if (prestoType.equals("date")) {
-            return Type.DATE;
-        } else if (prestoType.startsWith("boolean")) {
-            return Type.BOOLEAN;
-        } else if (prestoType.startsWith("varchar") || prestoType.startsWith("char")
-                || prestoType.startsWith("varbinary")) {
-            return Type.STRING;
-        } else if (prestoType.startsWith("array(varchar") || prestoType.startsWith("array(date")
-                || prestoType.startsWith("array(timestamp")) { // oof
-            return Type.STRING_ARRAY;
-        } else if (prestoType.startsWith("array(row") || prestoType.startsWith("json")) {
-            return Type.JSON;
-        } else if (prestoType.startsWith("array(double") || prestoType.startsWith("array(bigint")
-                || prestoType.startsWith("array(int") || prestoType.equals(Type.NUMBER_ARRAY.toString())) {
-            return Type.NUMBER_ARRAY;
-            // TODO: Double check correctness of below, was a best guess
-        } else if (prestoType.startsWith("row(")) {
-            return Type.JSON;
-        }
+    private static Map<String, Type> initPrestoToTypeMap() {
+        Map<String, Type> prestoToTypeMap = new HashMap<>();
 
-        log.warn("Unable to understand presto type {}, returning type STRING", prestoType);
-        return Type.STRING;
+        prestoToTypeMap.put("int", Type.NUMBER);
+        prestoToTypeMap.put("integer", Type.NUMBER);
+        prestoToTypeMap.put("tinyint", Type.NUMBER);
+        prestoToTypeMap.put("smallint", Type.NUMBER);
+        prestoToTypeMap.put("bigint", Type.NUMBER);
+        prestoToTypeMap.put("double", Type.NUMBER);
+        prestoToTypeMap.put("real", Type.NUMBER);
+        prestoToTypeMap.put("array(int)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("array(tinyint)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("array(smallint)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("array(bigint)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("array(double)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("array(real)", Type.NUMBER_ARRAY);
+        prestoToTypeMap.put("number[]", Type.NUMBER_ARRAY);
+
+        prestoToTypeMap.put("timestamp", Type.DATETIME);
+        prestoToTypeMap.put("timestamp with time zone", Type.DATETIME);
+        prestoToTypeMap.put("date", Type.DATETIME);
+        prestoToTypeMap.put("time", Type.DATETIME);
+        prestoToTypeMap.put("array(timestamp)", Type.DATETIME_ARRAY);
+        prestoToTypeMap.put("array(timestamp with time zone)", Type.DATETIME_ARRAY);
+        prestoToTypeMap.put("array(date)", Type.DATETIME_ARRAY);
+        prestoToTypeMap.put("array(time)", Type.DATETIME_ARRAY);
+
+        prestoToTypeMap.put("varchar", Type.STRING);
+        prestoToTypeMap.put("char", Type.STRING);
+        prestoToTypeMap.put("array(varchar)", Type.STRING_ARRAY);
+        prestoToTypeMap.put("array(char)", Type.STRING_ARRAY);
+
+        prestoToTypeMap.put("row", Type.ROW);
+        prestoToTypeMap.put("array(row", Type.ROW_ARRAY);
+
+        prestoToTypeMap.put("boolean", Type.BOOLEAN);
+        prestoToTypeMap.put("varbinary", Type.VARBINARY);
+        prestoToTypeMap.put("json", Type.JSON);
+
+        return prestoToTypeMap;
     }
 }

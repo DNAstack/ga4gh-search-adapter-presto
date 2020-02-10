@@ -17,7 +17,9 @@ public enum Type {
     },
     NUMBER_ARRAY {
         @Override
-        public String toString() {return "number[]";}
+        public String toString() {
+            return "number[]";
+        }
     },
     STRING {
         @Override
@@ -37,10 +39,34 @@ public enum Type {
             return "json";
         }
     },
-    DATE {
+    DATETIME {
         @Override
         public String toString() {
-            return "date";
+            return "datetime";
+        }
+    },
+    DATETIME_ARRAY {
+        @Override
+        public String toString() {
+            return "datetime[]";
+        }
+    },
+    VARBINARY {
+        @Override
+        public String toString() {
+            return "varbinary";
+        }
+    },
+    ROW {
+        @Override
+        public String toString() {
+            return "row";
+        }
+    },
+    ROW_ARRAY {
+        @Override
+        public String toString() {
+            return "row[]";
         }
     },
     DRS_OBJECT {
