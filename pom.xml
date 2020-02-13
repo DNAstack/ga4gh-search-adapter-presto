@@ -153,6 +153,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${version.spring.boot}</version>
 				<executions>
 					<execution>
 						<goals>
@@ -164,6 +165,7 @@
 			<plugin>
 				<groupId>de.qaware.maven</groupId>
 				<artifactId>go-offline-maven-plugin</artifactId>
+				<version>1.2.5</version>
 			</plugin>
 		</plugins>
 	</build>
@@ -180,16 +182,5 @@
           <layout>default</layout>
           <url>https://nexus.dnastack.com/content/repositories/releases</url>
         </repository>
-
-		<repository>
-			<id>dev-azure-com-supercluster-dna-supercluster-dna</id>
-			<url>https://pkgs.dev.azure.com/supercluster-dna/_packaging/supercluster-dna/maven/v1</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
 	</repositories>
 </project>
