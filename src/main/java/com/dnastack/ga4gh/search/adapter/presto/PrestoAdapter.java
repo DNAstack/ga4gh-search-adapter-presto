@@ -46,7 +46,7 @@ public class PrestoAdapter {
         return query(prestoSQL, pageSize, true);
     }
 
-    public PagingResultSetConsumer query(String prestoSQL, Integer pageSize, boolean shouldRetryOnAuthFailure) {
+    private PagingResultSetConsumer query(String prestoSQL, Integer pageSize, boolean shouldRetryOnAuthFailure) {
         this.queryCounter.increment();
         int finalPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
         return latencyTime.record(() -> {
@@ -58,42 +58,6 @@ public class PrestoAdapter {
                     log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
                     authenticator.refreshAccessToken();
                     return query(prestoSQL, finalPageSize, false);
-                } else {
-                    log.trace("Encountered SQLException is not recoverable, failing query");
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-    }
-
-    public PagingResultSetConsumer query(String prestoSQL, List<Object> params) {
-        return query(prestoSQL, params, DEFAULT_PAGE_SIZE);
-    }
-
-
-    public PagingResultSetConsumer query(String prestoSQL, List<Object> params, Integer pageSize) {
-        return query(prestoSQL, params, pageSize);
-    }
-
-    public PagingResultSetConsumer query(String prestoSQL, List<Object> params, Integer pageSize, boolean shouldRetryOnAuthFailure) {
-        int finalPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-        return latencyTime.record(() -> {
-            try (Connection connection = getConnection()) {
-                PreparedStatement stmt = connection.prepareStatement(prestoSQL);
-                if (params != null) {
-                    int i = 1;
-                    for (Object p : params) {
-                        //TODO: Could NPE here
-                        stmt.setString(i, p.toString());
-                        i++;
-                    }
-                }
-                return new PagingResultSetConsumer(stmt.executeQuery(), pageSize);
-            } catch (SQLException e) {
-                if (shouldRetryOnAuthFailure && isAuthenticationFailure(e) && authenticator.requiresAuthentication()) {
-                    log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
-                    authenticator.refreshAccessToken();
-                    return query(prestoSQL, params, pageSize, false);
                 } else {
                     log.trace("Encountered SQLException is not recoverable, failing query");
                     throw new RuntimeException(e);
@@ -120,7 +84,7 @@ public class PrestoAdapter {
 
     /**
      * If the Incoming request has authentication information, use the attached user principal as the username to pass
-     * to presto, otherwise, set  the a default username
+     * to presto, otherwise, return {@link #DEFAULT_PRESTO_USER_NAME the default username}.
      */
     private String getUserNameForPrestoRequest() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

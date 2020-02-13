@@ -329,18 +329,4 @@ public class PrestoSearchSource {
         return results;
     }
 
-    private List<ResultRow> query(String sql, List<Object> params, List<Field> fields) {
-        List<ResultRow> results = new ArrayList<>();
-        PagingResultSetConsumer consumer = prestoAdapter.query(sql, params);
-        consumer.consumeAll(rs -> {
-            try {
-                while (rs.next()) {
-                    results.add(PagingResultSetConsumer.extractRow(rs, fields));
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return results;
-    }
 }
