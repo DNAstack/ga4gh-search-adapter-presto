@@ -16,6 +16,7 @@ public class MonitorConfig {
     String environment = null;
     StackDriver stackDriver = null;
     AzureMonitor azureMonitor = null;
+    LoggingMonitor loggingMonitor = null;
 
     @Getter
     @Setter
@@ -29,5 +30,12 @@ public class MonitorConfig {
     public static class AzureMonitor {
         boolean enabled;
         Duration step;
+    }
+
+    @Getter
+    @Setter
+    public static class LoggingMonitor {
+        boolean enabled;
+        Duration step = Duration.ofSeconds(30);
     }
 }

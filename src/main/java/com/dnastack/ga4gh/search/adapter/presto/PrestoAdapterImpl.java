@@ -3,17 +3,21 @@ package com.dnastack.ga4gh.search.adapter.presto;
 import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.oauth2.jwt.Jwt;
-
-import java.sql.*;
-import java.util.List;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 public class PrestoAdapterImpl implements PrestoAdapter {
@@ -23,12 +27,15 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     private static final String DEFAULT_PRESTO_USER_NAME = "ga4gh-search-adapter-presto";
     private static final int DEFAULT_PAGE_SIZE = 100;
     private final Counter queryCounter;
+    private final Timer latencyTime;
 
     public PrestoAdapterImpl(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator, Monitor monitor) {
         this.prestoDatasourceUrl = prestoDatasourceUrl;
         this.authenticator = accountAuthenticator;
         this.queryCounter = monitor.registerCounter("search.queries.queries_performed",
-                "The raw number of queries performed.");
+            "The raw number of queries performed over a given step of time.");
+        this.latencyTime = monitor.registerRequestTimer("search.queries.query_latency",
+            "The average latency of queries performed over a given step of time.");
     }
 
     @Override
@@ -43,20 +50,22 @@ public class PrestoAdapterImpl implements PrestoAdapter {
 
     public PagingResultSetConsumer query(String prestoSQL, Integer pageSize, boolean shouldRetryOnAuthFailure) {
         this.queryCounter.increment();
-        try (Connection connection = getConnection()) {
-            pageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-            Statement stmt = connection.createStatement();
-            return new PagingResultSetConsumer(stmt.executeQuery(prestoSQL), pageSize);
-        } catch (SQLException e) {
-            if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
-                log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
-                authenticator.refreshAccessToken();
-                return query(prestoSQL, pageSize, false);
-            } else {
-                log.trace("Encountered SQLException is not recoverable, failing query");
-                throw new RuntimeException(e);
+        int finalPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+        return latencyTime.record(() -> {
+            try (Connection connection = getConnection()) {
+                Statement stmt = connection.createStatement();
+                return new PagingResultSetConsumer(stmt.executeQuery(prestoSQL), finalPageSize);
+            } catch (SQLException e) {
+                if (shouldRetryOnAuthFailure && isAuthenticationFailure(e)) {
+                    log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
+                    authenticator.refreshAccessToken();
+                    return query(prestoSQL, finalPageSize, false);
+                } else {
+                    log.trace("Encountered SQLException is not recoverable, failing query");
+                    throw new RuntimeException(e);
+                }
             }
-        }
+        });
     }
 
     @Override
@@ -71,28 +80,30 @@ public class PrestoAdapterImpl implements PrestoAdapter {
     }
 
     public PagingResultSetConsumer query(String prestoSQL, List<Object> params, Integer pageSize, boolean shouldRetryOnAuthFailure) {
-        try (Connection connection = getConnection()) {
-            pageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
-            PreparedStatement stmt = connection.prepareStatement(prestoSQL);
-            if (params != null) {
-                int i = 1;
-                for (Object p : params) {
-                    //TODO: Could NPE here
-                    stmt.setString(i, p.toString());
-                    i++;
+        int finalPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+        return latencyTime.record(() -> {
+            try (Connection connection = getConnection()) {
+                PreparedStatement stmt = connection.prepareStatement(prestoSQL);
+                if (params != null) {
+                    int i = 1;
+                    for (Object p : params) {
+                        //TODO: Could NPE here
+                        stmt.setString(i, p.toString());
+                        i++;
+                    }
+                }
+                return new PagingResultSetConsumer(stmt.executeQuery(), pageSize);
+            } catch (SQLException e) {
+                if (shouldRetryOnAuthFailure && isAuthenticationFailure(e) && authenticator.requiresAuthentication()) {
+                    log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
+                    authenticator.refreshAccessToken();
+                    return query(prestoSQL, params, pageSize, false);
+                } else {
+                    log.trace("Encountered SQLException is not recoverable, failing query");
+                    throw new RuntimeException(e);
                 }
             }
-            return new PagingResultSetConsumer(stmt.executeQuery(), pageSize);
-        } catch (SQLException e) {
-            if (shouldRetryOnAuthFailure && isAuthenticationFailure(e) && authenticator.requiresAuthentication()) {
-                log.trace("Encountered SQLException is recoverable. Renewing authentication credentials and retrying query");
-                authenticator.refreshAccessToken();
-                return query(prestoSQL, params, pageSize, false);
-            } else {
-                log.trace("Encountered SQLException is not recoverable, failing query");
-                throw new RuntimeException(e);
-            }
-        }
+        });
     }
 
     private Connection getConnection() throws SQLException {
