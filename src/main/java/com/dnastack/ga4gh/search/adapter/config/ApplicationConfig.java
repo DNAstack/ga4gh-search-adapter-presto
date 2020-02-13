@@ -5,7 +5,7 @@ import com.dnastack.ga4gh.search.adapter.data.PersistentSearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
-import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapterImpl;
+import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
@@ -76,7 +76,7 @@ public class ApplicationConfig {
 
     @Bean
     public PrestoSearchSource getPrestoSearchSource(SearchHistoryService searchHistoryService, PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator, Monitor monitor) {
-        return new PrestoSearchSource(searchHistoryService, new PrestoAdapterImpl(prestoDatasourceUrl, accountAuthenticator, monitor), consumerCache);
+        return new PrestoSearchSource(searchHistoryService, new PrestoAdapter(prestoDatasourceUrl, accountAuthenticator, monitor), consumerCache);
     }
 
 
