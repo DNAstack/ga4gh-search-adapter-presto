@@ -1,8 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.lang.Collections;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
@@ -14,6 +13,7 @@ import org.springframework.util.Assert;
 public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
 
     private final List<String> aud;
+    private final static String AUDIENCE = "aud";
 
     public JwtAudienceValidator(List<String> audience) {
         this.aud = audience;
@@ -22,11 +22,12 @@ public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {
     @Override
     public OAuth2TokenValidatorResult validate(Jwt jwt) {
         Assert.notNull(jwt, "jwt cannot be null");
-        Object tokenAudience = jwt.getClaims().get(Claims.AUDIENCE);
+        Object tokenAudience = jwt.getClaims().get(AUDIENCE);
         if (tokenAudience != null) {
             if (tokenAudience instanceof Collection) {
                 Collection audienceCollection = (Collection) tokenAudience;
-                if (!Collections.containsAny(audienceCollection, aud)) {
+
+                if (Collections.disjoint(aud,audienceCollection)) {
                     OAuth2Error error = new OAuth2Error(
                         OAuth2ErrorCodes.INVALID_REQUEST,
                         String.format("Jwt has invalid audience. Expected audience to contain: \"%s\"", aud),

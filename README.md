@@ -101,3 +101,29 @@ APP_AUTH_PRESTOOAUTHCLIENT_SCOPES="list of scopes separated by a space"
 ```
 
 
+## Query History Encryption at Rest
+
+In certain circumstances, the queries themselves might contain sensitive data which should not be exposed when persisted to the
+backing database. In these instances the Search API provides a simple way for encrypting users search history 
+using [JWE](https://tools.ietf.org/html/rfc7516). JWE is designed to be fast and lightweight and provides both security as well
+as integrity checks of the encrypted data.
+
+To begin, you first must generate and RSA Private key in `PEM` format using OpenSSL
+
+```bash
+openssl genrsa -out rsa-key.pem 2048
+``` 
+
+Once you have generated the key you can set an environment variable with its contents to enable Encryption and Decryption of search keys
+
+```
+APP_DATA_ENCRYPTION_RSAKEYPAIR=$(cat rsa-key.pem)
+```
+
+**IMPORTANT**
+
+Once fields are encrypted, the ONLY way for them to be unencrypted is to supple the appropriate key at startup. If the key is lost
+there is no method on Gods green earth to retrieve it by. Additionally, the `EncryptionService` is designed to fail silently. That is,
+if it cannot encrypt or decrypt a field, the original string will be returned. In the case of a key change (without planned migration),
+this means that all previously encrypted search histories will be returned in their compact JWE form
+

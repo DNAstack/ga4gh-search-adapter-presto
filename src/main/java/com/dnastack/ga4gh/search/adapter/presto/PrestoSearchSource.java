@@ -1,16 +1,30 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
-import com.dnastack.ga4gh.search.adapter.model.*;
+import com.dnastack.ga4gh.search.adapter.model.Field;
+import com.dnastack.ga4gh.search.adapter.model.ListTableResponse;
+import com.dnastack.ga4gh.search.adapter.model.Pagination;
+import com.dnastack.ga4gh.search.adapter.model.ResultRow;
+import com.dnastack.ga4gh.search.adapter.model.ResultValue;
+import com.dnastack.ga4gh.search.adapter.model.SearchRequest;
+import com.dnastack.ga4gh.search.adapter.model.Table;
+import com.dnastack.ga4gh.search.adapter.model.TableData;
+import com.dnastack.ga4gh.search.adapter.model.Type;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoMetadata.PrestoMetadataBuilder;
 import com.google.common.collect.ImmutableList;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
 import java.net.URI;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
 public class PrestoSearchSource {
@@ -85,7 +99,6 @@ public class PrestoSearchSource {
 
     public TableData search(SearchRequest searchRequest, Integer pageSize) {
         String prestoSqlString = searchRequest.getSqlQuery();
-        log.info("Received SQL: {}", prestoSqlString);
         PageResult pageResult = performPrestoSearchQuery(prestoSqlString, pageSize);
         return createTableDataResponse(pageResult);
     }

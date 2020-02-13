@@ -42,12 +42,12 @@ import org.bouncycastle.asn1.ASN1Sequence;
  *
  * @author Luke Taylor
  */
-class RsaKeyHelper {
+public class RsaKeyHelper {
 
     private static String BEGIN = "-----BEGIN";
     private static Pattern PEM_DATA = Pattern.compile("-----BEGIN (.*)-----(.*)-----END (.*)-----", Pattern.DOTALL);
 
-    static KeyPair parseKeyPair(String pemData) {
+    public static KeyPair parseKeyPair(String pemData) {
         pemData = pemData.trim().replaceAll("\\\\n", "");
         Matcher m = PEM_DATA.matcher(pemData);
 

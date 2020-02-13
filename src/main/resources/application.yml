@@ -22,6 +22,11 @@ app:
     contact-url:
     version:
 
+# Sample Encryption config
+#  data:
+#    encryption:
+#      rsa-key-pair: ----BEGIN PRIVATE KEY----.......
+
 # Sample Auth configuration
 #  auth:
 #    token-issuers:

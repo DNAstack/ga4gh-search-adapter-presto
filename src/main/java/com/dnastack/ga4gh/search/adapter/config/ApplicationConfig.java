@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.config;
 
+import com.dnastack.ga4gh.search.adapter.data.EncryptionService;
 import com.dnastack.ga4gh.search.adapter.data.InMemorySearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.PersistentSearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
@@ -14,6 +15,9 @@ import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.ArrayList;
+import java.util.List;
+import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
@@ -28,10 +32,6 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import javax.sql.DataSource;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Slf4j
@@ -57,6 +57,10 @@ public class ApplicationConfig {
 
     @Value("${spring.datasource.password}")
     private String pgPassword;
+
+
+    @Value("${app.data.encryption.rsa-key-pair:}")
+    private String rsaKeyPair;
 
     /**
      * Other settings
@@ -94,7 +98,6 @@ public class ApplicationConfig {
             }
         };
     }
-
 
     @Bean
     @Profile("!basic-auth & !no-auth")
@@ -196,7 +199,13 @@ public class ApplicationConfig {
     @Profile("!no-auth")
     public SearchHistoryService persistentSearchHistory(Jdbi jdbi) {
         log.info("Using persistent query storage");
-        return new PersistentSearchHistoryService(jdbi);
+        if (rsaKeyPair != null && !rsaKeyPair.equals("")) {
+            log.info("Enabling encryption services for query history");
+            return new PersistentSearchHistoryService(jdbi, new EncryptionService(rsaKeyPair));
+        } else {
+            log.warn("Encryption services for query history is disabled. All queries will be stored as plain text");
+            return new PersistentSearchHistoryService(jdbi);
+        }
     }
 
     @Bean
