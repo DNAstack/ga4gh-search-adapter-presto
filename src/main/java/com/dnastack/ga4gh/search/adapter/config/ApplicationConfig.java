@@ -176,7 +176,7 @@ public class ApplicationConfig {
 
 
     @Bean
-    @Profile("!no-auth")
+    @Profile("search-history")
     public DataSource hakariDataSource() {
         PGSimpleDataSource pgDataSource = new PGSimpleDataSource();
         pgDataSource.setUrl(pgUrl);
