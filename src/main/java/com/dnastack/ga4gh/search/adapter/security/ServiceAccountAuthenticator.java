@@ -22,6 +22,7 @@ public class ServiceAccountAuthenticator {
     private final String clientId;
     private final String clientSecret;
     private final String scopes;
+    private final String resource;
     private final String audience;
     private final String tokenEndpoint;
     private final boolean shouldAuthenticate;
@@ -34,6 +35,7 @@ public class ServiceAccountAuthenticator {
         this.clientId = config.getClientId();
         this.clientSecret = config.getClientSecret();
         this.scopes = config.getScopes();
+        this.resource = config.getResource();
         this.audience = config.getAudience();
         this.tokenEndpoint = config.getTokenUri();
         this.shouldAuthenticate = true;
@@ -44,10 +46,10 @@ public class ServiceAccountAuthenticator {
         this.clientId = null;
         this.clientSecret = null;
         this.scopes = null;
+        this.resource = null;
         this.audience = null;
         this.tokenEndpoint = null;
         this.shouldAuthenticate = false;
-
     }
 
 
@@ -92,6 +94,14 @@ public class ServiceAccountAuthenticator {
         if (scopes != null && !scopes.isEmpty()) {
             formBodyBuilder.add("scope", scopes);
         }
+
+        if (resource != null && ! resource.trim().isEmpty()) {
+            formBodyBuilder.add("resource", resource);
+        }
+
+        formBodyBuilder.add("client_id", clientId);
+        formBodyBuilder.add("client_secret", clientSecret);
+
 
         Request request = new Request.Builder().url(tokenEndpoint).method("POST", formBodyBuilder.build())
             .header("Authorization", encodedClientCredentials).build();

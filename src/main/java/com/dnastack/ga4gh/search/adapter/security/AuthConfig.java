@@ -77,6 +77,11 @@ public class AuthConfig {
          */
         String scopes = null;
 
+        /**
+         * The resource being requested
+         */
+        String resource = null;
+
 
         /**
          * The audience to request
