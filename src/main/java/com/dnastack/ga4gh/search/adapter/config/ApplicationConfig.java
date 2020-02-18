@@ -209,7 +209,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile("no-auth")
+    @Profile("no-auth || no-history")
     public SearchHistoryService inMemorySearchHistory() {
         log.info("Using in memory query storage. Only keeping at most 10 queries");
         return new InMemorySearchHistoryService(10);
