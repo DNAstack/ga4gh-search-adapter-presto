@@ -189,14 +189,14 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile("!no-auth")
+    @Profile("search-history")
     public Jdbi jdbi(DataSource dataSource) {
         return Jdbi.create(dataSource)
             .installPlugin(new SqlObjectPlugin());
     }
 
     @Bean
-    @Profile("!no-auth")
+    @Profile("search-history")
     public SearchHistoryService persistentSearchHistory(Jdbi jdbi) {
         log.info("Using persistent query storage");
         if (rsaKeyPair != null && !rsaKeyPair.equals("")) {
@@ -209,7 +209,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile("no-auth || no-history")
+    @Profile("!search-history")
     public SearchHistoryService inMemorySearchHistory() {
         log.info("Using in memory query storage. Only keeping at most 10 queries");
         return new InMemorySearchHistoryService(10);
