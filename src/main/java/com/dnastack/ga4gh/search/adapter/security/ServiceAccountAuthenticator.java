@@ -87,25 +87,16 @@ public class ServiceAccountAuthenticator {
         String combinedClientCredentials = clientId + ":" + clientSecret;
         String encodedClientCredentials =
             "Basic " + Base64.getEncoder().encodeToString(combinedClientCredentials.getBytes());
-
         FormBody.Builder formBodyBuilder = new FormBody.Builder().add("grant_type", "client_credentials")
             .add("audience", audience);
-
         if (scopes != null && !scopes.isEmpty()) {
             formBodyBuilder.add("scope", scopes);
         }
 
-        if (resource != null && ! resource.trim().isEmpty()) {
-            formBodyBuilder.add("resource", resource);
-        }
-
         formBodyBuilder.add("client_id", clientId);
         formBodyBuilder.add("client_secret", clientSecret);
-
-
         Request request = new Request.Builder().url(tokenEndpoint).method("POST", formBodyBuilder.build())
             .header("Authorization", encodedClientCredentials).build();
-
         return executeRequest(request);
     }
 
