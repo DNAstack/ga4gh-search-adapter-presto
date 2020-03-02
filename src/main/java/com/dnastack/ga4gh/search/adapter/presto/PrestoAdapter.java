@@ -4,20 +4,19 @@ import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class PrestoAdapter {
@@ -29,12 +28,12 @@ public class PrestoAdapter {
     private final Counter queryCounter;
     private final Timer latencyTime;
 
-    public PrestoAdapter(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator, Monitor monitor) {
+    public PrestoAdapter(String prestoDatasourceUrl, ServiceAccountAuthenticator accountAuthenticator) {
         this.prestoDatasourceUrl = prestoDatasourceUrl;
         this.authenticator = accountAuthenticator;
-        this.queryCounter = monitor.registerCounter("search.queries.queries_performed",
+        this.queryCounter = Monitor.registerCounter("search.queries.queries_performed",
             "The raw number of queries performed over a given step of time.");
-        this.latencyTime = monitor.registerRequestTimer("search.queries.query_latency",
+        this.latencyTime = Monitor.registerRequestTimer("search.queries.query_latency",
             "The average latency of queries performed over a given step of time.");
     }
 

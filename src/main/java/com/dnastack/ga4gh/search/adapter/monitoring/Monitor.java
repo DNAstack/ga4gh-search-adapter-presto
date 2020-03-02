@@ -19,23 +19,25 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class Monitor {
 
-    private MeterRegistry registry;
-    private final Map<String, Counter> counters = new HashMap<>();
-    private final Map<String, Timer> timers = new HashMap<>();
-    private boolean initialized = false;
-    private MonitorConfig config;
+    private static MeterRegistry registry;
+    private static final Map<String, Counter> counters = new HashMap<>();
+    private static final Map<String, Timer> timers = new HashMap<>();
+    private static boolean initialized = false;
+    private static MonitorConfig config;
 
+
+    //TODO: improve constructor
     public Monitor(MonitorConfig config) {
-        this.config = config;
+        Monitor.config = config;
     }
 
-    public Counter getCounter(String counterName) {
+    public static Counter getCounter(String counterName) {
         return counters.getOrDefault(counterName, null);
     }
 
     //TODO: Synchronized here puts some restrictions on how this can be used.
     // Is this too lazy a mechanism to stop races when registering counters?
-    public synchronized Counter registerCounter(String counterName, String description, String... tags) {
+    public static synchronized Counter registerCounter(String counterName, String description, String... tags) {
         if (!initialized) {
             initialize();
         }
@@ -54,7 +56,7 @@ public class Monitor {
         return counter;
     }
 
-    public synchronized Timer registerRequestTimer(String timerName, String description, String... tags) {
+    public static synchronized Timer registerRequestTimer(String timerName, String description, String... tags) {
         if (!initialized) {
             initialize();
         }
@@ -72,7 +74,7 @@ public class Monitor {
         return timer;
     }
 
-    private synchronized void initialize() {
+    private static synchronized void initialize() {
         if (initialized) {
             return;
         }
@@ -117,7 +119,7 @@ public class Monitor {
         log.info("Finished setting up registry successfully.");
     }
 
-    private StackdriverConfig configureStackDriver(MonitorConfig.StackDriver config) {
+    private static StackdriverConfig configureStackDriver(MonitorConfig.StackDriver config) {
         return new StackdriverConfig() {
             @Override
             public String get(String s) {
@@ -137,7 +139,7 @@ public class Monitor {
     }
 
 
-    private AzureMonitorConfig configureAzureMonitor(MonitorConfig.AzureMonitor config) {
+    private static AzureMonitorConfig configureAzureMonitor(MonitorConfig.AzureMonitor config) {
         return new AzureMonitorConfig() {
             @Override
             public String get(String s) {
@@ -151,7 +153,7 @@ public class Monitor {
         };
     }
 
-    private LoggingRegistryConfig configureLoggingMonitor(MonitorConfig.LoggingMonitor config) {
+    private static LoggingRegistryConfig configureLoggingMonitor(MonitorConfig.LoggingMonitor config) {
         return new LoggingRegistryConfig() {
             @Override
             public String get(String s) {
