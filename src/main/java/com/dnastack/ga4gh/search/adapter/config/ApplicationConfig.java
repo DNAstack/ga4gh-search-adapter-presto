@@ -4,6 +4,7 @@ import com.dnastack.ga4gh.search.adapter.data.EncryptionService;
 import com.dnastack.ga4gh.search.adapter.data.InMemorySearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.PersistentSearchHistoryService;
 import com.dnastack.ga4gh.search.adapter.data.SearchHistoryService;
+import com.dnastack.ga4gh.search.adapter.monitoring.Monitor;
 import com.dnastack.ga4gh.search.adapter.presto.PagingResultSetConsumerCache;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchSource;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.postgresql.ds.PGSimpleDataSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,6 +64,10 @@ public class ApplicationConfig {
     @Value("${app.data.encryption.rsa-key-pair:}")
     private String rsaKeyPair;
 
+
+    @Autowired
+    private Monitor monitor;
+
     /**
      * Other settings
      */
@@ -82,7 +88,6 @@ public class ApplicationConfig {
     public PrestoSearchSource getPrestoSearchSource(SearchHistoryService searchHistoryService, PagingResultSetConsumerCache consumerCache, ServiceAccountAuthenticator accountAuthenticator) {
         return new PrestoSearchSource(searchHistoryService, new PrestoAdapter(prestoDatasourceUrl, accountAuthenticator), consumerCache);
     }
-
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {

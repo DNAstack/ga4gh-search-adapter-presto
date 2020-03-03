@@ -9,11 +9,12 @@ import io.micrometer.core.instrument.logging.LoggingMeterRegistry;
 import io.micrometer.core.instrument.logging.LoggingRegistryConfig;
 import io.micrometer.stackdriver.StackdriverConfig;
 import io.micrometer.stackdriver.StackdriverMeterRegistry;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Configuration;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
@@ -24,7 +25,6 @@ public class Monitor {
     private static final Map<String, Timer> timers = new HashMap<>();
     private static boolean initialized = false;
     private static MonitorConfig config;
-
 
     //TODO: improve constructor
     public Monitor(MonitorConfig config) {
