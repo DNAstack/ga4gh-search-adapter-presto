@@ -1,15 +1,5 @@
 package com.dnastack.ga4gh.search.adapter;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.isEmptyOrNullString;
-import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-
 import com.dnastack.ga4gh.search.adapter.test.model.SearchRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -19,9 +9,14 @@ import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
 import io.restassured.mapper.ObjectMapperType;
 import io.restassured.specification.RequestSpecification;
-import java.net.URI;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.net.URI;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertEquals;
 
 public class SearchE2eTest extends BaseE2eTest {
 
@@ -29,6 +24,7 @@ public class SearchE2eTest extends BaseE2eTest {
     private static String clientId;
     private static String clientSecret;
     private static String audience;
+    private static String scope;
     private static String table;
 
     @BeforeClass
@@ -37,6 +33,7 @@ public class SearchE2eTest extends BaseE2eTest {
         clientId = optionalEnv("E2E_WALLET_CLIENT_ID", null);
         clientSecret = optionalEnv("E2E_WALLET_CLIENT_SECRET", null);
         audience = optionalEnv("E2E_WALLET_AUDIENCE", null);
+        scope = optionalEnv("E2E_WALLET_SCOPE", null);
         config =
             RestAssuredConfig.config()
                 .objectMapperConfig(
@@ -73,7 +70,10 @@ public class SearchE2eTest extends BaseE2eTest {
             .auth()
             .basic(clientId,clientSecret)
             .formParam("grant_type","client_credentials")
+            .formParam("client_id", clientId)
+            .formParam("client_secret", clientSecret)
             .formParam("audience",audience)
+            .formParam("scope", scope)
         .post()
             .then()
             .log()
