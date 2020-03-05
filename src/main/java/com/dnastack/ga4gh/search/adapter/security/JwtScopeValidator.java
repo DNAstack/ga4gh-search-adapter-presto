@@ -26,7 +26,7 @@ public class JwtScopeValidator implements OAuth2TokenValidator<Jwt> {
 
         if (tokenScope != null) {
             Collection scopeCollection;
-            if (!(tokenScope instanceof Collection)) {
+            if (tokenScope instanceof Collection) {
                 scopeCollection = (Collection) tokenScope;
             } else {
                 scopeCollection = Collections.singletonList(tokenScope);

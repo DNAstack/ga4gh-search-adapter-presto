@@ -31,4 +31,7 @@ public class AuthTokenResponse {
     @JsonProperty("resource")
     String resource;
 
+    @JsonProperty("scope")
+    String scope;
+
 }
