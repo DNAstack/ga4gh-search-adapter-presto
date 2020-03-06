@@ -28,6 +28,15 @@ To build the complete project do
 
 # Running
 
+## Quick Start
+You can quickly launch the server without authentication requirements, against a similarly anonymously-accessible 
+instance of presto, by running it with the following environment variables set: 
+
+|  Environment Variable  |           Value          | Notes                                        |
+|:----------------------:|:------------------------:|----------------------------------------------|
+|  PRESTO_DATASOURCE_URL | https://yourprestoserver | The https address of your presto server.     |
+| SPRING_PROFILES_ACTIVE |          no-auth         | The Search server is anonymously accessible. |
+
 ## Auth Profiles
 
 The app can be deployed using one of 3 different spring profiles which toggles authentication on or off. The default profile
@@ -81,7 +90,11 @@ SPRING_SECURITY_USER_PASSWORD={some-password}
 
 ## Presto Setup
 
-There is a number of required configuration properties that need to be set in order to communicate with a presto deployment. 
+There are a number of required configuration properties that need to be set in order to communicate with a presto deployment. 
+### Connectivity
+Point the service to a presto server by setting the following environment variable:
+>PRESTO_DATASOURCE_URL
+### Authentication
 Presto now requires a JWT signed by a valid issuer, in most cases this issuer will be a `wallet` deployment such as 
 https://wallet.prod.dnastack.com or https://wallet.staging.dnastack.com. To facilitate this, the search adapter must be
 a `client` of the target `token` issuer, and it will use the `client_credential` flow in order to retrieve an `access_token`
