@@ -6,9 +6,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @SpringBootApplication
-public class Application {
+public class Ga4ghSearchAdapterPrestoApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+        SpringApplication.run(Ga4ghSearchAdapterPrestoApplication.class, args);
     }
 }
