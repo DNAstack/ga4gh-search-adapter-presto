@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter;
+package com.dnastack.ga4gh.search;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
