@@ -82,6 +82,11 @@ public class PrestoHttpClient implements PrestoClient {
         }
 
         if (isQueryFailure(currentBody)) {
+            String errorMessage = (currentBody.hasNonNull("error")
+                    && currentBody.get("error").hasNonNull("message"))
+                    ? currentBody.get("error").get("message").asText()
+                    : "<no message>";
+            log.error("Query failed with message: " + errorMessage);
             return null;
         }
 

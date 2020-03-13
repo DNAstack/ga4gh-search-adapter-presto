@@ -64,6 +64,9 @@ public class SearchAdapter {
 
     public TableInfo getTableInfo(String tableName, String refHost) {
         TableData data = search("SELECT * FROM " + tableName + " LIMIT 1");
+        if (data == null) {
+            return null; //TODO: could do better than nulls ?
+        }
         data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
         return new TableInfo(tableName, null, data.getDataModel());
     }
@@ -135,11 +138,20 @@ public class SearchAdapter {
         for (Map<String, Object> catalog : data.getData()) {
             catalogs.add(catalog.get("Catalog").toString());
         }
+
         Map<String, List<String>> catalogSchemas = new HashMap<>();
         for (String catalog : catalogs) {
+            if (catalog.equalsIgnoreCase("system")) {
+                continue;
+            }
+
             List<String> schemas = new ArrayList<>();
             TableData schemaData = search("show schemas from " + catalog);
             for (Map<String, Object> schema : schemaData.getData()) {
+                if (schema.get("Schema").toString().equalsIgnoreCase("information_schema")) {
+                    continue;
+                }
+
                 schemas.add(schema.get("Schema").toString());
             }
             catalogSchemas.put(catalog, schemas);

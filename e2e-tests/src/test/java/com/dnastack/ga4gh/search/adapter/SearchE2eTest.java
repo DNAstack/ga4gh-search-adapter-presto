@@ -10,6 +10,7 @@ import io.restassured.http.ContentType;
 import io.restassured.mapper.ObjectMapperType;
 import io.restassured.specification.RequestSpecification;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.URI;
@@ -120,6 +121,7 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:on
     }
 
+    @Ignore("Search history is currently disabled.")
     @Test
     public void searchHistoryShouldReturnLastRequest(){
         SearchRequest request = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
@@ -197,6 +199,7 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:on
     }
 
+    @Ignore("Currently can't request your own page size.")
     @Test
     public void getTableData_PaginationShouldWork() {
         //@formatter:off

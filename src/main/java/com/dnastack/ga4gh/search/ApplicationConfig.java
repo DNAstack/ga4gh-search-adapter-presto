@@ -101,7 +101,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    @Profile("!basic-auth & !no-auth")
+    @Profile("default")
     public JwtDecoder jwtDecoder(AuthConfig authConfig) {
         List<IssuerConfig> issuers = authConfig.getTokenIssuers();
 
@@ -114,7 +114,7 @@ public class ApplicationConfig {
 
 
     @Bean
-    @Profile("!basic-auth & !no-auth")
+    @Profile("default")
     public WebSecurityConfigurerAdapter securityConfigurerBearerAuth() {
         return new WebSecurityConfigurerAdapter() {
             @Override
