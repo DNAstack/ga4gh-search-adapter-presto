@@ -65,24 +65,20 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:off
         return given(specification)
             .config(config)
-            .log()
-            .method()
+            .log().method()
             .log().all()
-            .auth()
-            .basic(clientId,clientSecret)
+            .auth().basic(clientId,clientSecret)
             .formParam("grant_type","client_credentials")
             .formParam("client_id", clientId)
             .formParam("client_secret", clientSecret)
             .formParam("audience",audience)
             .formParam("scope", scope)
-        .post()
-            .then()
-            .log()
-            .ifValidationFails()
+        .when()
+            .post()
+        .then()
+            .log().ifValidationFails()
             .statusCode(200)
-            .extract()
-            .jsonPath()
-            .getString("access_token");
+            .extract().jsonPath().getString("access_token");
         //@formatter:on
 
     }
@@ -118,37 +114,6 @@ public class SearchE2eTest extends BaseE2eTest {
             .log().ifValidationFails()
             .statusCode(200)
             .body("data_model", not(empty()));
-        //@formatter:on
-    }
-
-    @Ignore("Search history is currently disabled.")
-    @Test
-    public void searchHistoryShouldReturnLastRequest(){
-        SearchRequest request = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
-
-        //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
-            .body(request)
-        .when()
-            .post("/search")
-        .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .body("data_model", not(empty()));
-        //@formatter:on
-
-        //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
-            .body(request)
-        .when()
-            .get("/search/history")
-        .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .body("search_history.size()", greaterThanOrEqualTo(1))
-            .body("search_history[0].query",equalTo(request.getSqlQuery()));
         //@formatter:on
     }
 
