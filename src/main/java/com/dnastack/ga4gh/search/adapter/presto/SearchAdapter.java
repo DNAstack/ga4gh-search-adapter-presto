@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 
@@ -16,22 +17,24 @@ public class SearchAdapter {
 
     private final static String NEXT_PAGE_PATH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private final PrestoClient client;
+    private final Map<String, String> extraCredentials;
 
-    public SearchAdapter(PrestoClient prestoClient) {
+    public SearchAdapter(PrestoClient prestoClient, Map<String, String> extraCredentials) {
         this.client = prestoClient;
+        this.extraCredentials = extraCredentials;
     }
 
-    public TableData search(String statement) {
-        JsonNode response = client.query(statement);
+    public TableData search(String statement) throws IOException {
+        JsonNode response = client.query(statement, extraCredentials);
         return toTableData(response);
     }
 
-    public TableData getNextPage(String page) {
-        JsonNode data = client.next(page);
+    public TableData getNextPage(String page) throws IOException {
+        JsonNode data = client.next(page, extraCredentials);
         return toTableData(data);
     }
 
-    public ListTables getTables(String refHost) {
+    public ListTables getTables(String refHost) throws IOException {
         ListTables listTables = new ListTables();
         List<String> schemas = getPrestoSchemas();
         List<TableInfo> tableInfos = new ArrayList<>();
@@ -56,13 +59,13 @@ public class SearchAdapter {
         return listTables;
     }
 
-    public TableData getTableData(String tableName, String refHost) {
+    public TableData getTableData(String tableName, String refHost) throws IOException {
         TableData data = search("SELECT * FROM " + tableName);
         data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
         return data;
     }
 
-    public TableInfo getTableInfo(String tableName, String refHost) {
+    public TableInfo getTableInfo(String tableName, String refHost) throws IOException {
         TableData data = search("SELECT * FROM " + tableName + " LIMIT 1");
         if (data == null) {
             return null; //TODO: could do better than nulls ?
@@ -132,7 +135,7 @@ public class SearchAdapter {
         return schemaJson;
     }
 
-    private List<String> getPrestoSchemas() {
+    private List<String> getPrestoSchemas() throws IOException {
         TableData data = search("show catalogs");
         List<String> catalogs = new ArrayList<>();
         for (Map<String, Object> catalog : data.getData()) {

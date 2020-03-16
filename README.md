@@ -45,10 +45,51 @@ will be used if no other profile is activated. to set a profile simply set the s
 
 #### `default`
 
-The default profile will protect API routes with `bearer-only` authentication. This means that all requests must contain a signed
-JWT from one of the configured issuers. You can additionally set required scopes or audiences which will be used when validating
-the token claims.
+The default profile requires every inbound request to include an OAuth access token that was signed by the
+locally-deployed Wallet server.
 
+* start Wallet with its default settings
+
+```shell script
+cd $HOME/workspace
+git clone git@github.com:DNAstack/wallet.git
+cd wallet
+./mvnw spring-boot:run
+```
+
+* create an OAuth client that allows this service to talk to the local Gatekeeper that guards Presto
+```shell script
+cd $HOME/workspace/ga4gh-search-adapter-presto
+wallet_admin_token=$(curl -X POST -u wallet-bootstrap-administration-client:dev-secret-never-use-in-prod "http://localhost:8081/oauth/token?grant_type=client_credentials&audience=http://localhost:8081&scope=admin:client" | jq -r .access_token)
+curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: application/json" \
+   -d '{"id":"ga4gh-search-adapter-presto","secret":"dev-secret-never-use-in-prod","name":"GA4GH Search Adapter for Presto"}' \
+  http://localhost:8081/admin/clients
+curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: application/json" \
+   -d '{"audience":"http://presto.local","scopes":["metadata","query"]}' \
+  http://localhost:8081/admin/clients/ga4gh-search-adapter-presto/grants
+```
+
+* create an OAuth client that allows you (via Insomnia, curl, etc) to talk to this service
+```shell script
+cd $HOME/workspace/ga4gh-search-adapter-presto
+wallet_admin_token=$(curl -X POST -u wallet-bootstrap-administration-client:dev-secret-never-use-in-prod "http://localhost:8081/oauth/token?grant_type=client_credentials&audience=http://localhost:8081&scope=admin:client" | jq -r .access_token)
+curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: application/json" \
+   -d '{"id":"local-test-client","secret":"dev-secret-never-use-in-prod","name":"Local client for testing local services"}' \
+  http://localhost:8081/admin/clients
+curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: application/json" \
+   -d '{"audience":"http://ga4gh-search-adapter-presto.local","scopes":["read:data_model","read:data"]}' \
+  http://localhost:8081/admin/clients/local-test-client/grants
+```
+
+In each request to this service, include a bearer token obtained from Wallet:
+
+```shell script
+search_adapter_presto_token=$(curl -X POST -u local-test-client:dev-secret-never-use-in-prod "http://localhost:8081/oauth/token?grant_type=client_credentials&audience=http://ga4gh-search-adapter-presto.local" | jq -r .access_token)
+```
+
+##### Configuring a Deployment
+
+The built-in defaults are good for local development, but you will need to customize the settings in a real deployment. 
 Issuer configuration is easy and can be done from environment variables. Additionally, the api allows you to configure multiple
 issuers using either a `jwkset` endpoint or by passing in an actual `RSA` public key. This flexibility allows for adding
 token issuers which do not have a `jwkset` endpoint, such as the `DAM`. The configuration is described by the [AuthConfig](src/main/java/org/ga4gh/discovery/search/security/AuthConfig.java)

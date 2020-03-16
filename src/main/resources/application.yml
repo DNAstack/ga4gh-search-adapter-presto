@@ -28,20 +28,20 @@ app:
 #    encryption:
 #      rsa-key-pair: ----BEGIN PRIVATE KEY----.......
 
-# Sample Auth configuration
-#  auth:
-#    token-issuers:
-#      - issuer-uri: https://wallet.prod.dnastack.com
-#        jwk-set-uri: https://wallet.prod.dnastack.com/oauth/jwks
-#    presto-oauth-client:
-#      token-uri: https://wallet.staging.dnastack.com/oauth/token
-#      client-id: some-client
-#      client-secret: my-secret
-#      audience: the-audience
+  # Sample Auth configuration - works with local Wallet, Gatekeeper, Presto (see README.md)
+  auth:
+    token-issuers:
+      - issuer-uri: http://localhost:8081
+        jwk-set-uri: http://localhost:8081/oauth/jwks
+    presto-oauth-client:
+      token-uri: http://localhost:8081/oauth/token
+      client-id: ga4gh-search-adapter-presto
+      client-secret: dev-secret-never-use-in-prod
+      audience: http://presto.local
 
 presto:
   datasource:
-    url: "jdbc:presto://presto-public.staging.dnastack.com:443"
+    url: "http://localhost:8079"
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100

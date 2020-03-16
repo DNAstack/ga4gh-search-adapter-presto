@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
 
+import java.io.IOException;
+import java.util.Map;
+
 /***
  * Wraps a PrestoClient to add telemetry.
  */
@@ -24,13 +27,19 @@ public class PrestoTelemetryClient implements PrestoClient {
                 "The number of additional pages retrieved after an initial query.");
     }
 
-    public JsonNode query(String statement) {
+    public JsonNode query(String statement, Map<String, String> extraCredentials) throws IOException {
         queryCount.increment();
-        return queryLatency.record(() -> client.query(statement));
+        try {
+            return queryLatency.recordCallable(() -> client.query(statement, extraCredentials));
+        } catch (final IOException | RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected checked exception", e);
+        }
     }
 
-    public JsonNode next(String page) {
+    public JsonNode next(String page, Map<String, String> extraCredentials) throws IOException {
         pageCount.increment();
-        return client.next(page);
+        return client.next(page, extraCredentials);
     }
 }

@@ -39,11 +39,11 @@ public class DelegatingJwtDecoder implements JwtDecoder {
             JwtDecoder decoder;
             log.info("Registering issuer config for issuer: " + issuerConfig.getIssuerUri());
             if (issuerConfig.getJwkSetUri() != null) {
+                log.info("Using JwkSet at {}", issuerConfig.getJwkSetUri());
                 NimbusJwtDecoderJwkSupport nimbusJwtDecoderJwkSupport =
                     new NimbusJwtDecoderJwkSupport(issuerConfig.getJwkSetUri());
                 nimbusJwtDecoderJwkSupport.setJwtValidator(oauthValidator);
                 decoder = nimbusJwtDecoderJwkSupport;
-                log.info("Using JwkSet at {}");
             } else if (issuerConfig.getRsaPublicKey() != null) {
                 PublicKeyJwtDecoder publicKeyJwtDecoder = new PublicKeyJwtDecoder(issuerConfig.getRsaPublicKey());
                 publicKeyJwtDecoder.setJwtValidator(oauthValidator);

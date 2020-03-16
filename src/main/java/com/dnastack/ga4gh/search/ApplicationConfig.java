@@ -76,11 +76,6 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public SearchAdapter getPrestoSearchAdapter(PrestoClient prestoClient) {
-        return new SearchAdapter(prestoClient);
-    }
-
-    @Bean
     public PrestoClient getPrestoClient(ServiceAccountAuthenticator accountAuthenticator) {
         return new PrestoTelemetryClient(new PrestoHttpClient(prestoDatasourceUrl, accountAuthenticator));
     }
