@@ -260,7 +260,11 @@ public class BaseE2eTest {
     private static Optional<HttpAuthChallenge> extractAuthChallengeHeader(Response response) {
         String authChallengeString = response.header("WWW-Authenticate");
         if (authChallengeString != null) {
-            return Optional.of(HttpAuthChallenge.fromString(authChallengeString));
+            try {
+                return Optional.of(HttpAuthChallenge.fromString(authChallengeString));
+            } catch (final Exception e) {
+                throw new AssertionError("Failed to parse WWW-Authenticate header [" + authChallengeString + "]", e);
+            }
         }
         return Optional.empty();
     }

@@ -12,7 +12,7 @@ public class HttpAuthChallenge {
     String scheme;
     Map<String, String> params;
 
-    private enum ParseState {READ_SCHEME, READ_KEY, DECIDE_VALUE_TYPE, READ_QUOTED_VALUE, READ_UNQUOTED_VALUE}
+    private enum ParseState {READ_SCHEME, SCAN_FOR_KEY, READ_KEY, DECIDE_VALUE_TYPE, READ_QUOTED_VALUE, READ_UNQUOTED_VALUE}
 
     public static HttpAuthChallenge fromString(String headerValue) {
         StringBuilder sb = new StringBuilder();
@@ -33,6 +33,17 @@ public class HttpAuthChallenge {
                         sb.append(ch);
                     }
                     break;
+                case SCAN_FOR_KEY:
+                    if (ch == ' ') {
+                        // skip spaces between keys (value separators)
+                    } else if (ch == ',') {
+                        // skip commas (value separators)
+                    } else {
+                        sb = new StringBuilder();
+                        sb.append(ch);
+                        state = ParseState.READ_KEY;
+                    }
+                    break;
                 case READ_KEY:
                     if (ch == '=') {
                         currentKey = sb.toString();
@@ -44,9 +55,7 @@ public class HttpAuthChallenge {
                     break;
                 case DECIDE_VALUE_TYPE:
                     if (ch == ' ') {
-                        // skip spaces
-                    } else if (ch == ',') {
-                        // skip commas (value separators)
+                        // skip spaces (although they should actually be illegal here)
                     } else if (ch == '"') {
                         state = ParseState.READ_QUOTED_VALUE;
                     } else {
@@ -58,7 +67,7 @@ public class HttpAuthChallenge {
                         params.put(requireNonNull(currentKey), sb.toString());
                         currentKey = null;
                         sb = new StringBuilder();
-                        state = ParseState.DECIDE_VALUE_TYPE;
+                        state = ParseState.SCAN_FOR_KEY;
                     } else {
                         sb.append(ch);
                     }
@@ -68,7 +77,7 @@ public class HttpAuthChallenge {
                         params.put(requireNonNull(currentKey), sb.toString());
                         currentKey = null;
                         sb = new StringBuilder();
-                        state = ParseState.DECIDE_VALUE_TYPE;
+                        state = ParseState.SCAN_FOR_KEY;
                     } else if (ch == '\\') {
                         i++;
                         ch = headerValue.charAt(i);
@@ -86,8 +95,9 @@ public class HttpAuthChallenge {
                 scheme = sb.toString();
                 break;
             case READ_KEY:
-                throw new IllegalArgumentException("key without value in " + headerValue);
             case DECIDE_VALUE_TYPE:
+                throw new IllegalArgumentException("key without value in " + headerValue);
+            case SCAN_FOR_KEY:
                 // this is good. we are between key/value pairs.
                 break;
             case READ_QUOTED_VALUE:
