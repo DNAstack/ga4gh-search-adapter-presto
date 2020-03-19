@@ -22,6 +22,11 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/e2e-tests.jar</systemPath>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.25</version>
+        </dependency>
 
         <!-- Surefire guesses at which JUnit version to use based on project dependencies -->
         <dependency>
@@ -35,7 +40,9 @@
         <plugins>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>2.21.0</version>
+                <!-- This version fixes a path issue when trying to fork a surefire test VM
+                     https://stackoverflow.com/a/53016532 -->
+                <version>3.0.0-M1</version>
                 <configuration>
 
                     <!-- Tells surefire to run the tests in our fat jar -->
@@ -51,6 +58,8 @@
                     <!-- Forking doesn't work when we use dependenciesToScan (child VM dies with ClassNotFoundError) -->
                     <forkCount>0</forkCount>
 
+                    <trimStackTrace>false</trimStackTrace>
+
                 </configuration>
             </plugin>
             <plugin>
@@ -64,7 +73,7 @@
                         <DynamicDependency>
                             <groupId>org.apache.maven.surefire</groupId>
                             <artifactId>surefire-junit4</artifactId>
-                            <version>2.21.0</version>
+                            <version>3.0.0-M1</version>
                             <repositoryType>PLUGIN</repositoryType>
                         </DynamicDependency>
                     </dynamicDependencies>
