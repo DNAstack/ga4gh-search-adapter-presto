@@ -28,17 +28,6 @@ app:
 #    encryption:
 #      rsa-key-pair: ----BEGIN PRIVATE KEY----.......
 
-  # Sample Auth configuration - works with local Wallet, Gatekeeper, Presto (see README.md)
-  auth:
-    token-issuers:
-      - issuer-uri: http://localhost:8081
-        jwk-set-uri: http://localhost:8081/oauth/jwks
-    presto-oauth-client:
-      token-uri: http://localhost:8081/oauth/token
-      client-id: ga4gh-search-adapter-presto
-      client-secret: dev-secret-never-use-in-prod
-      audience: http://presto.local
-
 presto:
   datasource:
     url: "http://localhost:8079"
@@ -58,6 +47,23 @@ spring:
 logging:
   level:
     com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient: DEBUG # logs queries when search fails
+
+---
+
+spring:
+  profiles: default
+
+app:
+  # Sample Auth configuration - works with local Wallet, Gatekeeper, Presto (see README.md)
+  auth:
+    token-issuers:
+      - issuer-uri: http://localhost:8081
+        jwk-set-uri: http://localhost:8081/oauth/jwks
+    presto-oauth-client:
+      token-uri: http://localhost:8081/oauth/token
+      client-id: ga4gh-search-adapter-presto
+      client-secret: dev-secret-never-use-in-prod
+      audience: http://presto.local
 
 ---
 
