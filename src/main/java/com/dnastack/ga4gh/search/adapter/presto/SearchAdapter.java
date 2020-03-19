@@ -36,18 +36,21 @@ public class SearchAdapter {
 
     public ListTables getTables(String refHost) throws IOException {
         ListTables listTables = new ListTables();
-        List<String> schemas = getPrestoSchemas();
+        List<String> catalogs = getPrestoCatalogs();
         List<TableInfo> tableInfos = new ArrayList<>();
-        for (String schema : schemas) {
-            String statement = "SHOW TABLES FROM " + schema;
+        for (String catalog : catalogs) {
+            String statement =
+                    "SELECT table_catalog, table_schema, table_name" +
+                    " FROM " + quote(catalog) + ".information_schema.tables" +
+                    " ORDER BY 1, 2, 3";
             TableData tableData = search(statement);
-            if (tableData == null) { //TODO: better way of handling this sitaution
-                log.warn("Schema " + schema + "'s tables were not retrievable!");
-                continue;
+            if (tableData == null) {
+                throw new IOException("Got null response from backend when listing tables in " + catalog);
             }
-            for (Map<String, Object> data : tableData.getData()) {
-                String table = data.get("Table").toString();
-                String qualifiedTableName = schema + "." + table;
+            for (Map<String, Object> row : tableData.getData()) {
+                String schema = (String) row.get("table_schema");
+                String table = (String) row.get("table_name");
+                String qualifiedTableName = catalog + "." + schema + "." + table;
                 String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
                 Map<String, Object> dataModel = new HashMap<>();
                 dataModel.put("$ref", ref);
@@ -59,6 +62,10 @@ public class SearchAdapter {
         return listTables;
     }
 
+    private static String quote(String sqlIdentifier) {
+        return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
+    }
+
     public TableData getTableData(String tableName, String refHost) throws IOException {
         TableData data = search("SELECT * FROM " + tableName);
         data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
@@ -67,18 +74,11 @@ public class SearchAdapter {
 
     public TableInfo getTableInfo(String tableName, String refHost) throws IOException {
         TableData data = search("SELECT * FROM " + tableName + " LIMIT 1");
-        if (data == null) {
-            return null; //TODO: could do better than nulls ?
-        }
         data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
         return new TableInfo(tableName, null, data.getDataModel());
     }
 
     private TableData toTableData(JsonNode prestoResponse) {
-        if (prestoResponse == null) {
-            return null;
-        }
-
         JsonNode columns = prestoResponse.get("columns");
         Map<String, Object> generatedSchema = generateDataModel(columns);
         List<Map<String, Object>> data = new ArrayList<>();
@@ -135,37 +135,19 @@ public class SearchAdapter {
         return schemaJson;
     }
 
-    private List<String> getPrestoSchemas() throws IOException {
-        TableData data = search("show catalogs");
+    private List<String> getPrestoCatalogs() throws IOException {
+        TableData showCatalogs = search("show catalogs");
         List<String> catalogs = new ArrayList<>();
-        for (Map<String, Object> catalog : data.getData()) {
-            catalogs.add(catalog.get("Catalog").toString());
-        }
-
-        Map<String, List<String>> catalogSchemas = new HashMap<>();
-        for (String catalog : catalogs) {
+        for (Map<String, Object> row : showCatalogs.getData()) {
+            String catalog = (String) row.get("Catalog");
             if (catalog.equalsIgnoreCase("system")) {
+                log.debug("Ignoring catalog {}", catalog);
                 continue;
             }
-
-            List<String> schemas = new ArrayList<>();
-            TableData schemaData = search("show schemas from " + catalog);
-            for (Map<String, Object> schema : schemaData.getData()) {
-                if (schema.get("Schema").toString().equalsIgnoreCase("information_schema")) {
-                    continue;
-                }
-
-                schemas.add(schema.get("Schema").toString());
-            }
-            catalogSchemas.put(catalog, schemas);
+            log.debug("Found catalog {}", catalog);
+            catalogs.add(catalog);
         }
-        List<String> qualifiedSchemas = new ArrayList<>();
-        catalogSchemas.forEach((catalog, schemas) -> {
-            for (String schema : schemas) {
-                qualifiedSchemas.add(catalog + "." + schema);
-            }
-        });
 
-        return qualifiedSchemas;
+        return catalogs;
     }
 }

@@ -55,6 +55,9 @@ spring:
     username: ga4gh-search-adapter-presto
     password: ""
     url: jdbc:postgresql://localhost/ga4gh-search-adapter-presto
+logging:
+  level:
+    com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient: DEBUG # logs queries when search fails
 
 ---
 

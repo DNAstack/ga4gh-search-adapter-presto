@@ -2,6 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.tables.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ public class SearchController {
     @Autowired
     PrestoClient prestoClient;
 
+    @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
     public TableData search(@RequestBody SearchRequest request,
                             @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
@@ -23,6 +25,7 @@ public class SearchController {
                 .search(request.getSqlQuery());
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
     public TableData getNextPaginatedResponse(HttpServletRequest request,
                                               @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {

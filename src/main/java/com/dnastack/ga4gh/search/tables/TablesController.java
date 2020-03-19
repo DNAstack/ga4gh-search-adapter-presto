@@ -8,6 +8,7 @@ import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -21,6 +22,7 @@ public class TablesController {
     @Autowired
     PrestoClient client;
 
+    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ListTables getTables(@RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
         return new SearchAdapter(client, SearchController.parseCredentialsHeader(clientSuppliedCredentials))
@@ -28,6 +30,7 @@ public class TablesController {
     }
 
 
+    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public TableInfo getTableInfo(@PathVariable("table_name") String tableName,
                                   @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
@@ -35,6 +38,7 @@ public class TablesController {
                 .getTableInfo(tableName, ServletUriComponentsBuilder.fromCurrentContextPath().toUriString());
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
     public TableData getTableData(@PathVariable("table_name") String tableName,
                                   @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {

@@ -70,6 +70,7 @@ curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: 
 ```
 
 * create an OAuth client that allows you (via Insomnia, curl, etc) to talk to this service
+  (note that `junk_scope` is required for the E2E test suite to verify scope handling on the table schema endpoints)
 ```shell script
 cd $HOME/workspace/ga4gh-search-adapter-presto
 wallet_admin_token=$(curl -X POST -u wallet-bootstrap-administration-client:dev-secret-never-use-in-prod "http://localhost:8081/oauth/token?grant_type=client_credentials&audience=http://localhost:8081&scope=admin:client" | jq -r .access_token)
@@ -77,7 +78,7 @@ curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: 
    -d '{"id":"local-test-client","secret":"dev-secret-never-use-in-prod","name":"Local client for testing local services"}' \
   http://localhost:8081/admin/clients
 curl -X POST -H "Authorization: Bearer ${wallet_admin_token}" -H "Content-Type: application/json" \
-   -d '{"audience":"http://ga4gh-search-adapter-presto.local","scopes":["read:data_model","read:data"]}' \
+   -d '{"audience":"http://ga4gh-search-adapter-presto.local","scopes":["read:data_model","read:data","junk_scope"]}' \
   http://localhost:8081/admin/clients/local-test-client/grants
 ```
 

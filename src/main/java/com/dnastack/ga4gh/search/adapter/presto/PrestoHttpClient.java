@@ -1,6 +1,8 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
+import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,6 +21,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 @Slf4j
 public class PrestoHttpClient implements PrestoClient {
@@ -42,31 +46,24 @@ public class PrestoHttpClient implements PrestoClient {
 
     public JsonNode query(String statement, Map<String, String> extraCredentials) throws IOException {
         try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-            if (!response.isSuccessful()) { //todo: need this condition?
-                return null; //TODO: better failure logic (503s?)
-            }
-
-            return waitForQueryResults(response, 0, extraCredentials);
+            return pollForQueryResults(response, 0, extraCredentials);
+        } catch (final AuthRequiredException e) {
+            log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
+            throw e;
+        } catch (final Exception e) {
+            log.debug("Failing query (rethrowing " + e + "): " + statement);
+            throw e;
         }
     }
 
     public JsonNode next(String page, Map<String, String> extraCredentials) throws IOException {
         //TODO: better url construction
         try (Response response =  get(this.prestoServer + "/" + page, extraCredentials)) {
-            if (response.body() == null) {
-                log.info("Got null response from Presto on page {}. All done?", page);
-                return null; // Got all content
-            }
-            JsonNode body = objectMapper.readTree(response.body().string());
-            return isQuerySuccess(body) ? body : null;
+            return pollForQueryResults(response, 0, extraCredentials);
         }
     }
 
-    private boolean isQuerySuccess(JsonNode node) {
-        return node.has("columns");
-    }
-
-    private Map<String, Object> extractExtraCredentialsRequest(JsonNode node) {
+    private SearchAuthRequest extractExtraCredentialsRequest(JsonNode node) {
         JsonNode error = node.get("error");
         if (error != null &&
                 Objects.equals(error.get("errorName").asText(), "RESOURCE_AUTH_REQUIRED")) {
@@ -77,7 +74,12 @@ public class PrestoHttpClient implements PrestoClient {
                 throw new RuntimeException("This looks like an auth challenge from Presto, but the auth challenge payload could not be found in " + embeddedJson);
             }
             try {
-                return objectMapper.readValue(embeddedJson, MAP_TYPE_REFERENCE);
+                Map<String, String> fromPresto = objectMapper.readValue(embeddedJson, MAP_TYPE_REFERENCE);
+                String key = requireNonNull(fromPresto.remove("extra-credentials-key"),
+                        "Coudn't find extra-credentials-key in auth request from backend");
+                String resourceType = requireNonNull(fromPresto.remove("resource-type"),
+                        "Coudn't find resource-type in auth request from backend");
+                return new SearchAuthRequest(key, resourceType, fromPresto);
             } catch (IOException e) {
                 throw new RuntimeException("The backend requested additional auth info but it couldn't be parsed as a JSON object: " + embeddedJson);
             }
@@ -112,49 +114,67 @@ public class PrestoHttpClient implements PrestoClient {
         }
     }
 
-    private boolean isQueryFailure(JsonNode node) {
-        return (node.hasNonNull("stats") &&
-                node.get("stats").hasNonNull("state") &&
-                node.get("stats").get("state").asText().equalsIgnoreCase("failed"))
-                ||
-                !node.hasNonNull("nextUri");
+    /**
+     * Returns the value of JSON node {@code stats.state}, or the special string {@code "(no state in response)"}
+     * if that node doesn't exist.
+     *
+     * @param node the node to start the search at (usually the root of the Presto response)
+     * @return the state under the given node or the special {@code "(no state in response)"}. Never null.
+     */
+    private String extractState(JsonNode node) {
+        if (node.hasNonNull("stats")) {
+            return node.get("stats").get("state").asText();
+        }
+        return "(no state in response)";
     }
 
-    private JsonNode waitForQueryResults(Response currentResponse, int currentRetry, Map<String, String> extraCredentials) throws IOException {
-        if (!currentResponse.isSuccessful()) {
-            throw new PrestoQueryFailedException(currentResponse.code(), currentResponse.body().string());
+    private JsonNode pollForQueryResults(Response httpResponse, int currentRetry, Map<String, String> extraCredentials) throws IOException {
+        if (httpResponse.body() == null) {
+            throw new PrestoQueryFailedException(
+                    httpResponse.code(),
+                    "No response body received from backend - status line was " + httpResponse.code() + " " + httpResponse.message());
         }
 
-        if (currentResponse.body() == null) {
-            throw new PrestoQueryFailedException(currentResponse.code(), "No response body received from backend");
+        String httpResponseBody = httpResponse.body().string();
+
+        if (!httpResponse.isSuccessful()) {
+            throw new PrestoQueryFailedException(httpResponse.code(), httpResponseBody);
         }
 
-        JsonNode currentBody = objectMapper.readTree(currentResponse.body().string());
-        if (isQuerySuccess(currentBody)) {
-            return currentBody;
-        }
+        JsonNode jsonBody = objectMapper.readTree(httpResponseBody);
+        String prestoState = extractState(jsonBody);
+        log.debug("Attempt {} - state is {}", currentRetry, prestoState);
 
-        Map<String, Object> credentialsRequest = extractExtraCredentialsRequest(currentBody);
-        if (credentialsRequest != null) {
-            throw new AuthRequiredException(credentialsRequest);
-        }
+        switch (prestoState) {
+            case "FAILED":
+                SearchAuthRequest credentialsRequest = extractExtraCredentialsRequest(jsonBody);
+                if (credentialsRequest != null) {
+                    throw new AuthRequiredException(credentialsRequest);
+                }
 
-        if (isQueryFailure(currentBody)) {
-            String errorMessage = (currentBody.hasNonNull("error")
-                    && currentBody.get("error").hasNonNull("message"))
-                    ? currentBody.get("error").get("message").asText()
-                    : "<no message>";
-            throw new PrestoQueryFailedException(currentResponse.code(), currentBody.toString());
-        }
+                Object error = jsonBody.get("error");
+                if (error == null) {
+                    error = httpResponseBody;
+                }
+                throw new PrestoQueryFailedException(httpResponse.code(), error.toString());
 
-        if (currentRetry > MAX_RETRIES) {
-            throw new PrestoQueryFailedException(currentResponse.code(), "Maximum backend retries exceeded");
-        }
+            case "RUNNING":
+            case "FINISHED":
+                assert (jsonBody.hasNonNull("columns"));
+                return jsonBody;
 
-        backoff(currentRetry);
-        try (Response response = get(currentBody.get("nextUri").asText(), extraCredentials)) {
-            // todo don't recurse. also, close previous response before making next request.
-            return waitForQueryResults(response, ++currentRetry, extraCredentials);
+            default:
+                log.debug("Attempt {} - still waiting for a result", currentRetry);
+
+                if (currentRetry >= MAX_RETRIES) {
+                    throw new PrestoQueryFailedException(httpResponse.code(), "Maximum backend retries exceeded");
+                }
+
+                backoff(currentRetry);
+                try (Response response = get(jsonBody.get("nextUri").asText(), extraCredentials)) {
+                    // todo don't recurse. also, close previous response before making next request.
+                    return pollForQueryResults(response, ++currentRetry, extraCredentials);
+                }
         }
     }
 

@@ -4,11 +4,12 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
 
-import java.net.URI;
+import java.util.Map;
 
 @Data
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
-public class Pagination {
-    private URI nextPageUrl;
-    private URI previousPageUrl;
+@JsonNaming(PropertyNamingStrategy.KebabCaseStrategy.class)
+public class SearchAuthRequest {
+    String key;
+    String resourceType;
+    Map<String, String> resourceDescription;
 }

@@ -1,175 +1,104 @@
 package com.dnastack.ga4gh.search.adapter;
 
+import com.dnastack.ga4gh.search.adapter.test.model.ListTableResponse;
 import com.dnastack.ga4gh.search.adapter.test.model.SearchRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.dnastack.ga4gh.search.adapter.test.model.Table;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.config.ObjectMapperConfig;
-import io.restassured.config.RestAssuredConfig;
 import io.restassured.http.ContentType;
-import io.restassured.mapper.ObjectMapperType;
-import io.restassured.specification.RequestSpecification;
-import org.junit.BeforeClass;
+import io.restassured.http.Method;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assume.assumeThat;
 
+@Slf4j
 public class SearchE2eTest extends BaseE2eTest {
 
-    private static RestAssuredConfig config;
-    private static String clientId;
-    private static String clientSecret;
-    private static String audience;
-    private static String scope;
-    private static String table;
-
-    @BeforeClass
-    public static void beforeClass() {
-
-        clientId = optionalEnv("E2E_WALLET_CLIENT_ID", null);
-        clientSecret = optionalEnv("E2E_WALLET_CLIENT_SECRET", null);
-        audience = optionalEnv("E2E_WALLET_AUDIENCE", null);
-        scope = optionalEnv("E2E_WALLET_SCOPE", null);
-        config =
-            RestAssuredConfig.config()
-                .objectMapperConfig(
-                    ObjectMapperConfig.objectMapperConfig()
-                        .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
-                        .jackson2ObjectMapperFactory(
-                            (cls, charset) -> new ObjectMapper()));
-
-        table = optionalEnv("E2E_TABLE", getE2eTable());
-    }
-
-    private static String getE2eTable() {
-        //@formatter:off
-        return
-            getRequest()
-                .contentType(ContentType.JSON)
-            .when()
-                    .get("/tables")
-            .path("tables[0].name").toString();
-        //@formatter:on
-
-    }
-
-    private static String getToken() {
-        RequestSpecification specification = new RequestSpecBuilder().setBaseUri(requiredEnv("E2E_WALLET_TOKEN_URI"))
-            .build();
-
-        //@formatter:off
-        return given(specification)
-            .config(config)
-            .log().method()
-            .log().all()
-            .auth().basic(clientId,clientSecret)
-            .formParam("grant_type","client_credentials")
-            .formParam("client_id", clientId)
-            .formParam("client_secret", clientSecret)
-            .formParam("audience",audience)
-            .formParam("scope", scope)
-        .when()
-            .post()
-        .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .extract().jsonPath().getString("access_token");
-        //@formatter:on
-
-    }
-
-    private static RequestSpecification getRequest() {
-        if (clientId != null && clientSecret != null) {
-            return given()
-                .config(config)
-                .log().method()
-                .log().uri()
-                .auth().oauth2(getToken());
-        } else {
-            return given()
-                .config(config)
-                .log().method()
-                .log().uri();
-        }
-    }
-
-
     @Test
-    public void sqlQueryShouldFindSomething() {
+    public void sqlQueryShouldFindSomething() throws Exception {
 
-        SearchRequest request = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
+        SearchRequest query = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
+        log.info("Running query {}", query);
 
-        //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
-            .body(request)
-        .when()
-            .post("/search")
-        .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .body("data_model", not(empty()));
-        //@formatter:on
+        Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
+        assertThat(result, not(nullValue()));
+        assertThat(result.getDataModel().entrySet(), hasSize(greaterThan(0)));
     }
 
     @Test
-    public void listingTables_ShouldContainTables() {
+    public void getTables_should_returnAtLeastOneTable() throws Exception {
+        ListTableResponse listTableResponse = searchApiGetRequest("/tables", 200, ListTableResponse.class);
+        assertThat(listTableResponse, not(nullValue()));
+        assertThat(listTableResponse.getTables(), hasSize(greaterThan(0)));
+    }
+
+    @Test
+    public void getTableInfo_should_returnTableAndSchema() throws Exception {
+        Table tableInfo = searchApiGetRequest("/table/" + table + "/info", 200, Table.class);
+        assertThat(tableInfo, not(nullValue()));
+        assertThat(tableInfo.getName(), equalTo(table));
+        assertThat(tableInfo.getDataModel(), not(nullValue()));
+        assertThat(tableInfo.getDataModel().entrySet(), not(empty()));
+    }
+
+    @Test
+    public void getTableData_should_returnDataAndDataModel() throws Exception {
+        Table tableData = searchApiGetRequest("/table/" + table + "/data", 200, Table.class);
+        List<Map<String, Object>> rows = searchApiGetAllPages(tableData);
+        assertThat(tableData, not(nullValue()));
+        assertThat(rows, not(nullValue()));
+        assertThat(rows, not(empty()));
+        assertThat(tableData.getDataModel(), not(nullValue()));
+        assertThat(tableData.getDataModel().entrySet(), not(empty()));
+    }
+
+    @Test
+    public void getTables_should_require_readDataModel_or_readData_scope() throws Exception {
+        assumeThat(walletClientId, notNullValue());
+        assumeThat(walletClientSecret, notNullValue());
 
         //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
+        givenAuthenticatedRequest("junk_scope")
         .when()
             .get("/tables")
         .then()
             .log().ifValidationFails()
-            .statusCode(200)
-            .body("tables.size()",greaterThan(0));
+            .statusCode(403)
+            .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
         //@formatter:on
     }
 
     @Test
-    public void getTableInfo_ShouldReturnTableAndSchema() {
+    public void getTableData_should_require_readData_scope() throws Exception {
+        assumeThat(walletClientId, notNullValue());
+        assumeThat(walletClientSecret, notNullValue());
 
         //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
+        givenAuthenticatedRequest("read:data_model") // but not read:data
         .when()
-            .get("/table/{table_name}/info",table)
+            .get("/table/{tableName}/data", table)
         .then()
             .log().ifValidationFails()
-            .statusCode(200)
-            .body("name",equalTo(table))
-            .body("data_model",not(empty()));
-        //@formatter:on
-    }
-
-    @Test
-    public void getTableData_shouldReturnDataAndDataModel() {
-
-        //@formatter:off
-        getRequest()
-            .contentType(ContentType.JSON)
-        .when()
-            .get("/table/{table_name}/data",table)
-        .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .body("data.size()",greaterThan(0))
-            .body("data_model",not(empty()));
+            .statusCode(403)
+            .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
         //@formatter:on
     }
 
     @Ignore("Currently can't request your own page size.")
     @Test
-    public void getTableData_PaginationShouldWork() {
+    public void getTableData_PaginationShouldWork() throws Exception {
         //@formatter:off
         ObjectNode tableData =
-                getRequest()
+                givenAuthenticatedRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",2)
                 .when()
@@ -185,7 +114,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
         //@formatter:off
         ObjectNode firstPage =
-                getRequest()
+                givenAuthenticatedRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",1)
                 .when()
@@ -203,7 +132,7 @@ public class SearchE2eTest extends BaseE2eTest {
         String nextPageUrl = URI.create(firstPage.get("pagination").get("next_page_url").asText()).getPath();
         //@formatter:off
         ObjectNode secondPage =
-                getRequest()
+                givenAuthenticatedRequest()
                     .contentType(ContentType.JSON)
                     .queryParam("pageSize",2)
                 .when()
