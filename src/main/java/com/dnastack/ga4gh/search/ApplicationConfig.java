@@ -1,22 +1,20 @@
 package com.dnastack.ga4gh.search;
 
-import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
-import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient;
-import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
+import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -30,7 +28,6 @@ import java.util.List;
 
 @Slf4j
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
 @Configuration
 public class ApplicationConfig {
 
