@@ -205,19 +205,26 @@ public class PrestoHttpClient implements PrestoClient {
         request.header("X-Presto-User", getUserNameForRequest());
         extraCredentials.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k+"="+v));
         if (!authenticator.requiresAuthentication()) {
-            return new OkHttpClient().newCall(request.build()).execute();
+            Request r = request.build();
+            log.info(">>> {} {} (No Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials.size());
+            return new OkHttpClient().newCall(r).execute();
         }
 
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
-        Response firstTry = new OkHttpClient().newCall(request.build()).execute();
+        Request r = request.build();
+        log.info(">>> {} {} (With Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials.size());
+        Response firstTry = new OkHttpClient().newCall(r).execute();
         if (firstTry.code() != 401 && firstTry.code() != 403) {
             return firstTry;
         }
+        log.info("Got {}. Will refresh access token and retry.", firstTry.code());
         firstTry.close();
 
         authenticator.refreshAccessToken();
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
-        return new OkHttpClient().newCall(request.build()).execute();
+        r = request.build();
+        log.info(">>> {} {} (With refreshed Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials.size());
+        return new OkHttpClient().newCall(r).execute();
     }
 
     /**
