@@ -12,29 +12,20 @@
  */
 package com.dnastack.ga4gh.search.adapter.security;
 
-import static org.springframework.security.jwt.codec.Codecs.b64Decode;
-import static org.springframework.security.jwt.codec.Codecs.utf8Encode;
+import org.bouncycastle.asn1.ASN1Sequence;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
 import java.security.interfaces.RSAPrivateCrtKey;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.RSAPrivateCrtKeySpec;
-import java.security.spec.RSAPublicKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.*;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.bouncycastle.asn1.ASN1Sequence;
 
 /**
  * Reads RSA key pairs using BC provider classes but without the need to specify a crypto provider or have BC added as
@@ -56,7 +47,7 @@ public class RsaKeyHelper {
         }
 
         String type = m.group(1);
-        final byte[] content = b64Decode(utf8Encode(m.group(2)));
+        final byte[] content = Base64.getMimeDecoder().decode(m.group(2).getBytes(StandardCharsets.UTF_8));
 
         PublicKey publicKey;
         PrivateKey privateKey = null;
@@ -69,11 +60,11 @@ public class RsaKeyHelper {
                     throw new IllegalArgumentException("Invalid RSA Private Key ASN1 sequence.");
                 }
                 org.bouncycastle.asn1.pkcs.RSAPrivateKey key = org.bouncycastle.asn1.pkcs.RSAPrivateKey
-                    .getInstance(seq);
+                        .getInstance(seq);
                 RSAPublicKeySpec pubSpec = new RSAPublicKeySpec(key.getModulus(), key.getPublicExponent());
                 RSAPrivateCrtKeySpec privSpec = new RSAPrivateCrtKeySpec(key.getModulus(), key.getPublicExponent(),
-                    key.getPrivateExponent(), key.getPrime1(), key.getPrime2(), key.getExponent1(), key.getExponent2(),
-                    key.getCoefficient());
+                        key.getPrivateExponent(), key.getPrime1(), key.getPrime2(), key.getExponent1(), key.getExponent2(),
+                        key.getCoefficient());
                 publicKey = fact.generatePublic(pubSpec);
                 privateKey = fact.generatePrivate(privSpec);
             } else if (type.equals("PRIVATE KEY")) {
@@ -134,7 +125,7 @@ public class RsaKeyHelper {
 
     private static RSAPublicKey parseSSHPublicKey(String encKey) {
         final byte[] PREFIX = new byte[]{0, 0, 0, 7, 's', 's', 'h', '-', 'r', 's', 'a'};
-        ByteArrayInputStream in = new ByteArrayInputStream(b64Decode(utf8Encode(encKey)));
+        ByteArrayInputStream in = new ByteArrayInputStream(Base64.getDecoder().decode(encKey.getBytes(StandardCharsets.UTF_8)));
 
         byte[] prefix = new byte[11];
 
