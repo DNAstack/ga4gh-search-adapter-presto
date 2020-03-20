@@ -43,6 +43,7 @@
     <version.spring.boot>2.1.8.RELEASE</version.spring.boot>
     <version.guava>27.1-jre</version.guava>
     <version.nimbus>8.6</version.nimbus>
+    <version.bouncy.castle>1.64</version.bouncy.castle>
   </properties>
 
 
@@ -64,17 +65,17 @@
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-jose</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-resource-server</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.security.oauth.boot</groupId>
-      <artifactId>spring-security-oauth2-autoconfigure</artifactId>
-      <version>2.1.4.RELEASE</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>${version.bouncy.castle}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
