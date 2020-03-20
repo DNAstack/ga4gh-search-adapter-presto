@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.function.Supplier;
 
 import static io.restassured.RestAssured.given;
+import static io.restassured.RestAssured.request;
 import static io.restassured.http.Method.GET;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.Matchers.greaterThan;
@@ -186,6 +187,10 @@ public class BaseE2eTest {
                 log.info("Got auth challenge header {}", wwwAuthenticate);
                 if (!wwwAuthenticate.isPresent()) {
                     throw new AssertionError("Got HTTP 401 without WWW-Authenticate header");
+                }
+
+                if ("invalid_token".equals(wwwAuthenticate.get().getParams().get("error"))) {
+                    log.info("Try running again with E2E_LOG_TOKENS=true to see what's wrong");
                 }
 
                 assertThat(wwwAuthenticate.get().getScheme(), is("GA4GH-Search"));
