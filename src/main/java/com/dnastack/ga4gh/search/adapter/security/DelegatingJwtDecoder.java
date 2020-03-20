@@ -92,11 +92,6 @@ public class DelegatingJwtDecoder implements JwtDecoder {
             validators.add(new JwtAudienceValidator(aud));
         }
 
-        List<String> scopes = issuerConfig.getScopes();
-        if (scopes != null && !scopes.isEmpty()) {
-            validators.add(new JwtScopeValidator(scopes));
-        }
-
         return new DelegatingOAuth2TokenValidator<>(validators);
     }
 

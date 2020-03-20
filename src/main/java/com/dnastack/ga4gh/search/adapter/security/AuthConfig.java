@@ -1,11 +1,12 @@
 package com.dnastack.ga4gh.search.adapter.security;
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Getter
@@ -28,12 +29,6 @@ public class AuthConfig {
          * The issuerUri this configuration applies to
          */
         String issuerUri;
-
-        /**
-         * The required scopes to test the JWT against. If this is set, the JWT must contain a claim with the associated
-         * scopes
-         */
-        List<String> scopes = new ArrayList<>();
 
         /**
          * The audience to test the JWT against. If this is set, the JWT must be issued for the appropriate audiences
