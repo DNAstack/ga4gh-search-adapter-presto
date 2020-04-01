@@ -212,9 +212,10 @@ public class BaseE2eTest {
                         .extract().as(responseType);
             } else {
                 response.then()
-                        .log().all();
+                        .log().headers();
                 throw new AssertionError("Unexpected response status " + response.getStatusCode() +
-                        " (sent " + method + " " + path + ", expecting " + expectedStatus + " with a body that maps to " + responseType.getName() + ")");
+                        " (sent " + method + " " + path + ", expecting " + expectedStatus + " with a body that maps to " + responseType.getName() + ")." +
+                        " Actual response headers: " + response.headers() + "; body: " + response.asString());
             }
         }
         throw new AssertionError(
@@ -308,8 +309,7 @@ public class BaseE2eTest {
         //@formatter:off
         RequestSpecification requestSpecification = given(specification)
                 .config(config)
-                .log().method()
-                .log().all()
+                .log().uri()
                 .auth().basic(walletClientId,walletClientSecret)
                 .formParam("grant_type","client_credentials")
                 .formParam("client_id", walletClientId)
