@@ -39,6 +39,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <org.jdbi.version>3.6.0</org.jdbi.version>
     <version.okhttp>3.14.0</version.okhttp>
+    <version.micrometer>1.4.1</version.micrometer>
     <version.presto>323</version.presto>
     <version.spring.boot>2.1.8.RELEASE</version.spring.boot>
     <version.guava>27.1-jre</version.guava>
@@ -124,6 +125,7 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-azure-monitor</artifactId>
+      <version>${version.micrometer}</version>
     </dependency>
 
     <!--database connections -->
