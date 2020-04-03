@@ -2,6 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
+import com.dnastack.ga4gh.search.adapter.shared.QueryManager;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -30,7 +31,6 @@ public class PrestoHttpClient implements PrestoClient {
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
 
     private static final String DEFAULT_PRESTO_USER_NAME = "ga4gh-search-adapter-presto";
-    private static final int MAX_RETRIES = 10; //TODO: Improve how retries work
 
     private final String prestoServer;
     private final String prestoSearchEndpoint;
@@ -45,8 +45,9 @@ public class PrestoHttpClient implements PrestoClient {
     }
 
     public JsonNode query(String statement, Map<String, String> extraCredentials) throws IOException {
+
         try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-            return pollForQueryResults(response, 0, extraCredentials);
+            return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
         } catch (final AuthRequiredException e) {
             log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
             throw e;
@@ -59,7 +60,7 @@ public class PrestoHttpClient implements PrestoClient {
     public JsonNode next(String page, Map<String, String> extraCredentials) throws IOException {
         //TODO: better url construction
         try (Response response =  get(this.prestoServer + "/" + page, extraCredentials)) {
-            return pollForQueryResults(response, 0, extraCredentials);
+            return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
         }
     }
 
@@ -128,7 +129,8 @@ public class PrestoHttpClient implements PrestoClient {
         return "(no state in response)";
     }
 
-    private JsonNode pollForQueryResults(Response httpResponse, int currentRetry, Map<String, String> extraCredentials) throws IOException {
+    private JsonNode pollForQueryResults(Response httpResponse, Map<String, String> extraCredentials,
+                                         int currentRetry, QueryManager queryManager) throws IOException {
         if (httpResponse.body() == null) {
             throw new PrestoQueryFailedException(
                     httpResponse.code(),
@@ -147,6 +149,7 @@ public class PrestoHttpClient implements PrestoClient {
 
         switch (prestoState) {
             case "FAILED":
+                log.error("Processing failure, prestoState: {}", prestoState);
                 SearchAuthRequest credentialsRequest = extractExtraCredentialsRequest(jsonBody);
                 if (credentialsRequest != null) {
                     throw new AuthRequiredException(credentialsRequest);
@@ -160,38 +163,28 @@ public class PrestoHttpClient implements PrestoClient {
 
             case "RUNNING":
             case "FINISHED":
+                log.debug("Returning jsonBody, prestoState {}", prestoState);
                 assert (jsonBody.hasNonNull("columns"));
                 return jsonBody;
 
+            // case "QUEUED"
             default:
-                log.debug("Attempt {} - still waiting for a result", currentRetry);
-
-                if (currentRetry >= MAX_RETRIES) {
-                    throw new PrestoQueryFailedException(httpResponse.code(), "Maximum backend retries exceeded");
+                // If query times out, return empty response with nextUri so client can re-try
+                if (queryManager.hasQueryTimedOut()) {
+                    return jsonBody;
                 }
 
-                backoff(currentRetry);
+                log.debug("Attempt {} - still waiting for a result, prestoState {}", currentRetry, prestoState);
+                queryManager.backoff();
                 try (Response response = get(jsonBody.get("nextUri").asText(), extraCredentials)) {
                     // todo don't recurse. also, close previous response before making next request.
-                    return pollForQueryResults(response, ++currentRetry, extraCredentials);
+                    return pollForQueryResults(response, extraCredentials, ++currentRetry, queryManager);
                 }
-        }
-    }
-
-    //todo: move retry constraints to this method?
-    //todo: better retry logic
-    private void backoff(int retries) {
-        try {
-            Thread.sleep(250 * retries);
-        } catch (Exception e) {
-            log.warn("Oh noes", e);
         }
     }
 
     private Response get(String url, Map<String, String> extraCredentials) throws IOException {
-        Request.Builder request = new Request.Builder()
-                .url(url)
-                .method("GET", null);
+        Request.Builder request = new Request.Builder().url(url).method("GET", null);
         return execute(request, extraCredentials);
     }
 

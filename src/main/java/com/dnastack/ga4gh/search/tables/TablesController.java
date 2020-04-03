@@ -3,13 +3,14 @@ package com.dnastack.ga4gh.search.tables;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchController;
-import com.dnastack.ga4gh.search.tables.ListTables;
-import com.dnastack.ga4gh.search.tables.TableData;
-import com.dnastack.ga4gh.search.tables.TableInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
@@ -28,7 +29,6 @@ public class TablesController {
         return new SearchAdapter(client, SearchController.parseCredentialsHeader(clientSuppliedCredentials))
                 .getTables(ServletUriComponentsBuilder.fromCurrentContextPath().toUriString());
     }
-
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)

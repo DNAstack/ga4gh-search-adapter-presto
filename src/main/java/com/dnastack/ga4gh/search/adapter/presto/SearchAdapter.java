@@ -79,20 +79,31 @@ public class SearchAdapter {
     }
 
     private TableData toTableData(JsonNode prestoResponse) {
-        JsonNode columns = prestoResponse.get("columns");
-        Map<String, Object> generatedSchema = generateDataModel(columns);
+
+        JsonNode columns;
+        Map<String, Object> generatedSchema = new LinkedHashMap<>();
         List<Map<String, Object>> data = new ArrayList<>();
-        if (prestoResponse.hasNonNull("data")) {
-            for (JsonNode dataNode : prestoResponse.get("data")) {
-                Map<String, Object> rowData = new LinkedHashMap<>();
-                for (int i = 0; i < dataNode.size(); i++) {
-                    rowData.put(columns.get(i).get("name").asText(), dataNode.get(i).asText());
+
+        if (prestoResponse.hasNonNull("columns")) {
+            // Generate data model
+            columns = prestoResponse.get("columns");
+            generatedSchema = generateDataModel(columns);
+
+            // Generate data
+            if (prestoResponse.hasNonNull("data")) {
+                for (JsonNode dataNode : prestoResponse.get("data")) {
+                    Map<String, Object> rowData = new LinkedHashMap<>();
+                    for (int i = 0; i < dataNode.size(); i++) {
+                        rowData.put(columns.get(i).get("name").asText(), dataNode.get(i).asText());
+                    }
+                    data.add(rowData);
                 }
-                data.add(rowData);
             }
         }
 
+        // Generate pagination
         Pagination pagination = generatePagination(prestoResponse);
+
         return new TableData(generatedSchema, Collections.unmodifiableList(data), pagination);
     }
 
