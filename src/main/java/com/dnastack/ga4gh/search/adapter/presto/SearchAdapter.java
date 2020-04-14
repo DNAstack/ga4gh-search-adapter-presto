@@ -146,6 +146,11 @@ public class SearchAdapter {
         return schemaJson;
     }
 
+    /**
+     * Get a list of the catalogs served by the connected instance of PrestoSQL.
+     * @return A List of Strings, where each String is the name of the catalog.
+     * @throws IOException If the query to enumerate the list of catalogs fails.
+     */
     private List<String> getPrestoCatalogs() throws IOException {
         TableData showCatalogs = search("show catalogs");
         List<String> catalogs = new ArrayList<>();
