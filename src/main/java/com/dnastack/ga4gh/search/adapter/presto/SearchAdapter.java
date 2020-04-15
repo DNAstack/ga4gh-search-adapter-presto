@@ -42,6 +42,7 @@ public class SearchAdapter {
             String statement =
                     "SELECT table_catalog, table_schema, table_name" +
                     " FROM " + quote(catalog) + ".information_schema.tables" +
+                    " WHERE table_schema != 'information_schema'" +
                     " ORDER BY 1, 2, 3";
             TableData tableData = search(statement);
             if (tableData == null) {

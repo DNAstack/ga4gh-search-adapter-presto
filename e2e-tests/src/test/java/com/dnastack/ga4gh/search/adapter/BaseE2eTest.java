@@ -174,7 +174,9 @@ public class BaseE2eTest {
         for (int attempt = 0; attempt < MAX_REAUTH_ATTEMPTS; attempt++) {
 
             // this request includes all the extra credentials we have been challenged for so far
-            RequestSpecification requestSpec = givenAuthenticatedRequest();
+            String defaultScope = optionalEnv("E2E_WALLET_DEFAULT_SCOPE", null);
+            RequestSpecification requestSpec =  defaultScope == null ? givenAuthenticatedRequest()
+                    : givenAuthenticatedRequest(defaultScope);
             if (body != null) {
                 requestSpec
                         .contentType(ContentType.JSON)
