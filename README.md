@@ -11,13 +11,14 @@ Get started in 30s.
 - Java 11+
 - A presto server you can access anonymously over HTTP(S).
 
-###Build
+### Build
 
 ```
 mvn clean package
 ```
 
-###Configure 
+### Configure
+ 
 Set these two environment variables.
 ```$xslt
 PRESTO_DATASOURCE_URL=https://<your-presto-server>
