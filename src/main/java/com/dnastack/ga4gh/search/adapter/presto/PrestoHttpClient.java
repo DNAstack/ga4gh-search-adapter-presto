@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
@@ -45,29 +46,32 @@ public class PrestoHttpClient implements PrestoClient {
         this.authenticator = accountAuthenticator;
     }
 
-    public Single<JsonNode> query(String statement, Map<String, String> extraCredentials)  {
+    public Single<JsonNode> query(String statement, Map<String, String> extraCredentials) {
 
-        return Single.fromCallable(() -> {
-            try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-                return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
-            } catch (final AuthRequiredException e) {
-                log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
-                throw e;
-            } catch (final Exception e) {
-                log.debug("Failing query (rethrowing " + e + "): " + statement);
-                throw e;
-            }
-        });
-
+        return Single.defer(() -> {
+            return Single.fromCallable(() -> {
+                try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
+                    return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
+                } catch (final AuthRequiredException e) {
+                    log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
+                    throw e;
+                } catch (final Exception e) {
+                    log.debug("Failing query (rethrowing " + e + "): " + statement);
+                    throw e;
+                }
+            });
+        }).subscribeOn(Schedulers.io());
     }
 
     public Single<JsonNode> next(String page, Map<String, String> extraCredentials) {
-        return Single.fromCallable(() -> {
-            //TODO: better url construction
-            try (Response response = get(this.prestoServer + "/" + page, extraCredentials)) {
-                return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
-            }
-        });
+        return Single.defer(() -> {
+            return Single.fromCallable(() -> {
+                //TODO: better url construction
+                try (Response response = get(this.prestoServer + "/" + page, extraCredentials)) {
+                    return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
+                }
+            });
+        }).subscribeOn(Schedulers.io());
     }
 
     private SearchAuthRequest extractExtraCredentialsRequest(JsonNode node) {

@@ -11,6 +11,7 @@ import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
+import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -28,11 +30,13 @@ public class SearchAdapter {
 
     private final static String NEXT_PAGE_PATH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private final PrestoClient client;
+    private final HttpServletRequest request;
     private final Map<String, String> extraCredentials;
 
-    public SearchAdapter(PrestoClient prestoClient, Map<String, String> extraCredentials) {
+    public SearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials) {
         this.client = prestoClient;
         this.extraCredentials = extraCredentials;
+        this.request = request;
     }
 
     public Single<TableData> search(String statement) {
@@ -55,6 +59,11 @@ public class SearchAdapter {
                         " ORDER BY 1, 2, 3";
                 return search(statement)
                     .map(tableData -> {
+                        try {
+                            log.info("" + Thread.currentThread().getId());
+                        } catch (Exception e) {
+                            //
+                        }
                         List<TableInfo> tableInfos = new ArrayList<>();
                         for (Map<String, Object> row : tableData.getData()) {
                             String schema = (String) row.get("table_schema");
@@ -115,7 +124,7 @@ public class SearchAdapter {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public Single<TableData> getTableData(String tableName, String refHost)  {
+    public Single<TableData> getTableData(String tableName, String refHost) {
         return search("SELECT * FROM " + tableName)
             .map(data -> {
                 data.getDataModel()
@@ -164,7 +173,7 @@ public class SearchAdapter {
     private Pagination generatePagination(JsonNode prestoResponse) {
         URI nextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
-            nextPageUri = ServletUriComponentsBuilder.fromCurrentContextPath()
+            nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
                 .path(String
                     .format(NEXT_PAGE_PATH_TEMPLATE, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
                 .build().toUri();
@@ -207,7 +216,7 @@ public class SearchAdapter {
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private Single<List<String>> getPrestoCatalogs(){
+    private Single<List<String>> getPrestoCatalogs() {
         return search("show catalogs")
             .map(showCatalogs -> {
                 List<String> catalogs = new ArrayList<>();

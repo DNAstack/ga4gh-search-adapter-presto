@@ -23,11 +23,11 @@ public class SearchController {
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
-    public DeferredResult<TableData> search(@RequestBody SearchRequest request,
+    public DeferredResult<TableData> search(HttpServletRequest request, @RequestBody SearchRequest searchRequest,
         @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
         return DeferredResultUtils
-            .ofSingle(() -> new SearchAdapter(prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
-                .search(request.getSqlQuery()));
+            .ofSingle(() -> new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
+                .search(searchRequest.getSqlQuery()));
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
@@ -40,7 +40,7 @@ public class SearchController {
 
                 String page = request.getRequestURI()
                     .split(request.getContextPath() + "/search/")[1];
-                return new SearchAdapter(prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
+                return new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
                     .getNextPage(page);
             });
     }
