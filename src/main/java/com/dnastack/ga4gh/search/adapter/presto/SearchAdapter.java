@@ -1,16 +1,27 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
+import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.dnastack.ga4gh.search.tables.ListTables;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
+import com.dnastack.ga4gh.search.tables.TableError;
+import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.Single;
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeoutException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
 public class SearchAdapter {
@@ -24,59 +35,101 @@ public class SearchAdapter {
         this.extraCredentials = extraCredentials;
     }
 
-    public TableData search(String statement) throws IOException {
-        JsonNode response = client.query(statement, extraCredentials);
-        return toTableData(response);
+    public Single<TableData> search(String statement) {
+        return client.query(statement, extraCredentials)
+            .map(this::toTableData);
     }
 
-    public TableData getNextPage(String page) throws IOException {
-        JsonNode data = client.next(page, extraCredentials);
-        return toTableData(data);
+    public Single<TableData> getNextPage(String page) {
+        return client.next(page, extraCredentials).map(this::toTableData);
     }
 
-    public ListTables getTables(String refHost) throws IOException {
-        ListTables listTables = new ListTables();
-        List<String> catalogs = getPrestoCatalogs();
-        List<TableInfo> tableInfos = new ArrayList<>();
-        for (String catalog : catalogs) {
-            String statement =
+    public Single<ListTables> getTables(String refHost) {
+        return getPrestoCatalogs()
+            .flatMapObservable(Observable::fromIterable)
+            .flatMapSingle(catalog -> {
+                String statement =
                     "SELECT table_catalog, table_schema, table_name" +
-                    " FROM " + quote(catalog) + ".information_schema.tables" +
-                    " WHERE table_schema != 'information_schema'" +
-                    " ORDER BY 1, 2, 3";
-            TableData tableData = search(statement);
-            if (tableData == null) {
-                throw new IOException("Got null response from backend when listing tables in " + catalog);
-            }
-            for (Map<String, Object> row : tableData.getData()) {
-                String schema = (String) row.get("table_schema");
-                String table = (String) row.get("table_name");
-                String qualifiedTableName = catalog + "." + schema + "." + table;
-                String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
-                Map<String, Object> dataModel = new HashMap<>();
-                dataModel.put("$ref", ref);
-                tableInfos.add(new TableInfo(qualifiedTableName, null, dataModel));
-            }
-        }
+                        " FROM " + quote(catalog) + ".information_schema.tables" +
+                        " WHERE table_schema != 'information_schema'" +
+                        " ORDER BY 1, 2, 3";
+                return search(statement)
+                    .map(tableData -> {
+                        List<TableInfo> tableInfos = new ArrayList<>();
+                        for (Map<String, Object> row : tableData.getData()) {
+                            String schema = (String) row.get("table_schema");
+                            String table = (String) row.get("table_name");
+                            String qualifiedTableName = catalog + "." + schema + "." + table;
+                            String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
+                            Map<String, Object> dataModel = new HashMap<>();
+                            dataModel.put("$ref", ref);
+                            tableInfos.add(new TableInfo(qualifiedTableName, null, dataModel));
+                        }
+                        return new ListTables(tableInfos, null, null);
+                    })
+                    .onErrorReturn(throwable -> {
+                        if (throwable instanceof AuthRequiredException) {
+                            SearchAuthRequest searchAuthRequest = ((AuthRequiredException) throwable)
+                                .getAuthorizationRequest();
+                            TableError error = new TableError();
+                            error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
+                                + ", request requires additional authorization information");
+                            error.setSource(searchAuthRequest.getKey());
+                            error.setCode(ErrorCode.AUTH_CHALLENGE);
+                            error.setAttributes(searchAuthRequest.getResourceDescription());
+                            return new ListTables(null, List.of(error), null);
+                        } else if (throwable instanceof TimeoutException) {
+                            TableError error = new TableError();
+                            error.setMessage(
+                                "Request to catalog: " + catalog + " timedout before a response was committed.");
+                            error.setSource(catalog);
+                            error.setCode(ErrorCode.TIMEOUT);
+                            return new ListTables(null, List.of(error), null);
+                        } else {
+                            throw throwable;
+                        }
 
-        listTables.setTableInfos(tableInfos);
-        return listTables;
+                    });
+            }).reduce(new ListTables(), (identity, reduction) -> {
+
+                List<TableInfo> infos = reduction.getTableInfos();
+                if (infos != null) {
+                    if (identity.getTableInfos() == null) {
+                        identity.setTableInfos(new ArrayList<>());
+                    }
+                    identity.getTableInfos().addAll(infos);
+                }
+
+                List<TableError> errors = reduction.getErrors();
+                if (errors != null) {
+                    if (identity.getErrors() == null) {
+                        identity.setErrors(new ArrayList<>());
+                    }
+                    identity.getErrors().addAll(errors);
+                }
+                return identity;
+            });
     }
 
     private static String quote(String sqlIdentifier) {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public TableData getTableData(String tableName, String refHost) throws IOException {
-        TableData data = search("SELECT * FROM " + tableName);
-        data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
-        return data;
+    public Single<TableData> getTableData(String tableName, String refHost)  {
+        return search("SELECT * FROM " + tableName)
+            .map(data -> {
+                data.getDataModel()
+                    .put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
+                return data;
+            });
     }
 
-    public TableInfo getTableInfo(String tableName, String refHost) throws IOException {
-        TableData data = search("SELECT * FROM " + tableName + " LIMIT 1");
-        data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
-        return new TableInfo(tableName, null, data.getDataModel());
+    public Single<TableInfo> getTableInfo(String tableName, String refHost) {
+        return search("SELECT * FROM " + tableName + " LIMIT 1")
+            .map(data -> {
+                data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
+                return new TableInfo(tableName, null, data.getDataModel());
+            });
     }
 
     private TableData toTableData(JsonNode prestoResponse) {
@@ -112,8 +165,9 @@ public class SearchAdapter {
         URI nextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
             nextPageUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path(String.format(NEXT_PAGE_PATH_TEMPLATE, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
-                    .build().toUri();
+                .path(String
+                    .format(NEXT_PAGE_PATH_TEMPLATE, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
+                .build().toUri();
         }
         return new Pagination(nextPageUri, null);
     }
@@ -134,7 +188,7 @@ public class SearchAdapter {
             Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
             if (JsonAdapter.isArray(type)) {
-                props.put("type", "array" );
+                props.put("type", "array");
                 props.put("items", Map.of("type", JsonAdapter.toJsonType(type)));
             } else {
                 props.put("type", JsonAdapter.toJsonType(type));
@@ -149,22 +203,24 @@ public class SearchAdapter {
 
     /**
      * Get a list of the catalogs served by the connected instance of PrestoSQL.
+     *
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private List<String> getPrestoCatalogs() throws IOException {
-        TableData showCatalogs = search("show catalogs");
-        List<String> catalogs = new ArrayList<>();
-        for (Map<String, Object> row : showCatalogs.getData()) {
-            String catalog = (String) row.get("Catalog");
-            if (catalog.equalsIgnoreCase("system")) {
-                log.debug("Ignoring catalog {}", catalog);
-                continue;
-            }
-            log.debug("Found catalog {}", catalog);
-            catalogs.add(catalog);
-        }
-
-        return catalogs;
+    private Single<List<String>> getPrestoCatalogs(){
+        return search("show catalogs")
+            .map(showCatalogs -> {
+                List<String> catalogs = new ArrayList<>();
+                for (Map<String, Object> row : showCatalogs.getData()) {
+                    String catalog = (String) row.get("Catalog");
+                    if (catalog.equalsIgnoreCase("system")) {
+                        log.debug("Ignoring catalog {}", catalog);
+                        continue;
+                    }
+                    log.debug("Found catalog {}", catalog);
+                    catalogs.add(catalog);
+                }
+                return catalogs;
+            });
     }
 }

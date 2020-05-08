@@ -23,11 +23,6 @@ app:
     contact-url:
     version:
 
-# Sample Encryption config
-#  data:
-#    encryption:
-#      rsa-key-pair: ----BEGIN PRIVATE KEY----.......
-
 presto:
   datasource:
     url: "http://localhost:8079"
@@ -39,11 +34,7 @@ info:
     name: "GA4GH Discovery Search API"
     version: 1.0
 
-spring:
-  datasource:
-    username: ga4gh-search-adapter-presto
-    password: ""
-    url: jdbc:postgresql://localhost/ga4gh-search-adapter-presto
+
 logging:
   level:
     com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient: DEBUG # logs queries when search fails

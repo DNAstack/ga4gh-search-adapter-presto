@@ -1,8 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.io.IOException;
+import io.reactivex.rxjava3.core.Single;
 import java.util.Map;
 
 //TODO: get rid of?
@@ -15,9 +14,8 @@ public interface PrestoClient {
      * @param extraCredentials The extra X-Presto-Extra-Credentials to include in the request.
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
-     * @throws IOException if HTTP communication with Presto fails or there is a parse error with the JSON response.
      */
-    JsonNode query(String statement, Map<String, String> extraCredentials) throws IOException;
+    Single<JsonNode> query(String statement, Map<String, String> extraCredentials);
 
     /**
      * Fetches the given page of a running query from Presto, polling until it either bears some results or errors out.
@@ -26,7 +24,6 @@ public interface PrestoClient {
      * @param extraCredentials The extra X-Presto-Extra-Credentials to include in the request.
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
-     * @throws IOException if HTTP communication with Presto fails or there is a parse error with the JSON response.
      */
-    JsonNode next(String page, Map<String, String> extraCredentials) throws IOException;
+    Single<JsonNode> next(String page, Map<String, String> extraCredentials);
 }

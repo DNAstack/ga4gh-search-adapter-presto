@@ -9,6 +9,8 @@ import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
 import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,9 +27,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 
 @Slf4j
 @EnableWebSecurity
@@ -37,35 +36,14 @@ public class ApplicationConfig {
     @Value("${presto.datasource.url}")
     private String prestoDatasourceUrl;
 
-    @Value("${presto.datasource.username}")
-    private String prestoDatasourceUsername;
-
-    @Value("${presto.results.default-page-size}")
-    private Integer defaultPageSize;
-
-
-    @Value("${spring.datasource.url}")
-    private String pgUrl;
-
-    @Value("${spring.datasource.username}")
-    private String pgUsername;
-
-    @Value("${spring.datasource.password}")
-    private String pgPassword;
-
-
-    @Value("${app.data.encryption.rsa-key-pair:}")
-    private String rsaKeyPair;
-
-
-    @Autowired
-    private Monitor monitor;
-
     /**
      * Other settings
      */
     @Value("${cors.urls}")
     private String corsUrls;
+
+    @Autowired
+    private Monitor monitor;
 
     @Autowired
     private Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter;
@@ -99,6 +77,7 @@ public class ApplicationConfig {
             }
         };
     }
+
 
     @Bean
     @Profile("default")

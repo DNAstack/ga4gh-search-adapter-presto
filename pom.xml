@@ -88,16 +88,6 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>io.prestosql</groupId>
-      <artifactId>presto-jdbc</artifactId>
-      <version>${version.presto}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.prestosql</groupId>
-      <artifactId>presto-parser</artifactId>
-      <version>${version.presto}</version>
-    </dependency>
-    <dependency>
       <groupId>com.squareup.okhttp3</groupId>
       <artifactId>okhttp</artifactId>
       <version>${version.okhttp}</version>
@@ -128,25 +118,17 @@
       <version>${version.micrometer}</version>
     </dependency>
 
-    <!--database connections -->
     <dependency>
-      <groupId>org.jdbi</groupId>
-      <artifactId>jdbi3-core</artifactId>
-      <version>${org.jdbi.version}</version>
+      <groupId>io.reactivex.rxjava3</groupId>
+      <artifactId>rxjava</artifactId>
+      <version>3.0.3</version>
     </dependency>
     <dependency>
-      <groupId>org.jdbi</groupId>
-      <artifactId>jdbi3-sqlobject</artifactId>
-      <version>${org.jdbi.version}</version>
+      <groupId>org.reactivestreams</groupId>
+      <artifactId>reactive-streams</artifactId>
+      <version>1.0.3</version>
     </dependency>
-    <dependency>
-      <groupId>com.zaxxer</groupId>
-      <artifactId>HikariCP</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-    </dependency>
+
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -177,8 +159,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>9</source>
-          <target>9</target>
+          <source>11</source>
+          <target>11</target>
         </configuration>
       </plugin>
     </plugins>
