@@ -5,6 +5,10 @@ An implementation of the [GA4GH Discovery Search API](https://github.com/ga4gh-d
 in a manner compliant with the GA4GH Discovery Search specification, and receive responses compliant with the 
 [Table](https://github.com/ga4gh-discovery/ga4gh-discovery-search/blob/develop/TABLE.md) specification.  
 
+# Updating This README
+
+Any structural changes to this README should be checked against the README_TEMPLATE available in `dnastack-development-tools`, with that document updated as necessary.
+
 # Quick Start
 Get started in 30s.
 ### Prerequisites
@@ -30,30 +34,7 @@ SPRING_PROFILES_ACTIVE=no-auth
 java -jar /target/ga4gh-discovery-search-service-1.0-SNAPSHOT.jar
 ```
 
-# Building (Advanced)
-
-##Prerequisites
-
-- Java 11
-- tested with Maven 3.5.4
-
-
-To build the complete project do
-```
-./mvnw clean package
-```
-
-## Docker Images
-```bash
-#Build docker image for the service
-./ci/build-docker-image <image tag>:<image version> ga4gh-search-adapter-presto <image version>
-
-#Build docker image for end-to-end tests
-./ci/build-docker-e2e-image <image tag>:<image version>> ga4gh-search-adapter-presto-e2e-image <image version>>
-
-```
-
-# Running (Advanced)
+# Configuring (Advanced)
 
 ## Auth Profiles
 
