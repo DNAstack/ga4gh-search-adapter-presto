@@ -98,7 +98,8 @@ public class ApplicationConfig {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
-                http.authorizeRequests()
+                http.cors().and()
+                    .authorizeRequests()
                     .antMatchers("/actuator/health", "/actuator/info", "/service-info").permitAll()
                     .antMatchers("/**")
                     .authenticated()
@@ -120,7 +121,8 @@ public class ApplicationConfig {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
-                http.authorizeRequests()
+                http.cors().and()
+                    .authorizeRequests()
                     .antMatchers("/api/**")
                     .authenticated()
                     .and()
@@ -149,7 +151,7 @@ public class ApplicationConfig {
         return new WebSecurityConfigurerAdapter() {
             @Override
             protected void configure(HttpSecurity http) throws Exception {
-                http.authorizeRequests().anyRequest().permitAll().and().csrf().disable();
+                http.cors().and().authorizeRequests().anyRequest().permitAll().and().csrf().disable();
             }
         };
     }
