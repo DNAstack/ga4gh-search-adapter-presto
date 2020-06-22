@@ -121,13 +121,13 @@ public class PublicKeyJwtDecoder implements JwtDecoder {
             jwt = new Jwt(token, issuedAt, expiresAt, headers, claims);
         } catch (RemoteKeySourceException ex) {
             if (ex.getCause() instanceof ParseException) {
-                throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, "Malformed Jwk set"));
+                throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, "Malformed Jwk set"), ex);
             } else {
                 throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, ex.getMessage()), ex);
             }
         } catch (Exception ex) {
             if (ex.getCause() instanceof ParseException) {
-                throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, "Malformed payload"));
+                throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, "Malformed payload"), ex);
             } else {
                 throw new JwtException(String.format(DECODING_ERROR_MESSAGE_TEMPLATE, ex.getMessage()), ex);
             }

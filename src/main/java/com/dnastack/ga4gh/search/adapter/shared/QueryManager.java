@@ -52,7 +52,8 @@ public class QueryManager {
             log.debug("Backing-off for {} ms", sleepTime);
             Thread.sleep(sleepTime);
         } catch (InterruptedException e) {
-            log.warn("Something went wrong while waiting between poll requests for search results.", e);
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Request aborted due to interrupt");
         }
     }
 

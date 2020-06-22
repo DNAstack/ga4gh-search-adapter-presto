@@ -65,7 +65,7 @@ public class DelegatingJwtDecoder implements JwtDecoder {
         try {
             issuer = jwt.getJWTClaimsSet().getIssuer();
         } catch (ParseException e) {
-            throw new JwtException(e.getMessage(), e);
+            throw new JwtException("Failed to decode claim set", e);
         }
 
         JwtDecoder delegate = delegates.get(issuer);

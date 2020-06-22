@@ -97,7 +97,7 @@ public class PrestoHttpClient implements PrestoClient {
             } catch (IOException e) {
                 throw new RuntimeException(
                     "The backend requested additional auth info but it couldn't be parsed as a JSON object: "
-                        + embeddedJson);
+                        + embeddedJson, e);
             }
         }
         return null;

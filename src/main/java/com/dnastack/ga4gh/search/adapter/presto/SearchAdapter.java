@@ -59,11 +59,7 @@ public class SearchAdapter {
                         " ORDER BY 1, 2, 3";
                 return search(statement)
                     .map(tableData -> {
-                        try {
-                            log.info("" + Thread.currentThread().getId());
-                        } catch (Exception e) {
-                            //
-                        }
+                        log.debug("Reading tables of catalog {} on thread id {}", catalog, Thread.currentThread().getId());
                         List<TableInfo> tableInfos = new ArrayList<>();
                         for (Map<String, Object> row : tableData.getData()) {
                             String schema = (String) row.get("table_schema");
