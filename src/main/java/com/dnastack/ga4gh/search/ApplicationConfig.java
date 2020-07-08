@@ -2,11 +2,13 @@ package com.dnastack.ga4gh.search;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient;
+import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.IssuerConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig.OauthClientConfig;
 import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
+import com.dnastack.ga4gh.search.adapter.shared.Ga4ghCredentialArgumentResolver;
 import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
 import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -74,6 +77,12 @@ public class ApplicationConfig {
                     .allowCredentials(true)
                     .allowedHeaders("*")
                     .allowedMethods("*");
+
+            }
+
+            @Override
+            public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+                resolvers.add(new Ga4ghCredentialArgumentResolver());
             }
         };
     }
@@ -155,6 +164,7 @@ public class ApplicationConfig {
             }
         };
     }
+
 
     private String[] parseCorsUrls() {
         return corsUrls.split(",");

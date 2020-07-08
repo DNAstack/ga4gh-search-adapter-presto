@@ -1,12 +1,12 @@
 package com.dnastack.ga4gh.search.tables;
 
-import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
-import com.dnastack.ga4gh.search.adapter.presto.SearchController;
 import com.dnastack.ga4gh.search.adapter.shared.DeferredResultUtils;
+import com.dnastack.ga4gh.search.adapter.shared.Ga4ghCredentials;
 import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,34 +24,35 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 public class TablesController {
 
+
     @Autowired
-    PrestoClient client;
+    SearchAdapter searchAdapter;
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
-    public DeferredResult<ResponseEntity<ListTables>> getTables(HttpServletRequest request,@RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
-        return DeferredResultUtils.ofSingle(() -> new SearchAdapter(request,client, SearchController
-            .parseCredentialsHeader(clientSuppliedCredentials))
-            .getTables(ServletUriComponentsBuilder.fromCurrentContextPath().toUriString())
+    public DeferredResult<ResponseEntity<ListTables>> getTables(HttpServletRequest request, @Ga4ghCredentials Map<String, String> clientSuppliedCredentials) throws IOException {
+        return DeferredResultUtils.ofSingle(() -> searchAdapter
+            .getTables(request, ServletUriComponentsBuilder.fromCurrentContextPath()
+                .toUriString(), clientSuppliedCredentials)
             .map(listTables -> ResponseEntity.ok().headers(getExtraAuthHeaders(listTables)).body(listTables)));
     }
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public DeferredResult<TableInfo> getTableInfo(HttpServletRequest request, @PathVariable("table_name") String tableName,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        return DeferredResultUtils.ofSingle(() -> new SearchAdapter(request,client, SearchController
-            .parseCredentialsHeader(clientSuppliedCredentials))
-            .getTableInfo(tableName, ServletUriComponentsBuilder.fromCurrentContextPath().toUriString()));
+        @Ga4ghCredentials Map<String, String> clientSuppliedCredentials) {
+        return DeferredResultUtils.ofSingle(() -> searchAdapter
+            .getTableInfo(request, tableName, ServletUriComponentsBuilder.fromCurrentContextPath()
+                .toUriString(), clientSuppliedCredentials));
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
-    public DeferredResult<TableData> getTableData(HttpServletRequest request,@PathVariable("table_name") String tableName,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        return DeferredResultUtils.ofSingle(() -> new SearchAdapter(request,client, SearchController
-            .parseCredentialsHeader(clientSuppliedCredentials))
-            .getTableData(tableName, ServletUriComponentsBuilder.fromCurrentContextPath().toUriString())
+    public DeferredResult<TableData> getTableData(HttpServletRequest request, @PathVariable("table_name") String tableName,
+        @Ga4ghCredentials Map<String, String> clientSuppliedCredentials) {
+        return DeferredResultUtils.ofSingle(() -> searchAdapter
+            .getTableData(request, tableName, ServletUriComponentsBuilder.fromCurrentContextPath()
+                .toUriString(), clientSuppliedCredentials)
         );
     }
 

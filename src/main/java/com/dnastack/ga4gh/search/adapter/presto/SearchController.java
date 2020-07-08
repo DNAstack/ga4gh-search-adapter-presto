@@ -1,15 +1,13 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.shared.DeferredResultUtils;
+import com.dnastack.ga4gh.search.adapter.shared.Ga4ghCredentials;
 import com.dnastack.ga4gh.search.tables.TableData;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,37 +17,26 @@ import org.springframework.web.context.request.async.DeferredResult;
 public class SearchController {
 
     @Autowired
-    PrestoClient prestoClient;
+    SearchAdapter searchAdapter;
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
-    public DeferredResult<TableData> search(HttpServletRequest request, @RequestBody SearchRequest searchRequest,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+    public DeferredResult<TableData> search(HttpServletRequest request, @RequestBody SearchRequest searchRequest, @Ga4ghCredentials Map<String, String> clientSuppliedCredentials) {
         return DeferredResultUtils
-            .ofSingle(() -> new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
-                .search(searchRequest.getSqlQuery()));
+            .ofSingle(() -> searchAdapter
+                .search(request, searchRequest.getSqlQuery(), clientSuppliedCredentials));
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
-    public DeferredResult<TableData> getNextPaginatedResponse(HttpServletRequest request,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+    public DeferredResult<TableData> getNextPaginatedResponse(HttpServletRequest request, @Ga4ghCredentials Map<String, String> clientSuppliedCredentials) {
 
         return DeferredResultUtils
             .ofSingle(() -> {
-
                 String page = request.getRequestURI()
                     .split(request.getContextPath() + "/search/")[1];
-                return new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
-                    .getNextPage(page);
+                return searchAdapter.getNextPage(request, page, clientSuppliedCredentials);
             });
-    }
-
-    // TODO make this method into a Spring MVC parameter provider
-    public static Map<String, String> parseCredentialsHeader(List<String> clientSuppliedCredentials) {
-        return clientSuppliedCredentials.stream()
-            .map(val -> val.split("=", 2))
-            .collect(Collectors.toMap(kv -> kv[0], kv -> kv[1]));
     }
 
 }

@@ -1,17 +1,15 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
-import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
+import com.dnastack.ga4gh.search.adapter.shared.CapturedSearchException;
+import com.dnastack.ga4gh.search.adapter.shared.ErrorUtils;
 import com.dnastack.ga4gh.search.tables.ListTables;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableError;
-import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -20,46 +18,55 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @Slf4j
+@Service
 public class SearchAdapter {
 
     private final static String NEXT_PAGE_PATH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private final PrestoClient client;
-    private final HttpServletRequest request;
-    private final Map<String, String> extraCredentials;
 
-    public SearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials) {
+    @Autowired
+    public SearchAdapter(PrestoClient prestoClient) {
         this.client = prestoClient;
-        this.extraCredentials = extraCredentials;
-        this.request = request;
     }
 
-    public Single<TableData> search(String statement) {
-        return client.query(statement, extraCredentials)
-            .map(this::toTableData);
+    public Single<TableData> search(HttpServletRequest request, String statement, Map<String, String> extraCredentials) {
+        long starTime = System.currentTimeMillis();
+        return client.query(statement, extraCredentials).map(data -> toTableData(request, data))
+            .onErrorReturn(throwable -> {
+                throw new CapturedSearchException("search", statement, throwable.getMessage(),
+                    System.currentTimeMillis() - starTime, throwable);
+            });
     }
 
-    public Single<TableData> getNextPage(String page) {
-        return client.next(page, extraCredentials).map(this::toTableData);
+    public Single<TableData> getNextPage(HttpServletRequest request, String page, Map<String, String> extraCredentials) {
+        long starTime = System.currentTimeMillis();
+        return client.next(page, extraCredentials).map(data -> toTableData(request, data))
+            .onErrorReturn(throwable -> {
+                throw new CapturedSearchException("search", null, throwable.getMessage(),
+                    System.currentTimeMillis() - starTime, throwable);
+            });
     }
 
-    public Single<ListTables> getTables(String refHost) {
-        return getPrestoCatalogs()
+    public Single<ListTables> getTables(HttpServletRequest request, String refHost, Map<String, String> extraCredentials) {
+        return getPrestoCatalogs(request, extraCredentials)
             .flatMapObservable(Observable::fromIterable)
             .flatMapSingle(catalog -> {
-                String statement =
-                    "SELECT table_catalog, table_schema, table_name" +
-                        " FROM " + quote(catalog) + ".information_schema.tables" +
-                        " WHERE table_schema != 'information_schema'" +
-                        " ORDER BY 1, 2, 3";
-                return search(statement)
+                String statement = "SELECT table_catalog, table_schema, table_name" +
+                    " FROM " + quote(catalog) + ".information_schema.tables" +
+                    " WHERE table_schema != 'information_schema'" +
+                    " ORDER BY 1, 2, 3";
+
+                return search(request, statement, extraCredentials)
                     .map(tableData -> {
-                        log.debug("Reading tables of catalog {} on thread id {}", catalog, Thread.currentThread().getId());
+                        log.debug("Reading tables of catalog {} on thread id {}", catalog, Thread.currentThread()
+                            .getId());
                         List<TableInfo> tableInfos = new ArrayList<>();
                         for (Map<String, Object> row : tableData.getData()) {
                             String schema = (String) row.get("table_schema");
@@ -72,29 +79,7 @@ public class SearchAdapter {
                         }
                         return new ListTables(tableInfos, null, null);
                     })
-                    .onErrorReturn(throwable -> {
-                        if (throwable instanceof AuthRequiredException) {
-                            SearchAuthRequest searchAuthRequest = ((AuthRequiredException) throwable)
-                                .getAuthorizationRequest();
-                            TableError error = new TableError();
-                            error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
-                                + ", request requires additional authorization information");
-                            error.setSource(searchAuthRequest.getKey());
-                            error.setCode(ErrorCode.AUTH_CHALLENGE);
-                            error.setAttributes(searchAuthRequest.getResourceDescription());
-                            return new ListTables(null, List.of(error), null);
-                        } else if (throwable instanceof TimeoutException) {
-                            TableError error = new TableError();
-                            error.setMessage(
-                                "Request to catalog: " + catalog + " timedout before a response was committed.");
-                            error.setSource(catalog);
-                            error.setCode(ErrorCode.TIMEOUT);
-                            return new ListTables(null, List.of(error), null);
-                        } else {
-                            throw throwable;
-                        }
-
-                    });
+                    .onErrorReturn(throwable -> new ListTables(null, ErrorUtils.handleErrors(throwable), null));
             }).reduce(new ListTables(), (identity, reduction) -> {
 
                 List<TableInfo> infos = reduction.getTableInfos();
@@ -120,24 +105,39 @@ public class SearchAdapter {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public Single<TableData> getTableData(String tableName, String refHost) {
-        return search("SELECT * FROM " + tableName)
+    public Single<TableData> getTableData(HttpServletRequest request, String tableName, String refHost, Map<String, String> extraCredentials) {
+        return search(request, "SELECT * FROM " + tableName, extraCredentials)
             .map(data -> {
                 data.getDataModel()
                     .put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
                 return data;
+            })
+            .onErrorReturn(throwable -> {
+                if (throwable instanceof CapturedSearchException) {
+                    ((CapturedSearchException) throwable).setSource(tableName);
+
+                }
+                throw throwable;
             });
     }
 
-    public Single<TableInfo> getTableInfo(String tableName, String refHost) {
-        return search("SELECT * FROM " + tableName + " LIMIT 1")
+    public Single<TableInfo> getTableInfo(HttpServletRequest request, String tableName, String refHost, Map<String, String> extraCredentials) {
+        return search(request, "SELECT * FROM " + tableName + " LIMIT 1", extraCredentials)
             .map(data -> {
                 data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
                 return new TableInfo(tableName, null, data.getDataModel());
+            })
+            .onErrorReturn(throwable -> {
+                if (throwable instanceof CapturedSearchException) {
+                    ((CapturedSearchException) throwable).setSource(tableName);
+
+                }
+                throw throwable;
             });
     }
 
-    private TableData toTableData(JsonNode prestoResponse) {
+
+    private TableData toTableData(HttpServletRequest request, JsonNode prestoResponse) {
 
         JsonNode columns;
         Map<String, Object> generatedSchema = new LinkedHashMap<>();
@@ -161,12 +161,12 @@ public class SearchAdapter {
         }
 
         // Generate pagination
-        Pagination pagination = generatePagination(prestoResponse);
+        Pagination pagination = generatePagination(request, prestoResponse);
 
-        return new TableData(generatedSchema, Collections.unmodifiableList(data), pagination);
+        return new TableData(generatedSchema, Collections.unmodifiableList(data), null, pagination);
     }
 
-    private Pagination generatePagination(JsonNode prestoResponse) {
+    private Pagination generatePagination(HttpServletRequest request, JsonNode prestoResponse) {
         URI nextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
             nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
@@ -212,8 +212,8 @@ public class SearchAdapter {
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private Single<List<String>> getPrestoCatalogs() {
-        return search("show catalogs")
+    private Single<List<String>> getPrestoCatalogs(HttpServletRequest request, Map<String, String> extraCredentials) {
+        return search(request, "show catalogs", extraCredentials)
             .map(showCatalogs -> {
                 List<String> catalogs = new ArrayList<>();
                 for (Map<String, Object> row : showCatalogs.getData()) {
