@@ -39,19 +39,17 @@ public class SearchAdapter {
     public Single<TableData> search(HttpServletRequest request, String statement, Map<String, String> extraCredentials) {
         long starTime = System.currentTimeMillis();
         return client.query(statement, extraCredentials).map(data -> toTableData(request, data))
-            .onErrorReturn(throwable -> {
-                throw new CapturedSearchException("search", statement, throwable.getMessage(),
-                    System.currentTimeMillis() - starTime, throwable);
-            });
+            .onErrorResumeNext((Throwable throwable) -> Single
+                .error(new CapturedSearchException("search", statement, throwable.getMessage(),
+                    System.currentTimeMillis() - starTime, throwable)));
     }
 
     public Single<TableData> getNextPage(HttpServletRequest request, String page, Map<String, String> extraCredentials) {
         long starTime = System.currentTimeMillis();
         return client.next(page, extraCredentials).map(data -> toTableData(request, data))
-            .onErrorReturn(throwable -> {
-                throw new CapturedSearchException("search", null, throwable.getMessage(),
-                    System.currentTimeMillis() - starTime, throwable);
-            });
+            .onErrorResumeNext((Throwable throwable) -> Single
+                .error(new CapturedSearchException("search", null, throwable.getMessage(),
+                    System.currentTimeMillis() - starTime, throwable)));
     }
 
     public Single<ListTables> getTables(HttpServletRequest request, String refHost, Map<String, String> extraCredentials) {
@@ -112,12 +110,12 @@ public class SearchAdapter {
                     .put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
                 return data;
             })
-            .onErrorReturn(throwable -> {
+            .onErrorResumeNext(throwable -> {
                 if (throwable instanceof CapturedSearchException) {
                     ((CapturedSearchException) throwable).setSource(tableName);
 
                 }
-                throw throwable;
+                return Single.error(throwable);
             });
     }
 
@@ -127,12 +125,12 @@ public class SearchAdapter {
                 data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
                 return new TableInfo(tableName, null, data.getDataModel());
             })
-            .onErrorReturn(throwable -> {
+            .onErrorResumeNext(throwable -> {
                 if (throwable instanceof CapturedSearchException) {
                     ((CapturedSearchException) throwable).setSource(tableName);
 
                 }
-                throw throwable;
+                return Single.error(throwable);
             });
     }
 
