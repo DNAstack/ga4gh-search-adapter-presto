@@ -1,11 +1,33 @@
 package com.dnastack.ga4gh.search.adapter;
 
-import com.dnastack.ga4gh.search.adapter.test.model.*;
+import static io.restassured.RestAssured.given;
+import static io.restassured.http.Method.GET;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeThat;
+
+import com.dnastack.ga4gh.search.adapter.test.model.ErrorResponse;
+import com.dnastack.ga4gh.search.adapter.test.model.ErrorResponse.Error;
+import com.dnastack.ga4gh.search.adapter.test.model.ErrorResponse.Error.ErrorCode;
+import com.dnastack.ga4gh.search.adapter.test.model.HttpAuthChallenge;
+import com.dnastack.ga4gh.search.adapter.test.model.ListTableResponse;
+import com.dnastack.ga4gh.search.adapter.test.model.SearchRequest;
+import com.dnastack.ga4gh.search.adapter.test.model.Table;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.auth.oauth2.GoogleCredentials;
-import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
@@ -16,25 +38,18 @@ import io.restassured.mapper.ObjectMapperType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.*;
-
-import static io.restassured.RestAssured.given;
-import static io.restassured.http.Method.GET;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeThat;
 
 @Slf4j
 public class SearchE2eTest extends BaseE2eTest {
@@ -299,15 +314,15 @@ public class SearchE2eTest extends BaseE2eTest {
 
                 assertThat(wwwAuthenticate.get().getScheme(), is("GA4GH-Search"));
 
-                SearchAuthChallengeBody challengeBody = response.as(SearchAuthChallengeBody.class);
-                SearchAuthRequest searchAuthRequest = challengeBody.getAuthorizationRequest();
+                ErrorResponse errorResponse = response.as(ErrorResponse.class);
+                Error error = errorResponse.getErrors().stream().filter(e -> e.getCode().equals(ErrorCode.AUTH_CHALLENGE)).findFirst().get();
 
-                assertAuthChallengeIsValid(wwwAuthenticate.get(), searchAuthRequest);
-                String token = supplyCredential(searchAuthRequest);
+                assertAuthChallengeIsValid(wwwAuthenticate.get(), error);
+                String token = supplyCredential(error);
 
-                String existingCredential = extraCredentials.put(searchAuthRequest.getKey(), token);
+                String existingCredential = extraCredentials.put(error.getSource(), token);
 
-                assertThat("Got re-challenged for the same credential " + searchAuthRequest + ". Is the token bad or expired?",
+                assertThat("Got re-challenged for the same credential " + error + ". Is the token bad or expired?",
                            existingCredential, nullValue());
                 continue;
             } else if (response.getStatusCode() == expectedStatus) {
@@ -327,31 +342,31 @@ public class SearchE2eTest extends BaseE2eTest {
                         " Tokens gathered so far: " + extraCredentials.keySet());
     }
 
-    private static void assertAuthChallengeIsValid(HttpAuthChallenge wwwAuthenticate, SearchAuthRequest searchAuthRequest) {
+    private static void assertAuthChallengeIsValid(HttpAuthChallenge wwwAuthenticate, Error searchAuthRequest) {
         assertThat("Auth challenge body must contain an authorization-request but it was " + searchAuthRequest,
                    searchAuthRequest, not(nullValue()));
         assertThat("Key must be present in auth request",
-                   searchAuthRequest.getKey(), not(nullValue()));
+                   searchAuthRequest.getSource(), not(nullValue()));
         assertThat("Key must match realm in auth challenge header",
-                   wwwAuthenticate.getParams().get("realm"), is(searchAuthRequest.getKey()));
+                   wwwAuthenticate.getParams().get("realm"), is(searchAuthRequest.getSource()));
         assertThat("Resource must be described in auth request",
-                   searchAuthRequest.getResourceDescription(), not(nullValue()));
+                   searchAuthRequest.getAttributes(), not(nullValue()));
     }
 
-    private static String supplyCredential(SearchAuthRequest searchAuthRequest) throws IOException {
+    private static String supplyCredential(Error searchAuthRequest) throws IOException {
         log.info("Handling auth challenge {}", searchAuthRequest);
 
         // first check for a configured token
         // a real client wouldn't use the key to decide what to get; that would complect the client with catalog naming choices!
         // a real client should do a credential lookup using the type and resource-description!
-        String tokenEnvName = "E2E_SEARCH_CREDENTIALS_" + searchAuthRequest.getKey().toUpperCase();
+        String tokenEnvName = "E2E_SEARCH_CREDENTIALS_" + searchAuthRequest.getSource().toUpperCase();
         String configuredToken = optionalEnv(tokenEnvName, null);
         if (configuredToken != null) {
             log.info("Using {} to satisfy auth challenge", tokenEnvName);
             return configuredToken;
         }
 
-        if (searchAuthRequest.getResourceType().equals("bigquery")) {
+        if (searchAuthRequest.getSource().equals("bigquery")) {
             log.info("Using Google Application Default credentials to satisfy auth challenge");
             return getGoogleCredentials().getAccessToken().getTokenValue();
         }
