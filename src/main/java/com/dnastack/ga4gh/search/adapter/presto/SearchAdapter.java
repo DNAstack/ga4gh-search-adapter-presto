@@ -137,27 +137,44 @@ public class SearchAdapter {
             });
     }
 
+
     private TableData toTableData(JsonNode prestoResponse) {
 
         JsonNode columns;
         Map<String, Object> generatedSchema = new LinkedHashMap<>();
         List<Map<String, Object>> data = new ArrayList<>();
 
+        List<Transformer> transformers = new ArrayList<>();
+
         if (prestoResponse.hasNonNull("columns")) {
             // Generate data model
             columns = prestoResponse.get("columns");
+            for(JsonNode column : columns){
+                int i = 0;
+                String type = column.get("type").asText();
+                JsonNode typeSignature = column.get("typeSignature");
+                String rawType = null;
+                if(typeSignature != null){
+                    rawType = typeSignature.get("rawType").asText();
+                }
+                transformers.add(JsonAdapter.getTransformer(type, rawType));
+            }
+
             generatedSchema = generateDataModel(columns);
+
 
             // Generate data
             if (prestoResponse.hasNonNull("data")) {
                 for (JsonNode dataNode : prestoResponse.get("data")) {
                     Map<String, Object> rowData = new LinkedHashMap<>();
                     for (int i = 0; i < dataNode.size(); i++) {
-                        rowData.put(columns.get(i).get("name").asText(), dataNode.get(i).asText());
+                        String content = dataNode.get(i).asText();
+                        rowData.put(columns.get(i).get("name").asText(), transformers.get(i)!=null ? transformers.get(i).transform(content) : content);
                     }
                     data.add(rowData);
                 }
             }
+
         }
 
         // Generate pagination
@@ -192,13 +209,25 @@ public class SearchAdapter {
         for (JsonNode column : columns) {
             Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
+//            JsonNode typeSignature = column.get("typeSignature");
+//            String rawType = null;
+//            if(typeSignature != null){
+//                rawType = typeSignature.get("rawType").asText();
+//            }
+            String format = JsonAdapter.toFormat(type);
             if (JsonAdapter.isArray(type)) {
                 props.put("type", "array");
-                props.put("items", Map.of("type", JsonAdapter.toJsonType(type)));
+                if(format == null) {
+                    props.put("items", Map.of("type", JsonAdapter.toJsonType(type)));
+                }else{
+                    props.put("items", Map.of("type", JsonAdapter.toJsonType(type), "format", format));
+                }
             } else {
                 props.put("type", JsonAdapter.toJsonType(type));
+                if(format != null){
+                    props.put("format", format);
+                }
             }
-
             props.put("x-ga4gh-position", position++);
             schemaJson.put(column.get("name").asText(), props);
         }

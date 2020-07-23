@@ -51,7 +51,8 @@ public class PrestoHttpClient implements PrestoClient {
         return Single.defer(() -> {
             return Single.fromCallable(() -> {
                 try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-                    return pollForQueryResults(response, extraCredentials, 0, new QueryManager());
+                    JsonNode jn = pollForQueryResults(response, extraCredentials, 0, new QueryManager());
+                    return jn;
                 } catch (final AuthRequiredException e) {
                     log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
                     throw e;
