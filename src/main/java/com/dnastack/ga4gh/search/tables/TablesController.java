@@ -30,7 +30,7 @@ public class TablesController {
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
-    public DeferredResult<ResponseEntity<ListTables>> getTables(HttpServletRequest request,@RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
+    public DeferredResult<ResponseEntity<TablesList>> getTables(HttpServletRequest request, @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) throws IOException {
         return DeferredResultUtils.ofSingle(() -> new SearchAdapter(request,client, SearchController
             .parseCredentialsHeader(clientSuppliedCredentials))
             .getTables(ServletUriComponentsBuilder.fromCurrentContextPath().toUriString())
@@ -60,7 +60,7 @@ public class TablesController {
         return s.replace("\"", "\\\"");
     }
 
-    private HttpHeaders getExtraAuthHeaders(ListTables listTables) {
+    private HttpHeaders getExtraAuthHeaders(TablesList listTables) {
         HttpHeaders headers = new HttpHeaders();
         List<TableError> errors = listTables.getErrors();
         if (errors != null) {

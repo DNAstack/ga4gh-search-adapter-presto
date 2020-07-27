@@ -1,26 +1,25 @@
 package com.dnastack.ga4gh.search.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
-public class TableData {
+public class TablesList {
 
-    @JsonProperty("data_model")
-    private Map<String, Object> dataModel;
+    @JsonProperty("tables")
+    private List<TableInfo> tableInfos;
 
-    @JsonProperty("data")
-    private List<Map<String, Object>> data;
+    @JsonProperty("errors")
+    private List<TableError> errors;
 
     @JsonProperty("pagination")
     private Pagination pagination;
@@ -40,13 +39,18 @@ public class TableData {
         }
     }
 
-    public void append(TableData tableData){
-
-        if(tableData.getData() != null) {
-            this.data = concat(this.data, tableData.getData());
-        }
-        this.pagination = tableData.getPagination();
-
+    private void append(final TablesList lt){
+        this.pagination = lt.pagination;
+        this.errors = concat(this.errors, lt.errors);
+        this.tableInfos = concat(this.tableInfos, lt.tableInfos);
     }
 
+    public TablesList(List<TablesList> tablesLists){
+        this.errors = null;
+        this.pagination = null;
+        this.tableInfos = List.of();
+        for(TablesList tablesList : tablesLists){
+            this.append(tablesList);
+        }
+    }
 }

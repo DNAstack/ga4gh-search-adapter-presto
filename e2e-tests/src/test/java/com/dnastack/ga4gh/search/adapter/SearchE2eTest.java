@@ -84,8 +84,17 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest("SELECT * FROM " + table + " LIMIT 10");
         log.info("Running query {}", query);
 
+
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
+        while(result.getPagination() != null){
+            result = searchApiGetRequest(result.getPagination().getNextPageUrl().toString(), 200, Table.class);
+            if(result.getDataModel() != null && !result.getDataModel().isEmpty()){
+                break;
+            }
+        }
+
         assertThat(result, not(nullValue()));
+        assertThat(result.getDataModel(), not(nullValue()));
         assertThat(result.getDataModel().entrySet(), hasSize(greaterThan(0)));
     }
 

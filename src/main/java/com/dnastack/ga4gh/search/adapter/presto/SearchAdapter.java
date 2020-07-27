@@ -1,29 +1,23 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
-import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
-import com.dnastack.ga4gh.search.tables.ListTables;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
-import com.dnastack.ga4gh.search.tables.TableError;
-import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 import com.dnastack.ga4gh.search.tables.TableInfo;
+import com.dnastack.ga4gh.search.tables.TablesList;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.schedulers.Schedulers;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
-import javax.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class SearchAdapter {
@@ -39,81 +33,54 @@ public class SearchAdapter {
         this.request = request;
     }
 
+    private boolean hasMore(TableData tableData) {
+        if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
+            return true;
+        }
+        return false;
+    }
+
+    // Perform the given query and gather ALL results, by following Presto's nextUrl links
+    public Single<TableData> searchAll(String statement){
+        return search(statement)
+                .map(tableData->{
+                    while(hasMore(tableData)){
+                        TableData nextPage = getNextPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
+                        tableData.append(nextPage);
+                    }
+                    return tableData;
+                });
+
+    }
+
+    // Perform the given query, and return results.  Note the results may include 0 rows, even if there
+    // is data available.  If the results include a non-null pagination object, then more data is
+    // available at that URL.
     public Single<TableData> search(String statement) {
         return client.query(statement, extraCredentials)
             .map(this::toTableData);
     }
 
-    public Single<TableData> getNextPage(String page) {
-        return client.next(page, extraCredentials).map(this::toTableData);
+    public TableData getNextPage(String page) throws IOException{
+            JsonNode response = client.next(page, extraCredentials);
+            return toTableData(response);
+
     }
 
-    public Single<ListTables> getTables(String refHost) {
+    public Single<TablesList> getTables(String refHost) {
         return getPrestoCatalogs()
-            .flatMapObservable(Observable::fromIterable)
-            .flatMapSingle(catalog -> {
-                String statement =
-                    "SELECT table_catalog, table_schema, table_name" +
-                        " FROM " + quote(catalog) + ".information_schema.tables" +
-                        " WHERE table_schema != 'information_schema'" +
-                        " ORDER BY 1, 2, 3";
-                return search(statement)
-                    .map(tableData -> {
-                        log.debug("Reading tables of catalog {} on thread id {}", catalog, Thread.currentThread().getId());
-                        List<TableInfo> tableInfos = new ArrayList<>();
-                        for (Map<String, Object> row : tableData.getData()) {
-                            String schema = (String) row.get("table_schema");
-                            String table = (String) row.get("table_name");
-                            String qualifiedTableName = catalog + "." + schema + "." + table;
-                            String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
-                            Map<String, Object> dataModel = new HashMap<>();
-                            dataModel.put("$ref", ref);
-                            tableInfos.add(new TableInfo(qualifiedTableName, null, dataModel));
-                        }
-                        return new ListTables(tableInfos, null, null);
-                    })
-                    .onErrorReturn(throwable -> {
-                        if (throwable instanceof AuthRequiredException) {
-                            SearchAuthRequest searchAuthRequest = ((AuthRequiredException) throwable)
-                                .getAuthorizationRequest();
-                            TableError error = new TableError();
-                            error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
-                                + ", request requires additional authorization information");
-                            error.setSource(searchAuthRequest.getKey());
-                            error.setCode(ErrorCode.AUTH_CHALLENGE);
-                            error.setAttributes(searchAuthRequest.getResourceDescription());
-                            return new ListTables(null, List.of(error), null);
-                        } else if (throwable instanceof TimeoutException) {
-                            TableError error = new TableError();
-                            error.setMessage(
-                                "Request to catalog: " + catalog + " timedout before a response was committed.");
-                            error.setSource(catalog);
-                            error.setCode(ErrorCode.TIMEOUT);
-                            return new ListTables(null, List.of(error), null);
-                        } else {
-                            throw throwable;
-                        }
+            .map(catalogs -> {
+                List<Single<TablesList>> tablesList = catalogs.stream()
+                        .map(catalog->{
+                            log.trace("Getting schemas and tables for "+catalog);
+                            PrestoCatalog prestoCatalog = new PrestoCatalog(this, refHost, catalog);
+                            return prestoCatalog.getTablesList();
+                }).collect(Collectors.toList());
 
-                    });
-            }).reduce(new ListTables(), (identity, reduction) -> {
+                return tablesList;
+            }).flatMap(tablesList-> Single.merge(tablesList).toList().map(TablesList::new));
 
-                List<TableInfo> infos = reduction.getTableInfos();
-                if (infos != null) {
-                    if (identity.getTableInfos() == null) {
-                        identity.setTableInfos(new ArrayList<>());
-                    }
-                    identity.getTableInfos().addAll(infos);
-                }
 
-                List<TableError> errors = reduction.getErrors();
-                if (errors != null) {
-                    if (identity.getErrors() == null) {
-                        identity.setErrors(new ArrayList<>());
-                    }
-                    identity.getErrors().addAll(errors);
-                }
-                return identity;
-            });
     }
 
     private static String quote(String sqlIdentifier) {
@@ -185,13 +152,17 @@ public class SearchAdapter {
 
     private Pagination generatePagination(JsonNode prestoResponse) {
         URI nextPageUri = null;
+        URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
+            prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(prestoResponse.get("nextUri").asText()).build().toUri();
             nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
                 .path(String
                     .format(NEXT_PAGE_PATH_TEMPLATE, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
                 .build().toUri();
+            log.info("Generating pagination as "+nextPageUri);
         }
-        return new Pagination(nextPageUri, null);
+
+        return new Pagination(nextPageUri, prestoNextPageUri);
     }
 
     private Map<String, Object> generateDataModel(JsonNode columns) {
@@ -209,11 +180,6 @@ public class SearchAdapter {
         for (JsonNode column : columns) {
             Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
-//            JsonNode typeSignature = column.get("typeSignature");
-//            String rawType = null;
-//            if(typeSignature != null){
-//                rawType = typeSignature.get("rawType").asText();
-//            }
             String format = JsonAdapter.toFormat(type);
             if (JsonAdapter.isArray(type)) {
                 props.put("type", "array");
@@ -242,7 +208,7 @@ public class SearchAdapter {
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
     private Single<List<String>> getPrestoCatalogs() {
-        return search("show catalogs")
+        return searchAll("show catalogs")
             .map(showCatalogs -> {
                 List<String> catalogs = new ArrayList<>();
                 for (Map<String, Object> row : showCatalogs.getData()) {

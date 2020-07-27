@@ -2,6 +2,8 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.reactivex.rxjava3.core.Single;
+
+import java.io.IOException;
 import java.util.Map;
 
 //TODO: get rid of?
@@ -25,5 +27,5 @@ public interface PrestoClient {
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
      */
-    Single<JsonNode> next(String page, Map<String, String> extraCredentials);
+    JsonNode next(String page, Map<String, String> extraCredentials) throws IOException;
 }

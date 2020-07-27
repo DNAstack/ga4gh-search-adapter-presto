@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.tables;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.net.URI;
 import lombok.AllArgsConstructor;
@@ -13,11 +14,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Pagination {
 
-
     @JsonProperty("next_page_url")
     private URI nextPageUrl;
 
-    @JsonProperty("previous_page_url")
-    private URI previousPageUrl;
+    @JsonIgnore
+    private URI prestoNextPageUrl;
 
 }

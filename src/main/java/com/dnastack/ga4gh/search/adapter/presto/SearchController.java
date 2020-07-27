@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
+
+import io.reactivex.rxjava3.core.Single;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,11 +39,10 @@ public class SearchController {
 
         return DeferredResultUtils
             .ofSingle(() -> {
-
                 String page = request.getRequestURI()
                     .split(request.getContextPath() + "/search/")[1];
-                return new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
-                    .getNextPage(page);
+                return Single.just(new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials))
+                    .getNextPage(page));
             });
     }
 
