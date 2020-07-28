@@ -2,14 +2,12 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
-import com.dnastack.ga4gh.search.adapter.shared.QueryManager;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -47,24 +45,20 @@ public class PrestoHttpClient implements PrestoClient {
         this.authenticator = accountAuthenticator;
     }
 
-    public Single<JsonNode> query(String statement, Map<String, String> extraCredentials) {
-        log.info("Executing query....");
-        return Single.defer(() -> {
-            return Single.fromCallable(() -> {
-                log.info("Posting to "+prestoSearchEndpoint);
-                try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-                    log.info("Got response, now polling for query results");
-                    JsonNode jn = getQueryResults(response);
-                    return jn;
-                } catch (final AuthRequiredException e) {
-                    log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
-                    throw e;
-                } catch (final Exception e) {
-                    log.debug("Failing query (rethrowing " + e + "): " + statement);
-                    throw e;
-                }
-            });
-        }).subscribeOn(Schedulers.io());
+    public JsonNode query(String statement, Map<String, String> extraCredentials){
+        log.info("Posting to "+prestoSearchEndpoint);
+        try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
+            log.info("Got response, now polling for query results");
+            JsonNode jn = getQueryResults(response);
+            return jn;
+        } catch (final AuthRequiredException e) {
+            log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
+            throw e;
+        } catch (final IOException e) {
+            log.debug("Failing query (wrapping " + e + "): " + statement);
+            throw new PrestoIOException(e);
+        }
+
     }
 
 //    public Single<JsonNode> next(String page, Map<String, String> extraCredentials) {
@@ -78,14 +72,15 @@ public class PrestoHttpClient implements PrestoClient {
 //        }).subscribeOn(Schedulers.io());
 //    }
 
-    public JsonNode next(String page, Map<String, String> extraCredentials) throws IOException {
+    public JsonNode next(String page, Map<String, String> extraCredentials){
         //TODO: better url construction
         String url = page.startsWith("/") ? this.prestoServer + page : this.prestoServer + "/" + page;
 
         try (Response response = get(url, extraCredentials)) {
             return getQueryResults(response);
+        }catch(IOException ie){
+            throw new PrestoIOException(ie);
         }
-
     }
 
     private SearchAuthRequest extractExtraCredentialsRequest(JsonNode node) {
@@ -165,7 +160,7 @@ public class PrestoHttpClient implements PrestoClient {
                prestoState.equalsIgnoreCase("CLIENT_ABORTED") ||
                prestoState.equalsIgnoreCase("CLIENT_ERROR"));
     }
-    private JsonNode getQueryResults(Response httpResponse) throws IOException {
+    private JsonNode getQueryResults(Response httpResponse) throws PrestoQueryFailedException, AuthRequiredException {
         if (httpResponse.body() == null) {
             throw new PrestoQueryFailedException(
                 httpResponse.code(),
@@ -173,32 +168,46 @@ public class PrestoHttpClient implements PrestoClient {
                     .message());
         }
 
-        String httpResponseBody = httpResponse.body().string();
+        String httpResponseBody;
+        try{
+            httpResponseBody=httpResponse.body().string();
+        }catch(IOException ie){
+            log.error("IOException when fetching query results http body of Presto response", ie);
+            throw new PrestoQueryFailedException(httpResponse.code(), "Failed to complete database query: problem with response");
+        }
 
         if (!httpResponse.isSuccessful()) {
             throw new PrestoQueryFailedException(httpResponse.code(), httpResponseBody);
         }
 
-        JsonNode jsonBody = objectMapper.readTree(httpResponseBody);
-        String prestoState = extractState(jsonBody);
+        try {
+            JsonNode jsonBody = objectMapper.readTree(httpResponseBody); //ioexception never happens;
+            String prestoState = extractState(jsonBody);
 
-        if(isRunning(prestoState) || prestoState.equalsIgnoreCase("finished")){
-            log.debug("PrestoState: {}", prestoState);
-            log.debug("Presto Results: {}", jsonBody.toString());
-            assert (jsonBody.hasNonNull("columns"));
-            return jsonBody;
-        }else{
-            log.error("Processing failure, prestoState: {}", prestoState);
-            SearchAuthRequest credentialsRequest = extractExtraCredentialsRequest(jsonBody);
-            if (credentialsRequest != null) {
-                throw new AuthRequiredException(credentialsRequest);
-            }
+            if (isRunning(prestoState) || prestoState.equalsIgnoreCase("finished")) {
+                log.debug("PrestoState: {}", prestoState);
+                log.debug("Presto Results: {}", jsonBody.toString());
+                assert (jsonBody.hasNonNull("columns"));
+                return jsonBody;
+            } else {
+                log.error("Processing failure, prestoState: {}", prestoState);
+                SearchAuthRequest credentialsRequest = extractExtraCredentialsRequest(jsonBody);
+                if (credentialsRequest != null) {
+                    throw new AuthRequiredException(credentialsRequest);
+                }
 
-            Object error = jsonBody.get("error");
-            if (error == null) {
-                error = httpResponseBody;
+                Object error = jsonBody.get("error");
+                if (error == null) {
+                    error = httpResponseBody;
+                }
+                throw new PrestoQueryFailedException(httpResponse.code(), error.toString());
             }
-            throw new PrestoQueryFailedException(httpResponse.code(), error.toString());
+        }catch(JsonParseException jpe){
+            log.error("Error while parsing Presto JSON response", jpe);
+            throw new PrestoQueryFailedException(httpResponse.code(), "Error while parsing JSON response from database");
+        }catch(IOException iex){
+            // should never happen: no I/O is performed by objectMapper.readTree
+            throw new AssertionError("IOException when parsing http body string response.");
         }
 
     }

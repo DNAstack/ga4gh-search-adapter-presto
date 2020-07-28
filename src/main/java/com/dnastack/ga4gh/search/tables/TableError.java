@@ -12,6 +12,6 @@ public class TableError {
     private Map<String,String> attributes;
 
     public enum ErrorCode {
-        AUTH_CHALLENGE,TIMEOUT
+        AUTH_CHALLENGE, PRESTO_QUERY
     }
 }

@@ -5,7 +5,6 @@ import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.dnastack.ga4gh.search.tables.TablesList;
 import com.fasterxml.jackson.databind.JsonNode;
-import io.reactivex.rxjava3.core.Single;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -41,67 +40,58 @@ public class SearchAdapter {
     }
 
     // Perform the given query and gather ALL results, by following Presto's nextUrl links
-    public Single<TableData> searchAll(String statement){
-        return search(statement)
-                .map(tableData->{
-                    while(hasMore(tableData)){
-                        TableData nextPage = getNextPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
-                        tableData.append(nextPage);
-                    }
-                    return tableData;
-                });
-
+    public TableData searchAll(String statement){
+        TableData tableData = search(statement);
+        while(hasMore(tableData)){
+            TableData nextPage = getNextPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
+            tableData.append(nextPage);
+        }
+        return tableData;
     }
 
     // Perform the given query, and return results.  Note the results may include 0 rows, even if there
     // is data available.  If the results include a non-null pagination object, then more data is
     // available at that URL.
-    public Single<TableData> search(String statement) {
-        return client.query(statement, extraCredentials)
-            .map(this::toTableData);
+    public TableData search(String statement){
+        JsonNode response = client.query(statement, extraCredentials);
+        return toTableData(response);
+
     }
 
-    public TableData getNextPage(String page) throws IOException{
+    public TableData getNextPage(String page){
             JsonNode response = client.next(page, extraCredentials);
             return toTableData(response);
 
     }
 
-    public Single<TablesList> getTables(String refHost) {
-        return getPrestoCatalogs()
-            .map(catalogs -> {
-                List<Single<TablesList>> tablesList = catalogs.stream()
-                        .map(catalog->{
-                            log.trace("Getting schemas and tables for "+catalog);
-                            PrestoCatalog prestoCatalog = new PrestoCatalog(this, refHost, catalog);
-                            return prestoCatalog.getTablesList();
-                }).collect(Collectors.toList());
-
-                return tablesList;
-            }).flatMap(tablesList-> Single.merge(tablesList).toList().map(TablesList::new));
-
-
+    public TablesList getTables(String refHost){
+        List<String> catalogs = getPrestoCatalogs();
+        List<TablesList> tablesLists = catalogs.stream().map(catalog -> {
+            log.trace("Getting schemas and tables for " + catalog);
+            PrestoCatalog prestoCatalog = new PrestoCatalog(this, refHost, catalog);
+            return prestoCatalog.getTablesList();
+        }).collect(Collectors.toList());
+        return new TablesList(tablesLists);
     }
+
 
     private static String quote(String sqlIdentifier) {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public Single<TableData> getTableData(String tableName, String refHost) {
-        return search("SELECT * FROM " + tableName)
-            .map(data -> {
-                data.getDataModel()
-                    .put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
-                return data;
-            });
+    public TableData getTableData(String tableName, String refHost) {
+        TableData tableData = search("SELECT * FROM " + tableName);
+        if(tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
+            tableData.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
+        }
+        return tableData;
     }
 
-    public Single<TableInfo> getTableInfo(String tableName, String refHost) {
-        return search("SELECT * FROM " + tableName + " LIMIT 1")
-            .map(data -> {
-                data.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
-                return new TableInfo(tableName, null, data.getDataModel());
-            });
+    public TableInfo getTableInfo(String tableName, String refHost){
+        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1");
+        tableData.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
+        return new TableInfo(tableName, null, tableData.getDataModel());
+
     }
 
 
@@ -207,20 +197,18 @@ public class SearchAdapter {
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private Single<List<String>> getPrestoCatalogs() {
-        return searchAll("show catalogs")
-            .map(showCatalogs -> {
-                List<String> catalogs = new ArrayList<>();
-                for (Map<String, Object> row : showCatalogs.getData()) {
-                    String catalog = (String) row.get("Catalog");
-                    if (catalog.equalsIgnoreCase("system")) {
-                        log.debug("Ignoring catalog {}", catalog);
-                        continue;
-                    }
-                    log.debug("Found catalog {}", catalog);
-                    catalogs.add(catalog);
-                }
-                return catalogs;
-            });
+    private List<String> getPrestoCatalogs(){
+        TableData catalogs = searchAll("show catalogs");
+        List<String> catalogList = new ArrayList<>();
+        for (Map<String, Object> row : catalogs.getData()) {
+            String catalog = (String) row.get("Catalog");
+            if (catalog.equalsIgnoreCase("system")) {
+                log.debug("Ignoring catalog {}", catalog);
+                continue;
+            }
+            log.debug("Found catalog {}", catalog);
+            catalogList.add(catalog);
+        }
+        return catalogList;
     }
 }

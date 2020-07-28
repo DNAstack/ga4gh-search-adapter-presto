@@ -4,9 +4,7 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
-import io.reactivex.rxjava3.core.Single;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -30,29 +28,19 @@ public class PrestoTelemetryClient implements PrestoClient {
             "The number of additional pages retrieved after an initial query.");
     }
 
-    public Single<JsonNode> query(String statement, Map<String, String> extraCredentials) {
-        return Single.defer(() -> {
+    public JsonNode query(String statement, Map<String, String> extraCredentials) {
             queryCount.increment();
             long start = System.currentTimeMillis();
-            return client.query(statement, extraCredentials)
-                .doOnSuccess((node) -> {
-                    queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
-                });
-        });
+            JsonNode jn = client.query(statement, extraCredentials);
+            queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
+            return jn;
     }
 
-    public JsonNode next(String page, Map<String, String> extraCredentials) throws IOException {
-//        return Single.defer(() -> {
+    public JsonNode next(String page, Map<String, String> extraCredentials) {
             queryCount.increment();
             long start = System.currentTimeMillis();
             JsonNode jsonNode = client.next(page, extraCredentials);
             queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
             return jsonNode;
-//            return Single.just(jsonNode);
-//            return client.next(page, extraCredentials)
-//                .doOnSuccess((node) -> {
-//                    queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
-//                });
-//        });
     }
 }

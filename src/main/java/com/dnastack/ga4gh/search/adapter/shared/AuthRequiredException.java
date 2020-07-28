@@ -5,7 +5,7 @@ import lombok.Getter;
 import java.io.IOException;
 
 @Getter
-public class AuthRequiredException extends IOException {
+public class AuthRequiredException extends RuntimeException {
     private final SearchAuthRequest authorizationRequest;
 
     public AuthRequiredException(SearchAuthRequest authorizationRequest) {

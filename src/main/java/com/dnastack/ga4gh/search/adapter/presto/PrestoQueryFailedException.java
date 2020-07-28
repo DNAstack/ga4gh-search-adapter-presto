@@ -5,7 +5,7 @@ import lombok.Getter;
 import java.io.IOException;
 
 @Getter
-public class PrestoQueryFailedException extends IOException {
+public class PrestoQueryFailedException extends RuntimeException {
     private final int code;
 
     public PrestoQueryFailedException(int code, String message) {

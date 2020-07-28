@@ -2,18 +2,16 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
-import com.dnastack.ga4gh.search.tables.TablesList;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableError;
 import com.dnastack.ga4gh.search.tables.TableInfo;
-import io.reactivex.rxjava3.core.Single;
+import com.dnastack.ga4gh.search.tables.TablesList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -57,36 +55,33 @@ public class PrestoCatalog {
     }
 
 
-    private TablesList getErrorObject(Throwable throwable) throws Throwable{
-        if (throwable instanceof AuthRequiredException) {
-            SearchAuthRequest searchAuthRequest = ((AuthRequiredException) throwable)
-                    .getAuthorizationRequest();
+    public TablesList getTablesList(){
+        try {
+            TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)));
+            List<TableInfo> tableInfoList = getTableInfoList(tables);
+            return new TablesList(tableInfoList, null, null);
+        }catch(AuthRequiredException ex){
+            SearchAuthRequest searchAuthRequest = ex.getAuthorizationRequest();
             TableError error = new TableError();
             error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
                              + ", request requires additional authorization information");
             error.setSource(searchAuthRequest.getKey());
             error.setCode(TableError.ErrorCode.AUTH_CHALLENGE);
             error.setAttributes(searchAuthRequest.getResourceDescription());
+            if(log.isTraceEnabled()){
+                log.error("Error when fetching tables for {}", catalogName, ex);
+            }
             return new TablesList(null, List.of(error), null);
-        } else if (throwable instanceof TimeoutException) {
+        }catch(PrestoQueryFailedException | PrestoIOException ex){
             TableError error = new TableError();
-            error.setMessage(
-                    "Request to catalog: " + catalogName + " timedout before a response was committed.");
+            error.setMessage("Couldn't complete query to list tables");
             error.setSource(catalogName);
-            error.setCode(TableError.ErrorCode.TIMEOUT);
+            error.setCode(TableError.ErrorCode.PRESTO_QUERY);
+            if(log.isTraceEnabled()){
+                log.error("Error when fetching tables for {}", catalogName, ex);
+            }
             return new TablesList(null, List.of(error), null);
-        } else {
-            throw throwable;
         }
-    }
-
-
-    public Single<TablesList> getTablesList(){
-        return searchAdapter
-                .searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)))
-                .map(this::getTableInfoList)
-                .map(tableInfoList->new TablesList(tableInfoList, null, null))
-                .onErrorReturn(this::getErrorObject);
     }
 
 
