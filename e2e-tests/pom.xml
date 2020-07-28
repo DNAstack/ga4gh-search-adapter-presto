@@ -53,6 +53,13 @@
 			<artifactId>google-auth-library-oauth2-http</artifactId>
 			<version>0.15.0</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/commons-validator/commons-validator -->
+		<dependency>
+			<groupId>commons-validator</groupId>
+			<artifactId>commons-validator</artifactId>
+			<version>1.6</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

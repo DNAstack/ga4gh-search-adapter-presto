@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.*;
 
+import static com.dnastack.ga4gh.search.adapter.matchers.IsUrl.isUrl;
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.Method.GET;
 import static org.hamcrest.CoreMatchers.is;
@@ -112,6 +113,10 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(tableInfo.getName(), equalTo(table));
         assertThat(tableInfo.getDataModel(), not(nullValue()));
         assertThat(tableInfo.getDataModel().entrySet(), not(empty()));
+        assertThat(tableInfo.getDataModel().keySet(), containsInAnyOrder("$id", "description", "$schema", "properties"));
+        assertThat(tableInfo.getDataModel().get("$id"), isUrl());
+        assertThat(tableInfo.getDataModel().get("$schema"), isUrl());
+        assertThat(tableInfo.getDataModel().get("properties").toString(), startsWith("{"));
     }
 
     @Test
