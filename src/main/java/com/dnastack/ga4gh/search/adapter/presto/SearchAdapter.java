@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.tables.PageIndexEntry;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableInfo;
@@ -13,15 +14,20 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class SearchAdapter {
+    private static final String NEXT_PAGE_SEARCH_TEMPLATE = "/search/%s"; //todo: alternatives?
+    private static final String NEXT_PAGE_CATALOG_TEMPLATE = "/tables/catalog/%s";
 
-    private final static String NEXT_PAGE_PATH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private final PrestoClient client;
     private final HttpServletRequest request;
     private final Map<String, String> extraCredentials;
@@ -43,35 +49,83 @@ public class SearchAdapter {
     public TableData searchAll(String statement){
         TableData tableData = search(statement);
         while(hasMore(tableData)){
-            TableData nextPage = getNextPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
+            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
             tableData.append(nextPage);
         }
         return tableData;
     }
 
-    // Perform the given query, and return results.  Note the results may include 0 rows, even if there
-    // is data available.  If the results include a non-null pagination object, then more data is
-    // available at that URL.
-    public TableData search(String statement){
+    TableData search(String statement){
         JsonNode response = client.query(statement, extraCredentials);
-        return toTableData(response);
-
+        return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response);
     }
 
-    public TableData getNextPage(String page){
+
+    public TableData getNextSearchPage(String page){
             JsonNode response = client.next(page, extraCredentials);
-            return toTableData(response);
+            return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response);
 
     }
 
-    public TablesList getTables(String refHost){
-        List<String> catalogs = getPrestoCatalogs();
-        List<TablesList> tablesLists = catalogs.stream().map(catalog -> {
-            log.trace("Getting schemas and tables for " + catalog);
-            PrestoCatalog prestoCatalog = new PrestoCatalog(this, refHost, catalog);
-            return prestoCatalog.getTablesList();
-        }).collect(Collectors.toList());
-        return new TablesList(tablesLists);
+    private URI getLinkToCatalog(String catalog){
+        return ServletUriComponentsBuilder.fromContextPath(request)
+                                   .path(String.format(NEXT_PAGE_CATALOG_TEMPLATE, catalog))
+                                   .build().toUri();
+    }
+
+    private PageIndexEntry getPageIndexEntryForCatalog(String catalog, int page){
+        URI uri = getLinkToCatalog(catalog);
+        return PageIndexEntry.builder()
+                             .catalog(catalog)
+                             .url(uri)
+                             .page(page)
+                             .build();
+    }
+
+    private String getRefHost(){
+        return ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+    }
+
+    private List<PageIndexEntry> getPageIndex(Set<String> catalogs){
+        final int[] page = {0};
+        return catalogs.stream().map(catalog->getPageIndexEntryForCatalog(catalog, page[0]++)).collect(Collectors.toList());
+    }
+
+    private TablesList getTables(String currentCatalog, String nextCatalog){
+        PrestoCatalog prestoCatalog = new PrestoCatalog(this, getRefHost(), currentCatalog);
+        Pagination nextPage = null;
+        if(nextCatalog != null){
+            nextPage = new Pagination(getLinkToCatalog(nextCatalog), null);
+        }
+
+        TablesList tablesList = prestoCatalog.getTablesList(nextPage);
+
+        return tablesList;
+    }
+
+    public TablesList getTables(){
+        Set<String> catalogs = getPrestoCatalogs();
+        if(catalogs == null || catalogs.isEmpty()){
+            return new TablesList(List.of(), null, null);
+        }
+        Iterator<String> catalogIt = catalogs.iterator();
+
+        TablesList tablesList = getTables(catalogIt.next(), catalogIt.hasNext() ? catalogIt.next() : null);
+        tablesList.setIndex(getPageIndex(catalogs));
+        return tablesList;
+    }
+
+    public TablesList getTablesInCatalog(String catalog){
+        Set<String> catalogs = getPrestoCatalogs();
+        if(catalogs != null) {
+            Iterator<String> catalogIt = catalogs.iterator();
+            while (catalogIt.hasNext()) {
+                if (catalogIt.next().equals(catalog)) {
+                    return getTables(catalog, catalogIt.hasNext() ? catalogIt.next() : null);
+                }
+            }
+        }
+        throw new PrestoNoSuchCatalogException("No such catalog "+catalog);
     }
 
 
@@ -95,7 +149,7 @@ public class SearchAdapter {
     }
 
 
-    private TableData toTableData(JsonNode prestoResponse) {
+    private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse) {
 
         JsonNode columns;
         Map<String, Object> generatedSchema = new LinkedHashMap<>();
@@ -135,21 +189,21 @@ public class SearchAdapter {
         }
 
         // Generate pagination
-        Pagination pagination = generatePagination(prestoResponse);
+        Pagination pagination = generatePagination(nextPageTemplate, prestoResponse);
 
         return new TableData(generatedSchema, Collections.unmodifiableList(data), pagination);
     }
 
-    private Pagination generatePagination(JsonNode prestoResponse) {
+    private Pagination generatePagination(String template, JsonNode prestoResponse) {
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
             prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(prestoResponse.get("nextUri").asText()).build().toUri();
             nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
                 .path(String
-                    .format(NEXT_PAGE_PATH_TEMPLATE, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
+                    .format(template, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
                 .build().toUri();
-            log.info("Generating pagination as "+nextPageUri);
+            log.debug("Generating pagination as "+nextPageUri);
         }
 
         return new Pagination(nextPageUri, prestoNextPageUri);
@@ -197,18 +251,21 @@ public class SearchAdapter {
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private List<String> getPrestoCatalogs(){
-        TableData catalogs = searchAll("show catalogs");
-        List<String> catalogList = new ArrayList<>();
+    private Set<String> getPrestoCatalogs(){
+        TableData catalogs = searchAll("select catalog_name FROM system.metadata.catalogs ORDER BY catalog_name");
+        Set<String> catalogSet = new LinkedHashSet<>();
         for (Map<String, Object> row : catalogs.getData()) {
-            String catalog = (String) row.get("Catalog");
+            String catalog = (String) row.get("catalog_name");
             if (catalog.equalsIgnoreCase("system")) {
                 log.debug("Ignoring catalog {}", catalog);
                 continue;
             }
-            log.debug("Found catalog {}", catalog);
-            catalogList.add(catalog);
+            log.trace("Found catalog {}", catalog);
+            if(catalogSet.contains(catalog)){
+                throw new AssertionError("Unexpected duplicate catalog "+catalog);
+            }
+            catalogSet.add(catalog);
         }
-        return catalogList;
+        return catalogSet;
     }
 }

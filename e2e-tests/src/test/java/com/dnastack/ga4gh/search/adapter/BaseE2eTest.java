@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter;
 
+import com.dnastack.ga4gh.search.adapter.matchers.IsUrl;
 import com.dnastack.ga4gh.search.adapter.test.model.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,11 +17,13 @@ import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -41,6 +44,14 @@ public class BaseE2eTest {
     @BeforeClass
     public static void setupRestAssured() {
         RestAssured.baseURI = requiredEnv("E2E_BASE_URI");
+        try{
+            if(new URI(RestAssured.baseURI).getHost().equalsIgnoreCase("localhost")){
+                log.info("E2E BASE URI is at localhost, allowing localhost to occur within URLs of JSON responses.");
+                IsUrl.setAllowLocalhost(true);
+            }
+        }catch(URISyntaxException use){
+            throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));
+        }
     }
 
     protected static String requiredEnv(String name) {

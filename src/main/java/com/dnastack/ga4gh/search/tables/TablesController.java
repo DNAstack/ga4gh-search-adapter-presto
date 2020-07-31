@@ -33,11 +33,17 @@ public class TablesController {
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTables(HttpServletRequest request, @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-
-        TablesList tablesList = getSearchAdapter(request, clientSuppliedCredentials)
-                .getTables(ServletUriComponentsBuilder.fromCurrentContextPath().toUriString());
+        TablesList tablesList = getSearchAdapter(request, clientSuppliedCredentials).getTables();
 
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
+    }
+
+    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
+    @RequestMapping(value = "/tables/catalog/{catalogName}", method = RequestMethod.GET)
+    public ResponseEntity<TablesList> getTablesByhCatalog(HttpServletRequest request, @PathVariable("catalogName") String catalogName, @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+        TablesList tablesList = getSearchAdapter(request, clientSuppliedCredentials).getTablesInCatalog(catalogName);
+        return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
+
     }
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
@@ -66,13 +72,10 @@ public class TablesController {
 
     private HttpHeaders getExtraAuthHeaders(TablesList listTables) {
         HttpHeaders headers = new HttpHeaders();
-        List<TableError> errors = listTables.getErrors();
-        if (errors != null) {
-            errors.stream().filter(error -> error.getCode().equals(ErrorCode.AUTH_CHALLENGE))
-                .forEach(authError -> {
-                    headers.add("WWW-Authenticate",
-                        "GA4GH-Search realm:\"" + escapeQuotes(authError.getSource()) + "\"");
-                });
+        TableError error = listTables.getError();
+        if(error != null && error.getCode().equals(ErrorCode.AUTH_CHALLENGE)){
+            headers.add("WWW-Authenticate",
+                        "GA4GH-Search realm:\"" + escapeQuotes(error.getSource()) + "\"");
         }
         return headers;
     }

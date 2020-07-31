@@ -2,6 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
+import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableError;
 import com.dnastack.ga4gh.search.tables.TableInfo;
@@ -55,11 +56,11 @@ public class PrestoCatalog {
     }
 
 
-    public TablesList getTablesList(){
+    public TablesList getTablesList(Pagination nextPage){
         try {
             TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)));
             List<TableInfo> tableInfoList = getTableInfoList(tables);
-            return new TablesList(tableInfoList, null, null);
+            return new TablesList(tableInfoList, null, nextPage);
         }catch(AuthRequiredException ex){
             SearchAuthRequest searchAuthRequest = ex.getAuthorizationRequest();
             TableError error = new TableError();
@@ -71,7 +72,7 @@ public class PrestoCatalog {
             if(log.isTraceEnabled()){
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
-            return new TablesList(null, List.of(error), null);
+            return new TablesList(null, error, null);
         }catch(PrestoQueryFailedException | PrestoIOException ex){
             TableError error = new TableError();
             error.setMessage("Couldn't complete query to list tables");
@@ -80,7 +81,7 @@ public class PrestoCatalog {
             if(log.isTraceEnabled()){
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
-            return new TablesList(null, List.of(error), null);
+            return new TablesList(null, error, null);
         }
     }
 
