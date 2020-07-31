@@ -79,6 +79,49 @@ public class SearchE2eTest extends BaseE2eTest {
         extraCredentials.clear();
     }
 
+    private ListTableResponse getFirstPageOfTableListing() throws Exception{
+        ListTableResponse listTableResponse = searchApiGetRequest("/tables", 200, ListTableResponse.class);
+        assertThat(listTableResponse.getIndex(), not(nullValue()));
+
+        for(int i = 0; i < listTableResponse.getIndex().size(); ++i) {
+            assertThat(listTableResponse.getIndex().get(i).getUrl(), not(nullValue()));
+            assertThat(listTableResponse.getIndex().get(i).getPage(), is(i));
+        }
+        return listTableResponse;
+    }
+
+    @Test
+    public void indexIsPresentOnFirstPage() throws Exception{
+        getFirstPageOfTableListing();
+    }
+
+    @Test
+    public void nextPageTrailIsConsistentWithIndex() throws Exception{
+        ListTableResponse currentPage = getFirstPageOfTableListing();
+
+        List<PageIndexEntry> pageIndex = currentPage.getIndex();
+        if(pageIndex.size() == 1){
+            assertThat(currentPage.getPagination(), is(nullValue()));
+            return;
+        }
+
+        assertThat(currentPage.getPagination(), not(nullValue()));
+
+        //assert that the nth page has next url equal to the n+1st index.
+        for(int i = 1; i < pageIndex.size()-1; ++i) {
+            currentPage = searchApiGetRequest(currentPage.getPagination().getNextPageUrl().toString(),
+                                              200,
+                                              ListTableResponse.class);
+            //all pages with index < pageIndex.size() - 1 should have a non null valid next url.
+            assertThat(currentPage.getPagination().getNextPageUrl(), not(nullValue()));
+            if (i == (pageIndex.size() - 1)) {
+                assertThat(currentPage.getPagination(), is(nullValue()));
+            } else {
+                assertThat(currentPage.getPagination().getNextPageUrl(), is(pageIndex.get(i + 1).getUrl()));
+            }
+        }
+    }
+
     @Test
     public void sqlQueryShouldFindSomething() throws Exception {
 
@@ -162,62 +205,6 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:on
     }
 
-    @Ignore("Currently can't request your own page size.")
-    @Test
-    public void getTableData_PaginationShouldWork() throws Exception {
-        //@formatter:off
-        ObjectNode tableData =
-                givenAuthenticatedRequest()
-                    .contentType(ContentType.JSON)
-                    .queryParam("pageSize",2)
-                .when()
-                    .get("/table/{table_name}/data",table)
-                .then()
-                    .log().ifValidationFails()
-                    .statusCode(200)
-                    .body("data.size()",equalTo(2))
-                    .body("data_model",not(empty()))
-                    .extract()
-                    .as(ObjectNode.class);
-        //@formatter:on
-
-        //@formatter:off
-        ObjectNode firstPage =
-                givenAuthenticatedRequest()
-                    .contentType(ContentType.JSON)
-                    .queryParam("pageSize",1)
-                .when()
-                    .get("/table/{table_name}/data",table)
-                .then()
-                    .log().ifValidationFails()
-                    .statusCode(200)
-                    .body("data.size()",equalTo(1))
-                    .body("data_model",not(empty()))
-                    .body("pagination.next_page_url",is(not(isEmptyOrNullString())))
-                    .extract()
-                    .as(ObjectNode.class);
-        //@formatter:on
-
-        String nextPageUrl = URI.create(firstPage.get("pagination").get("next_page_url").asText()).getPath();
-        //@formatter:off
-        ObjectNode secondPage =
-                givenAuthenticatedRequest()
-                    .contentType(ContentType.JSON)
-                    .queryParam("pageSize",2)
-                .when()
-                    .get(nextPageUrl)
-                .then()
-                    .log().ifValidationFails()
-                    .statusCode(200)
-                    .body("data.size()",equalTo(1))
-                    .body("data_model",not(empty()))
-                    .extract()
-                    .as(ObjectNode.class);
-        //@formatter:on
-
-        assertEquals(firstPage.withArray("data").get(0), tableData.withArray("data").get(0));
-        assertEquals(secondPage.withArray("data").get(0), tableData.withArray("data").get(1));
-    }
 
 
     /**

@@ -38,7 +38,7 @@ public class SearchController {
         String page = request.getRequestURI()
                              .split(request.getContextPath() + "/search/")[1];
         return getSearchAdapter(request, clientSuppliedCredentials)
-                .getNextPage(page);
+                .getNextSearchPage(page);
     }
 
     // TODO make this method into a Spring MVC parameter provider
