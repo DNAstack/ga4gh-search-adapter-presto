@@ -1,7 +1,10 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedResponseException;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
+import com.dnastack.ga4gh.search.tables.DataModel;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableError;
@@ -10,7 +13,6 @@ import com.dnastack.ga4gh.search.tables.TablesList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,10 +35,8 @@ public class PrestoCatalog {
         String table = (String) row.get("table_name");
         String qualifiedTableName = catalogName + "." + schema + "." + table;
         String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
-        Map<String, Object> dataModel = new HashMap<>();
-        dataModel.put("$ref", ref);
         log.trace("Got table "+qualifiedTableName);
-        return new TableInfo(qualifiedTableName, null, dataModel);
+        return new TableInfo(qualifiedTableName, null, DataModel.builder().ref(ref).build());
     }
 
     private List<TableInfo> getTableInfoList(TableData tableData){
@@ -73,7 +73,7 @@ public class PrestoCatalog {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);
-        }catch(PrestoQueryFailedException | PrestoIOException ex){
+        }catch(PrestoUnexpectedResponseException | PrestoIOException ex){
             TableError error = new TableError();
             error.setMessage("Couldn't complete query to list tables");
             error.setSource(catalogName);

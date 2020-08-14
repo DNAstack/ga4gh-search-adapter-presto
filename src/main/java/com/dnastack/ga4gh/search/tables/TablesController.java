@@ -1,11 +1,13 @@
 package com.dnastack.ga4gh.search.tables;
 
+import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchController;
 import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 
 import java.util.List;
+import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,10 +26,13 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class TablesController {
 
     @Autowired
-    PrestoClient prestoClient;
+    private PrestoClient prestoClient;
+
+    @Autowired
+    private ApplicationConfig applicationConfig;
 
     private SearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
-        return new SearchAdapter(request, prestoClient, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        return new SearchAdapter(request, prestoClient, SearchController.parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs());
     }
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
@@ -40,7 +45,7 @@ public class TablesController {
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/tables/catalog/{catalogName}", method = RequestMethod.GET)
-    public ResponseEntity<TablesList> getTablesByhCatalog(HttpServletRequest request, @PathVariable("catalogName") String catalogName, @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+    public ResponseEntity<TablesList> getTablesByCatalog(HttpServletRequest request, @PathVariable("catalogName") String catalogName, @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
         TablesList tablesList = getSearchAdapter(request, clientSuppliedCredentials).getTablesInCatalog(catalogName);
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
 

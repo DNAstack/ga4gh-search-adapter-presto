@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.tables.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,10 +19,13 @@ import java.util.stream.Collectors;
 public class SearchController {
 
     @Autowired
-    PrestoClient prestoClient;
+    private PrestoClient prestoClient;
+
+    @Autowired
+    private ApplicationConfig applicationConfig;
 
     private SearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
-        return new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials));
+        return new SearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs());
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")

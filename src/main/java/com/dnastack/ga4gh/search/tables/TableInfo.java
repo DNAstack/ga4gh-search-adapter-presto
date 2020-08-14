@@ -19,8 +19,10 @@ public class TableInfo implements Comparable<TableInfo> {
     @JsonProperty("description")
     private String description;
 
+
+    //private Map<String, Object> dataModel;
     @JsonProperty("data_model")
-    private Map<String, Object> dataModel;
+    private DataModel dataModel;
 
     @Override
     public int compareTo(TableInfo o) {

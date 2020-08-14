@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.adapter.presto;
+package com.dnastack.ga4gh.search.adapter.presto.exception;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
