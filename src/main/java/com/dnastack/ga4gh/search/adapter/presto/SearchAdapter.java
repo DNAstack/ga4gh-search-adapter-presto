@@ -1,16 +1,27 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInsufficientResourcesException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInternalErrorException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInvalidQueryException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchCatalogException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchColumnException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchSchemaException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchTableException;
+import com.dnastack.ga4gh.search.tables.ColumnSchema;
+import com.dnastack.ga4gh.search.tables.DataModel;
 import com.dnastack.ga4gh.search.tables.PageIndexEntry;
 import com.dnastack.ga4gh.search.tables.Pagination;
 import com.dnastack.ga4gh.search.tables.TableData;
 import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.dnastack.ga4gh.search.tables.TablesList;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,21 +32,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 public class SearchAdapter {
     private static final String NEXT_PAGE_SEARCH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private static final String NEXT_PAGE_CATALOG_TEMPLATE = "/tables/catalog/%s";
+    private static final URI JSON_SCHEMA_DRAFT7_URI = URI.create("http://json-schema.org/draft-07/schema#");
 
     private final PrestoClient client;
     private final HttpServletRequest request;
     private final Map<String, String> extraCredentials;
+    private final Set<String> hiddenCatalogs;
 
-    public SearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials) {
+    public SearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials, Set<String> hiddenCatalogs) {
         this.client = prestoClient;
         this.extraCredentials = extraCredentials;
         this.request = request;
+        this.hiddenCatalogs = hiddenCatalogs;
     }
 
     private boolean hasMore(TableData tableData) {
@@ -125,7 +138,7 @@ public class SearchAdapter {
                 }
             }
         }
-        throw new PrestoNoSuchCatalogException("No such catalog "+catalog);
+        throw new PrestoNoSuchCatalogException("No such catalog " + catalog);
     }
 
 
@@ -136,14 +149,14 @@ public class SearchAdapter {
     public TableData getTableData(String tableName, String refHost) {
         TableData tableData = search("SELECT * FROM " + tableName);
         if(tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
-            tableData.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName)); //todo: this could be better
+            tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
         }
         return tableData;
     }
 
     public TableInfo getTableInfo(String tableName, String refHost){
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1");
-        tableData.getDataModel().put("$id", String.format("%s/table/%s/info", refHost, tableName));
+        tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
         return new TableInfo(tableName, null, tableData.getDataModel());
 
     }
@@ -152,9 +165,9 @@ public class SearchAdapter {
     private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse) {
 
         JsonNode columns;
-        Map<String, Object> generatedSchema = new LinkedHashMap<>();
-        List<Map<String, Object>> data = new ArrayList<>();
 
+        List<Map<String, Object>> data = new ArrayList<>();
+        DataModel dataModel = null;
         List<Transformer> transformers = new ArrayList<>();
 
         if (prestoResponse.hasNonNull("columns")) {
@@ -171,7 +184,7 @@ public class SearchAdapter {
                 transformers.add(JsonAdapter.getTransformer(type, rawType));
             }
 
-            generatedSchema = generateDataModel(columns);
+            dataModel = generateDataModel(columns);
 
 
             // Generate data
@@ -186,12 +199,38 @@ public class SearchAdapter {
                 }
             }
 
+        }else if(prestoResponse.hasNonNull("error")){
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                PrestoError prestoError = objectMapper.readValue(prestoResponse.get("error").toString(), PrestoError.class);
+                if(prestoError.getErrorName().equals("CATALOG_NOT_FOUND")){
+                    throw new PrestoNoSuchCatalogException(prestoError);
+                }else if(prestoError.getErrorName().equals("SCHEMA_NOT_FOUND")){
+                    throw new PrestoNoSuchSchemaException(prestoError);
+                }else if(prestoError.getErrorName().equals("TABLE_NOT_FOUND")){
+                    throw new PrestoNoSuchTableException(prestoError);
+                }else if(prestoError.getErrorName().equals("COLUMN_NOT_FOUND")){
+                    throw new PrestoNoSuchColumnException(prestoError);
+                }else if(prestoError.getErrorType().equals("USER_ERROR")){
+                    //Most other USER_ERRORs are bad queries and should likely return BAD_REQUEST error code.
+                    throw new PrestoInvalidQueryException(prestoError);
+                }else if(prestoError.getErrorType().equals("INSUFFICIENT_RESOURCES")){
+                    throw new PrestoInsufficientResourcesException(prestoError);
+                }else{
+                    // as of this commit, the remaining presto error type is 'internal error', but this
+                    // will also be a catch all.
+                    throw new PrestoInternalErrorException(prestoError);
+                }
+            }catch(IOException ex){
+                throw new UncheckedIOException(ex);
+            }
+
         }
 
         // Generate pagination
         Pagination pagination = generatePagination(nextPageTemplate, prestoResponse);
 
-        return new TableData(generatedSchema, Collections.unmodifiableList(data), pagination);
+        return new TableData(dataModel, Collections.unmodifiableList(data), pagination);
     }
 
     private Pagination generatePagination(String template, JsonNode prestoResponse) {
@@ -209,41 +248,54 @@ public class SearchAdapter {
         return new Pagination(nextPageUri, prestoNextPageUri);
     }
 
-    private Map<String, Object> generateDataModel(JsonNode columns) {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("$id", null);
-        schema.put("description", "Automatically generated schema.");
-        schema.put("$schema", "http://json-schema.org/draft-07/schema#");
-        schema.put("properties", generateJsonSchema(columns));
-        return schema;
+
+    private DataModel generateDataModel(JsonNode columns) {
+        return DataModel.builder()
+                 .id(null)
+                 .description("Automatically generated schema")
+                 .schema(JSON_SCHEMA_DRAFT7_URI)
+                 .properties(getJsonSchemaProperties(columns))
+                 .build();
     }
 
-    private Map<String, Object> generateJsonSchema(JsonNode columns) {
-        Map<String, Object> schemaJson = new LinkedHashMap<>();
+    private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
+        Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
         int position = 0;
         for (JsonNode column : columns) {
-            Map<String, Object> props = new LinkedHashMap<>();
+            ColumnSchema columnSchema = new ColumnSchema();
+            //Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
             String format = JsonAdapter.toFormat(type);
             if (JsonAdapter.isArray(type)) {
-                props.put("type", "array");
+                columnSchema.setType("array");
+                //props.put("type", "array");
                 if(format == null) {
-                    props.put("items", Map.of("type", JsonAdapter.toJsonType(type)));
+                    columnSchema.setItems(
+                            ColumnSchema.builder()
+                                .type(JsonAdapter.toJsonType(type))
+                                .build());
+
                 }else{
-                    props.put("items", Map.of("type", JsonAdapter.toJsonType(type), "format", format));
+                    columnSchema.setItems(
+                            ColumnSchema.builder()
+                                        .type(JsonAdapter.toJsonType(type))
+                                        .format(format)
+                                        .build());
                 }
             } else {
-                props.put("type", JsonAdapter.toJsonType(type));
+                columnSchema.setType(JsonAdapter.toJsonType(type));
                 if(format != null){
-                    props.put("format", format);
+                    columnSchema.setFormat(format);
                 }
             }
-            props.put("x-ga4gh-position", position++);
-            schemaJson.put(column.get("name").asText(), props);
+            columnSchema.setPosition(position++);
+
+            schemaJson.put(column.get("name").asText(), columnSchema);
         }
 
         return schemaJson;
     }
+
 
     /**
      * Get a list of the catalogs served by the connected instance of PrestoSQL.
@@ -256,10 +308,11 @@ public class SearchAdapter {
         Set<String> catalogSet = new LinkedHashSet<>();
         for (Map<String, Object> row : catalogs.getData()) {
             String catalog = (String) row.get("catalog_name");
-            if (catalog.equalsIgnoreCase("system")) {
+            if(hiddenCatalogs.contains(catalog.toLowerCase())){
                 log.debug("Ignoring catalog {}", catalog);
                 continue;
             }
+
             log.trace("Found catalog {}", catalog);
             if(catalogSet.contains(catalog)){
                 throw new AssertionError("Unexpected duplicate catalog "+catalog);

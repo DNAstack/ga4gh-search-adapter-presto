@@ -29,6 +29,8 @@ presto:
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100
+  hidden-catalogs: "system,postgrestest"
+
 info:
   build:
     name: "GA4GH Discovery Search API"

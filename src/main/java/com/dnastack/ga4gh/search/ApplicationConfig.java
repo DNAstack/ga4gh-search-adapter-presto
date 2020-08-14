@@ -11,6 +11,9 @@ import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
 import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +38,10 @@ public class ApplicationConfig {
 
     @Value("${presto.datasource.url}")
     private String prestoDatasourceUrl;
+
+    @Value("${presto.hidden-catalogs}")
+    @Getter
+    private Set<String> hiddenCatalogs;
 
     /**
      * Other settings

@@ -1,5 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedResponseException;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
@@ -46,17 +48,16 @@ public class PrestoHttpClient implements PrestoClient {
     }
 
     public JsonNode query(String statement, Map<String, String> extraCredentials){
-        log.info("Posting to "+prestoSearchEndpoint);
+        log.debug("Posting to "+prestoSearchEndpoint);
         try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-            log.info("Got response, now polling for query results");
+            log.debug("Got response, now polling for query results");
             JsonNode jn = getQueryResults(response);
             return jn;
         } catch (final AuthRequiredException e) {
-            log.info("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
+            log.debug("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
             throw e;
         } catch (final IOException e) {
-            log.debug("Failing query (wrapping " + e + "): " + statement);
-            throw new PrestoIOException(e);
+            throw new PrestoIOException("Unable to initiate search (I/O error).", e);
         }
 
     }
@@ -79,7 +80,7 @@ public class PrestoHttpClient implements PrestoClient {
         try (Response response = get(url, extraCredentials)) {
             return getQueryResults(response);
         }catch(IOException ie){
-            throw new PrestoIOException(ie);
+            throw new PrestoIOException("Unable to fetch more search or listing results (I/O error).", ie);
         }
     }
 
@@ -104,7 +105,7 @@ public class PrestoHttpClient implements PrestoClient {
                     "Coudn't find resource-type in auth request from backend");
                 return new SearchAuthRequest(key, resourceType, fromPresto);
             } catch (IOException e) {
-                throw new RuntimeException(
+                throw new PrestoIOException(
                     "The backend requested additional auth info but it couldn't be parsed as a JSON object: "
                         + embeddedJson, e);
             }
@@ -160,10 +161,11 @@ public class PrestoHttpClient implements PrestoClient {
                prestoState.equalsIgnoreCase("CLIENT_ABORTED") ||
                prestoState.equalsIgnoreCase("CLIENT_ERROR"));
     }
-    private JsonNode getQueryResults(Response httpResponse) throws PrestoQueryFailedException, AuthRequiredException {
+    private JsonNode getQueryResults(Response httpResponse) throws PrestoUnexpectedResponseException, AuthRequiredException {
         if (httpResponse.body() == null) {
-            throw new PrestoQueryFailedException(
+            throw new PrestoUnexpectedResponseException(
                 httpResponse.code(),
+                "Unable to fetch query results",
                 "No response body received from backend - status line was " + httpResponse.code() + " " + httpResponse
                     .message());
         }
@@ -172,12 +174,11 @@ public class PrestoHttpClient implements PrestoClient {
         try{
             httpResponseBody=httpResponse.body().string();
         }catch(IOException ie){
-            log.error("IOException when fetching query results http body of Presto response", ie);
-            throw new PrestoQueryFailedException(httpResponse.code(), "Failed to complete database query: problem with response");
+            throw new PrestoUnexpectedResponseException(httpResponse.code(), "Failed to complete database query: problem with response", "IOException while extracting http response body from Presto", ie);
         }
 
         if (!httpResponse.isSuccessful()) {
-            throw new PrestoQueryFailedException(httpResponse.code(), httpResponseBody);
+            throw new PrestoUnexpectedResponseException(httpResponse.code(), "An error occurred during query execution", "Presto Http response was not successful: "+httpResponseBody);
         }
 
         try {
@@ -190,7 +191,7 @@ public class PrestoHttpClient implements PrestoClient {
                 assert (jsonBody.hasNonNull("columns"));
                 return jsonBody;
             } else {
-                log.error("Processing failure, prestoState: {}", prestoState);
+
                 SearchAuthRequest credentialsRequest = extractExtraCredentialsRequest(jsonBody);
                 if (credentialsRequest != null) {
                     throw new AuthRequiredException(credentialsRequest);
@@ -200,11 +201,10 @@ public class PrestoHttpClient implements PrestoClient {
                 if (error == null) {
                     error = httpResponseBody;
                 }
-                throw new PrestoQueryFailedException(httpResponse.code(), error.toString());
+                throw new PrestoUnexpectedResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Processing failure, prestoState:"+prestoState+" -- "+ error.toString());
             }
         }catch(JsonParseException jpe){
-            log.error("Error while parsing Presto JSON response", jpe);
-            throw new PrestoQueryFailedException(httpResponse.code(), "Error while parsing JSON response from database");
+            throw new PrestoUnexpectedResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Error while parsing JSON response from database", jpe);
         }catch(IOException iex){
             // should never happen: no I/O is performed by objectMapper.readTree
             throw new AssertionError("IOException when parsing http body string response.");
@@ -235,19 +235,19 @@ public class PrestoHttpClient implements PrestoClient {
 
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
         Request r = request.build();
-        log.info(">>> {} {} (With Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials
+        log.debug(">>> {} {} (With Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials
             .size());
         Response firstTry = new OkHttpClient().newCall(r).execute();
         if (firstTry.code() != 401 && firstTry.code() != 403) {
             return firstTry;
         }
-        log.info("Got {}. Will refresh access token and retry.", firstTry.code());
+        log.debug("Got {}. Will refresh access token and retry.", firstTry.code());
         firstTry.close();
 
         authenticator.refreshAccessToken();
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
         r = request.build();
-        log.info(">>> {} {} (With refreshed Authorization header, {} extra credentials)", r.method(), r
+        log.debug(">>> {} {} (With refreshed Authorization header, {} extra credentials)", r.method(), r
             .url(), extraCredentials.size());
         return new OkHttpClient().newCall(r).execute();
     }

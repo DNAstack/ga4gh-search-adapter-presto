@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class TableData {
 
     @JsonProperty("data_model")
-    private Map<String, Object> dataModel;
+    private DataModel dataModel;
 
     @JsonProperty("data")
     private List<Map<String, Object>> data;
