@@ -28,6 +28,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.Method.GET;
@@ -44,71 +45,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
     private static final int MAX_REAUTH_ATTEMPTS = 10;
 
-    private static final Map<String, String> EXPECTED_FORMATS = Map.of(
-            "thedate", "date",
-            "thetime", "time",
-            "thetimestamp", "date-time",
-            "thetimestampwithtimezone", "date-time",
-            "thetimestampwithouttimezone", "date-time",
-            "thetimewithouttimezone", "time");
-            //"thetimewithtimezone", "time");   //Blocked by https://github.com/prestosql/presto/issues/4715
-
-
-    private static final Map<String, String> EXPECTED_VALUES_LOSANGELES = Map.of(
-            "thedate", "2020-05-27",
-            "thetime", "12:22:27.000",
-            "thetimestamp", "2020-05-27T12:22:27.000",
-            "thetimestampwithtimezone", "2020-05-27T19:22:27.000Z",
-            "thetimestampwithouttimezone", "2020-05-27T12:22:27.000",
-            "thetimewithouttimezone", "12:22:27.000");
-            //"thetimewithtimezone", "12:22:27-07"); //Blocked by https://github.com/prestosql/presto/issues/4715
-
-    private static final Map<String, String> EXPECTED_VALUES_UTC = Map.of(
-            "thedate", "2020-05-27",
-            "thetime", "12:22:27.000",
-            "thetimestamp", "2020-05-27T12:22:27.000",
-            "thetimestampwithtimezone", "2020-05-27T12:22:27.000Z",
-            "thetimestampwithouttimezone", "2020-05-27T12:22:27.000",
-            "thetimewithouttimezone", "12:22:27.000");
-            //"thetimewithtimezone", "12:22:27+00"); //Blocked by https://github.com/prestosql/presto/issues/4715
-
-    //Uncomment below when issue https://github.com/prestosql/presto/issues/4715 is resolved, and the "thetimewithtimezone" columns
-    //are uncommented in the above EXPECTED_* templates.
-//    private static final String INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE =
-//            "INSERT INTO %s(zone, thedate, thetime, thetimestamp, thetimestampwithtimezone, thetimestampwithouttimezone, thetimewithouttimezone, thetimewithtimezone)"
-//            +" VALUES('%s','%s', '%s', '%s', '%s', '%s', '%s', '%s')";
-
-    //Delete the below constant when issue https://github.com/prestosql/presto/issues/4715 is resolved.
-    private static final String INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE =
-            "INSERT INTO %s(zone, thedate, thetime, thetimestamp, thetimestampwithtimezone, thetimestampwithouttimezone, thetimewithouttimezone)"
-            +" VALUES('%s','%s', '%s', '%s', '%s', '%s', '%s')";
-
-    private static final String INSERT_PAGINATION_TEST_TABLE_ENTRY_TEMPLATE = "INSERT INTO %s(bogusfield) VALUES('%s')";
-
-    private static final String TEST_DATE_TIME_LOS_ANGELES = "2020-05-27 12:22:27.000 America/Los_Angeles";
-    private static final String TEST_DATE_TIME_UTC = "2020-05-27 12:22:27.000 UTC";
-
-    private static final String CREATE_DATETIME_TEST_TABLE_TEMPLATE = "CREATE TABLE %s("
-                                                                      + "id serial primary key,"
-                                                                      + "zone varchar(255),"
-                                                                      + "thedate DATE,"
-                                                                      + "thetime time,"
-                                                                      + "thetimestamp timestamp,"
-                                                                      + "thetimestampwithtimezone timestamp with time zone,"
-                                                                      + "thetimestampwithouttimezone timestamp without time zone,"
-                                                                      + "thetimewithouttimezone time without time zone)";
-                                                               //       + "thetimewithtimezone time with time zone)"; //Blocked by https://github.com/prestosql/presto/issues/4715
-
-    private static final String CREATE_PAGINATION_TEST_TABLE_TEMPLATE = "CREATE TABLE %s("
-                                                                        + "id serial primary key,"
-                                                                        + "bogusfield varchar(64))";
-
-    private static final String DELETE_TEST_TABLE_TEMPLATE = "DROP TABLE %s";
-
     private static String walletClientId;
     private static String walletClientSecret;
     private static String audience;
-    //private static String table;
 
     /**
      * Lazily initialized if Google credentials are needed by the test.
@@ -121,17 +60,13 @@ public class SearchE2eTest extends BaseE2eTest {
      */
     private static Map<String, String> extraCredentials = new HashMap<>();
 
-    private static String pgTestUser;
-    private static String pgTestPass;
-    private static String pgTestUri;
-    private static String pgTestCatalog;
 
-    private static String prestoDateTimeTestTable;
-    private static String prestoPaginationTestTable;
-
-    private static String postgresDateTimeTestTable;
-    private static String postgresPaginationTestTable;
-
+    private static String inMemoryCatalog;
+    private static String inMemorySchema;
+    private static String unqualifiedDateTimeTestTable;
+    private static String unqualifiedPaginationTestTable;
+    private static Map<String, Map<String, String>> expectedValues;
+    private static final Map<String, String> expectedFormats = new HashMap<>();
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -146,55 +81,48 @@ public class SearchE2eTest extends BaseE2eTest {
                                         .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
                                         .jackson2ObjectMapperFactory((cls, charset) -> objectMapper));
 
-
-        pgTestUser = requiredEnv("E2E_POSTGRES_TESTUSER");
-        pgTestPass = requiredEnv("E2E_POSTGRES_TESTPASS");
-        pgTestUri = requiredEnv("E2E_POSTGRES_TESTURI");
-        pgTestCatalog = requiredEnv("E2E_POSTGRES_TESTCATALOG");
-
-        //does test database exist?
-        assertTestDatabaseConnection();
-        setupTestTables();
+        inMemoryCatalog = requiredEnv("E2E_INMEMORY_TESTCATALOG");
+        inMemorySchema = requiredEnv("E2E_INMEMORY_TESTSCHEMA");
+        unqualifiedDateTimeTestTable = requiredEnv("E2E_INMEMORY_DATETIMETESTTABLE");
+        unqualifiedPaginationTestTable = requiredEnv("E2E_INMEMORY_PAGINATIONTESTTABLE");
+        String[] pairs = requiredEnv("E2E_DATETIMETESTTABLE_TYPE_MAP").split(",");
+        initMapFromPairs(pairs, expectedFormats);
+        expectedValues = System.getenv().entrySet().stream()
+                               .filter(v->v.getKey().startsWith("E2E_DATETIMETESTTABLE_VALUE_MAP"))
+                               .collect(Collectors.toMap(e->getZoneFromEnvVarName(e.getKey()), e->getExpectedValuesFromEnvVarValue(e.getValue())));
     }
 
-    private static String getFullyQualifiedTestTableName(String tableName){
-        final String schema = "public";
-        return pgTestCatalog+"."+schema+"."+tableName;
+
+    private static String getZoneFromEnvVarName(String envVarName){
+        return envVarName.substring("E2E_DATETIMETESTTABLE_VALUE_MAP_".length());
     }
 
-    static Connection getTestDatabaseConnection() throws SQLException{
-        log.info("Logging in to {} with user {} and pass {}", pgTestUri, pgTestUser, pgTestPass);
-        log.info("Driver dump:");
-        try{
-            Class.forName("org.postgresql.Driver");
-        }catch(ClassNotFoundException ce){
-            throw new RuntimeException("Class not found", ce);
-        }
-        DriverManager.drivers().forEach(driver->{
-            log.info("Got driver "+driver.toString());
-        });
-        return DriverManager.getConnection(pgTestUri, pgTestUser, pgTestPass);
+    private static Map<String, String> getExpectedValuesFromEnvVarValue(String value){
+        String[] pairs = value.split(",");
+        Map<String, String> expectedValuesForZone = new HashMap<>();
+        initMapFromPairs(pairs, expectedValuesForZone);
+        return expectedValuesForZone;
     }
 
-    private static void assertTestDatabaseConnection(){
-        try (Connection conn = getTestDatabaseConnection()){
-            if (conn != null) {
-                log.info("Test database connection is valid for "+pgTestUri);
-            } else {
-                throw new RuntimeException("Couldn't connect to test database with URI "+pgTestUri);
-            }
-        } catch (SQLException e) {
-            log.error("Error connecting to test database.  SQL State: {}", e.getSQLState(), e.getMessage());
-            throw new RuntimeException("Couldn't connect to test database with URI "+pgTestUri, e);
-        } catch (Exception e) {
-            throw new RuntimeException("Couldn't connect to test database with URI "+pgTestUri, e);
+    private static void initMapFromPairs(String[] pairs, Map<String, String> m){
+        for(String pair : pairs){
+            String[] splitPair = pair.split("::");
+            String key = splitPair[0].trim();
+            String val = splitPair[1].trim();
+            m.put(key, val);
         }
     }
+
 
     @Before
     public final void beforeEachTest() {
         extraCredentials.clear();
     }
+
+    private static String getFullyQualifiedTestTableName(String tableName){
+        return inMemoryCatalog+"."+inMemorySchema+"."+tableName;
+    }
+
 
     private ListTableResponse getFirstPageOfTableListing() throws Exception{
         ListTableResponse listTableResponse = searchApiGetRequest("/tables", 200, ListTableResponse.class);
@@ -207,91 +135,20 @@ public class SearchE2eTest extends BaseE2eTest {
         return listTableResponse;
     }
 
-    private static void setupTestTables() throws IOException{
-        String query = null;
-        try(Connection conn = getTestDatabaseConnection()){
-            Statement statement = conn.createStatement();
-            postgresDateTimeTestTable = "dateTimeTest_" + RandomStringUtils.randomAlphanumeric(16);
-            query = String.format(CREATE_DATETIME_TEST_TABLE_TEMPLATE, postgresDateTimeTestTable);
-            statement.execute(query);
-            prestoDateTimeTestTable = getFullyQualifiedTestTableName(postgresDateTimeTestTable);
-
-            //setup table entries
-            query = String.format(INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE, postgresDateTimeTestTable, "LosAngeles",
-                                  TEST_DATE_TIME_LOS_ANGELES,
-                                  TEST_DATE_TIME_LOS_ANGELES,
-                                  TEST_DATE_TIME_LOS_ANGELES,
-                                  TEST_DATE_TIME_LOS_ANGELES,
-                                  TEST_DATE_TIME_LOS_ANGELES,
-                                  TEST_DATE_TIME_LOS_ANGELES);
-                                  //TEST_DATE_TIME_LOS_ANGELES); //Blocked by https://github.com/prestosql/presto/issues/4715
-
-            statement.execute(query);
-
-            query = String.format(INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE, postgresDateTimeTestTable, "UTC",
-                                  TEST_DATE_TIME_UTC,
-                                  TEST_DATE_TIME_UTC,
-                                  TEST_DATE_TIME_UTC,
-                                  TEST_DATE_TIME_UTC,
-                                  TEST_DATE_TIME_UTC,
-                                  TEST_DATE_TIME_UTC
-                                  //TEST_DATE_TIME_UTC // Blocked by https://github.com/prestosql/presto/issues/4715
-                                 );
-            statement.execute(query);
-            
-            //create a test table with a bunch of bogus entries to test pagination.
-            postgresPaginationTestTable = "pagination_" + RandomStringUtils.randomAlphanumeric(16);
-            query = String.format(CREATE_PAGINATION_TEST_TABLE_TEMPLATE, postgresPaginationTestTable);
-            statement.execute(query);
-            for(int i = 0; i < 225; ++i){
-                String testValue = "testValue_"+i;
-                query = String.format(INSERT_PAGINATION_TEST_TABLE_ENTRY_TEMPLATE,
-                                      postgresPaginationTestTable, testValue);
-                statement.execute(query);
-            }
-
-            prestoPaginationTestTable = getFullyQualifiedTestTableName(postgresPaginationTestTable);
-
-        }catch(SQLException se){
-            log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
-            throw new RuntimeException("Unable to setup test tables.  query="+query, se);
-        }
-    }
-
-    @AfterClass
-    public static void removeTestTables(){
-        if(prestoDateTimeTestTable != null) {
-            log.info("Trying to remove datetime test table " + prestoDateTimeTestTable);
-            try (Connection conn = getTestDatabaseConnection()) {
-                Statement statement = conn.createStatement();
-
-                statement.execute(String.format(DELETE_TEST_TABLE_TEMPLATE, postgresDateTimeTestTable));
-                log.info("Successfully removed datetime test table " + postgresDateTimeTestTable);
-                postgresDateTimeTestTable = null;
-
-                statement = conn.createStatement();
-                statement.execute(String.format(DELETE_TEST_TABLE_TEMPLATE, postgresPaginationTestTable));
-                log.info("Successfully removed pagination test table " + postgresPaginationTestTable);
-                postgresPaginationTestTable = null;
-            } catch (SQLException se) {
-                log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
-                throw new RuntimeException("Unable to setup test tables: ", se);
-            }
-        }
-    }
 
     @Test
     public void datesAndTimesHaveCorrectTypes() throws IOException{
-        Table tableInfo = searchApiGetRequest("/table/" + prestoDateTimeTestTable + "/info", 200, Table.class);
+        String qualifiedTableName = getFullyQualifiedTestTableName(unqualifiedDateTimeTestTable);
+        Table tableInfo = searchApiGetRequest("/table/" + qualifiedTableName + "/info", 200, Table.class);
         assertThat(tableInfo, not(nullValue()));
-        assertThat(tableInfo.getName(), equalTo(prestoDateTimeTestTable));
+        assertThat(tableInfo.getName(), equalTo(qualifiedTableName));
         assertThat(tableInfo.getDataModel(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getId(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getSchema(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getProperties(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getProperties().entrySet(), not(empty()));
 
-        EXPECTED_FORMATS.entrySet().stream()
+        expectedFormats.entrySet().stream()
                       .forEach((entry)->{
                           assertThat(tableInfo.getDataModel().getProperties(), hasKey(entry.getKey()));
                           assertThat(tableInfo.getDataModel().getProperties().get(entry.getKey()).getFormat(), is(entry.getValue()));
@@ -300,7 +157,7 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     private void assertDatesAndTimesHaveCorrectValuesForZone(String zone, Map<String, String> expectedValues) throws IOException{
-        SearchRequest query = new SearchRequest(String.format("SELECT * FROM " + prestoDateTimeTestTable + " WHERE zone='%s'", zone));
+        SearchRequest query = new SearchRequest(String.format("SELECT * FROM " + getFullyQualifiedTestTableName(unqualifiedDateTimeTestTable) + " WHERE zone='%s'", zone));
         log.info("Running query {}", query);
 
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
@@ -317,24 +174,32 @@ public class SearchE2eTest extends BaseE2eTest {
 
         final Map<String, ColumnSchema> properties = result.getDataModel().getProperties();
         final Map<String, Object> row = result.getData().get(0);
-        EXPECTED_FORMATS.entrySet().stream().forEach(entry->{
+        expectedFormats.entrySet().stream().forEach(entry->{
             String columnName = entry.getKey();
             String expectedColumnFormat = entry.getValue();
             assertThat("Expected column with format "+expectedColumnFormat+" for column "+columnName+" ("+zone+" time zone)", properties.get(columnName).getFormat(), is(expectedColumnFormat));
             assertThat("Expected column with type string for column "+columnName+" ("+zone+" time zone)", properties.get(columnName).getType(), is("string"));
-            assertThat(row.get(columnName), is(expectedValues.get(columnName)));
+            assertThat("date/time/datetime column "+columnName+" had an unexpected value ", row.get(columnName), is(expectedValues.get(columnName)));
         });
     }
 
 
-    @Test
-    public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithLosAngelesTimeZone() throws IOException{
-        assertDatesAndTimesHaveCorrectValuesForZone("LosAngeles", EXPECTED_VALUES_LOSANGELES);
-    }
+//    @Test
+//    public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithLosAngelesTimeZone() throws IOException{
+//        assertDatesAndTimesHaveCorrectValuesForZone("LosAngeles", EXPECTED_VALUES_LOSANGELES);
+//    }
+//
+//    @Test
+//    public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithUTCTimeZone() throws IOException{
+//        assertDatesAndTimesHaveCorrectValuesForZone("UTC", EXPECTED_VALUES_UTC);
+//    }
 
     @Test
-    public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithUTCTimeZone() throws IOException{
-        assertDatesAndTimesHaveCorrectValuesForZone("UTC", EXPECTED_VALUES_UTC);
+    public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithZone() throws IOException{
+        for(Map.Entry<String, Map<String, String>> e : expectedValues.entrySet()){
+           log.info("Checking date and time was inserted correctly for zone "+e.getKey());
+            assertDatesAndTimesHaveCorrectValuesForZone(e.getKey(), e.getValue());
+        }
     }
 
     @Test
@@ -387,7 +252,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void sqlQueryWithBadColumnShouldReturn400AndMessageAndTraceId() throws Exception{
-        SearchRequest query = new SearchRequest("SELECT e2etest_olywolypolywoly FROM " + prestoPaginationTestTable + " LIMIT 10");
+        SearchRequest query = new SearchRequest("SELECT e2etest_olywolypolywoly FROM " + getFullyQualifiedTestTableName(unqualifiedPaginationTestTable) + " LIMIT 10");
         log.info("Running bad query");
         UserFacingError error = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
         log.info("Got error "+error);
@@ -399,7 +264,7 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void sqlQueryShouldFindSomething() throws Exception {
 
-        SearchRequest query = new SearchRequest("SELECT * FROM " + prestoPaginationTestTable + " LIMIT 10");
+        SearchRequest query = new SearchRequest("SELECT * FROM " + getFullyQualifiedTestTableName(unqualifiedPaginationTestTable) + " LIMIT 10");
         log.info("Running query {}", query);
 
 
@@ -426,7 +291,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableInfoWithUnknownCatalogGives404AndMessageAndTraceId() throws Exception{
-        final String prestoTableWithBadCatalog = "e2etest_olywlypolywoly.public."+postgresPaginationTestTable;
+        final String prestoTableWithBadCatalog = "e2etest_olywlypolywoly.public." + unqualifiedPaginationTestTable;
         UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadCatalog + "/info", 404, UserFacingError.class);
         assertThat(error, not(nullValue()));
         assertThat(error.getMessage(), not(nullValue()));
@@ -435,7 +300,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableInfoWithUnknownSchemaGives404AndMessageAndTraceId() throws Exception{
-        final String prestoTableWithBadSchema = pgTestCatalog+".e2etest_olywolypolywoly."+postgresPaginationTestTable;
+        final String prestoTableWithBadSchema = inMemoryCatalog + ".e2etest_olywolypolywoly." + unqualifiedPaginationTestTable;
         UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadSchema + "/info", 404, UserFacingError.class);
         assertThat(error, not(nullValue()));
         assertThat(error.getMessage(), not(nullValue()));
@@ -444,7 +309,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableInfoWithUnknownTableGives404AndMessageAndTraceId() throws Exception{
-        final String prestoTableWithBadTable = pgTestCatalog+".public."+"e2etest_olywolypolywoly";
+        final String prestoTableWithBadTable = inMemoryCatalog+"."+inMemorySchema+"."+"e2etest_olywolypolywoly";
         UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, UserFacingError.class);
         assertThat(error, not(nullValue()));
         assertThat(error.getMessage(), not(nullValue()));
@@ -453,9 +318,10 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableInfo_should_returnTableAndSchema() throws Exception {
-        Table tableInfo = searchApiGetRequest("/table/" + prestoPaginationTestTable + "/info", 200, Table.class);
+        String qualifiedTable = getFullyQualifiedTestTableName(unqualifiedPaginationTestTable);
+        Table tableInfo = searchApiGetRequest("/table/" + qualifiedTable + "/info", 200, Table.class);
         assertThat(tableInfo, not(nullValue()));
-        assertThat(tableInfo.getName(), equalTo(prestoPaginationTestTable));
+        assertThat(tableInfo.getName(), equalTo(qualifiedTable));
         assertThat(tableInfo.getDataModel(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getId(), not(nullValue()));
         assertThat(tableInfo.getDataModel().getSchema(), not(nullValue()));
@@ -465,7 +331,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableData_should_returnDataAndDataModel() throws Exception {
-        Table tableData = searchApiGetRequest("/table/" + prestoPaginationTestTable + "/data", 200, Table.class);
+        Table tableData = searchApiGetRequest("/table/" + getFullyQualifiedTestTableName(unqualifiedPaginationTestTable) + "/data", 200, Table.class);
         assertThat(tableData, not(nullValue()));
         tableData = searchApiGetAllPages(tableData);
         assertThat(tableData.getData(), not(nullValue()));
@@ -500,7 +366,7 @@ public class SearchE2eTest extends BaseE2eTest {
         //@formatter:off
         givenAuthenticatedRequest("read:data_model") // but not read:data
         .when()
-            .get("/table/{tableName}/data", prestoPaginationTestTable)
+            .get("/table/{tableName}/data", getFullyQualifiedTestTableName(unqualifiedPaginationTestTable))
         .then()
             .log().ifValidationFails()
             .statusCode(403)
