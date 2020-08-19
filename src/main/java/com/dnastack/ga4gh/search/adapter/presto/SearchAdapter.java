@@ -150,6 +150,7 @@ public class SearchAdapter {
         TableData tableData = search("SELECT * FROM " + tableName);
         if(tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
             tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
+            attachCommentsToDataModel(tableData, tableName);
         }
         return tableData;
     }
@@ -157,6 +158,7 @@ public class SearchAdapter {
     public TableInfo getTableInfo(String tableName, String refHost){
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1");
         tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
+        attachCommentsToDataModel(tableData, tableName);
         return new TableInfo(tableName, null, tableData.getDataModel());
 
     }
@@ -320,5 +322,28 @@ public class SearchAdapter {
             catalogSet.add(catalog);
         }
         return catalogSet;
+    }
+
+    private void attachCommentsToDataModel(TableData tableData, String tableName) {
+        if (tableData.getDataModel() == null) {
+            return;
+        }
+
+        Map<String, ColumnSchema> dataModelProperties = tableData.getDataModel().getProperties();
+
+        if (dataModelProperties == null) {
+            return;
+        }
+
+        TableData describeData = searchAll("DESCRIBE " + tableName);
+
+        for (Map<String, Object> describeRow : describeData.getData()) {
+            final String columnName = (String) describeRow.get("Column");
+            final String comment = (String) describeRow.get("Comment");
+
+            if (dataModelProperties.containsKey(columnName) && comment != null && !comment.isBlank()) {
+                dataModelProperties.get(columnName).setComment(comment);
+            }
+        }
     }
 }
