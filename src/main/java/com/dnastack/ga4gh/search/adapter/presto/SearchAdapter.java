@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoBadlyQualifiedNameException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInsufficientResourcesException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInternalErrorException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInvalidQueryException;
@@ -31,6 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -38,6 +40,11 @@ public class SearchAdapter {
     private static final String NEXT_PAGE_SEARCH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private static final String NEXT_PAGE_CATALOG_TEMPLATE = "/tables/catalog/%s";
     private static final URI JSON_SCHEMA_DRAFT7_URI = URI.create("http://json-schema.org/draft-07/schema#");
+
+    //Matches the given name against the pattern <catalog>.<schema>.<table>, "<catalog>"."<schema>"."<table>", or
+    //"<catalog>.<schema>.<table>".  Note this pattern is permissive and will often allow misquoted names through.
+    private static final Pattern qualifiedNameMatcher =
+            Pattern.compile("^\"?[A-Za-z0-9]+\"?\\.\"?[A-Za-z0-9]+\"?\\.\"?[A-Za-z0-9]+\"?$");
 
     private final PrestoClient client;
     private final HttpServletRequest request;
@@ -155,7 +162,16 @@ public class SearchAdapter {
         return tableData;
     }
 
+
+    private boolean isValidPrestoName(String tableName){
+        return qualifiedNameMatcher.matcher(tableName).matches();
+    }
+
     public TableInfo getTableInfo(String tableName, String refHost){
+        if(!isValidPrestoName(tableName)){
+            //triggers a 404.
+           throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
+        }
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1");
         tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
         attachCommentsToDataModel(tableData, tableName);

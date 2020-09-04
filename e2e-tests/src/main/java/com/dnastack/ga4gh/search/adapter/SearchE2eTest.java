@@ -317,6 +317,15 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
+    public void getTableInfoWithBadlyQualifiedTableGives404AndMessageAndTraceId() throws Exception{
+        final String prestoTableWithBadTable = "e2etest_olywolypolywoly";
+        UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, UserFacingError.class);
+        assertThat(error, not(nullValue()));
+        assertThat(error.getMessage(), not(nullValue()));
+        assertThat(error.getTraceId(), not(nullValue()));
+    }
+
+    @Test
     public void getTableInfo_should_returnTableAndSchema() throws Exception {
         String qualifiedTable = getFullyQualifiedTestTableName(unqualifiedPaginationTestTable);
         Table tableInfo = searchApiGetRequest("/table/" + qualifiedTable + "/info", 200, Table.class);

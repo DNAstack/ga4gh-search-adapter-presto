@@ -29,7 +29,7 @@ presto:
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100
-  hidden-catalogs: "system,postgrestest"
+  hidden-catalogs: "system"
 
 info:
   build:

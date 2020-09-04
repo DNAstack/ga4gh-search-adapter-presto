@@ -1,6 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.shared;
 
 import brave.Tracer;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoBadlyQualifiedNameException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoErrorException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInsufficientResourcesException;
@@ -42,6 +43,12 @@ public class GlobalControllerExceptionHandler {
     public ResponseEntity<?> handleNoSuchThingException(PrestoErrorException ex){
         logPrestoError(ex);
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new UserFacingError(ex.getPrestoError(), tracer.currentSpan().context().traceIdString()
+        ));
+    }
+    @ExceptionHandler({PrestoBadlyQualifiedNameException.class})
+    public ResponseEntity<?> handleBadlyQualifiedNameException(PrestoBadlyQualifiedNameException ex){
+        log.error("Table name given was not fully qualified", ex);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new UserFacingError(ex.getMessage(), tracer.currentSpan().context().traceIdString()
         ));
     }
 
