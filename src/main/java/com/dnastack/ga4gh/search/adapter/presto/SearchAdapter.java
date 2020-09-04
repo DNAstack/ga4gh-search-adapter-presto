@@ -44,7 +44,7 @@ public class SearchAdapter {
     //Matches the given name against the pattern <catalog>.<schema>.<table>, "<catalog>"."<schema>"."<table>", or
     //"<catalog>.<schema>.<table>".  Note this pattern is permissive and will often allow misquoted names through.
     private static final Pattern qualifiedNameMatcher =
-            Pattern.compile("^\"?[A-Za-z0-9]+\"?\\.\"?[A-Za-z0-9]+\"?\\.\"?[A-Za-z0-9]+\"?$");
+            Pattern.compile("^\"?[^\"]+\"?\\.\"?[^\"]+\"?\\.\"?[^\"]+\"?$");
 
     private final PrestoClient client;
     private final HttpServletRequest request;
