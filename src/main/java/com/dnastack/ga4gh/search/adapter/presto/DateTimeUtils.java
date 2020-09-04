@@ -65,6 +65,9 @@ public class DateTimeUtils {
      */
     public static String convertToIso8601TimestampWithTimeZone(String timestampWithTimeZone)
     {
+        if(timestampWithTimeZone.equalsIgnoreCase("null")){
+            return null;
+        }
         String ts = TIMESTAMP_WITH_TIME_ZONE_FORMATTER
                 .withOffsetParsed()
                 .parseDateTime(timestampWithTimeZone)
@@ -81,6 +84,9 @@ public class DateTimeUtils {
      * @return iso8601 form of timestamp with timezone.
      */
     public static String convertToIso8601Timestamp(String timestamp){
+        if(timestamp.equalsIgnoreCase("null")){
+            return null;
+        }
         String ts = TIMESTAMP_WITHOUT_TIME_ZONE_FORMATTER
                 .parseDateTime(timestamp)
                 .toDateTimeISO()
@@ -127,7 +133,9 @@ public class DateTimeUtils {
      */
     public static String convertToIso8601TimeWithTimeZone(String timeWithTimeZone)
     {
-
+        if(timeWithTimeZone.equalsIgnoreCase("null")){
+            return null;
+        }
 
         DateTime dt = TIME_WITH_TIME_ZONE_FORMATTER
                 .parseDateTime(timeWithTimeZone)
@@ -147,6 +155,9 @@ public class DateTimeUtils {
      */
     public static String convertToIso8601TimeWithoutTimeZone(String value)
     {
+        if(value.equalsIgnoreCase("null")){
+            return null;
+        }
         return TIME_FORMATTER.parseDateTime(value).toDateTimeISO().toLocalTime().toString();
     }
 
