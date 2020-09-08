@@ -278,15 +278,13 @@ public class SearchAdapter {
 
     private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
         Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
-        int position = 0;
+
         for (JsonNode column : columns) {
             ColumnSchema columnSchema = new ColumnSchema();
-            //Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
             String format = JsonAdapter.toFormat(type);
             if (JsonAdapter.isArray(type)) {
                 columnSchema.setType("array");
-                //props.put("type", "array");
                 if(format == null) {
                     columnSchema.setItems(
                             ColumnSchema.builder()
@@ -306,7 +304,6 @@ public class SearchAdapter {
                     columnSchema.setFormat(format);
                 }
             }
-            columnSchema.setPosition(position++);
 
             schemaJson.put(column.get("name").asText(), columnSchema);
         }
