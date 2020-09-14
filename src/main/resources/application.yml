@@ -25,7 +25,7 @@ app:
 
 presto:
   datasource:
-    url: "http://localhost:8079"
+    url: "http://localhost:8089"
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100
@@ -44,6 +44,20 @@ logging:
 spring:
   jackson:
     default-property-inclusion: NON_NULL
+  jpa:
+    properties:
+      hibernate:
+        temp:
+          use_jdbc_metadata_defaults: false
+    show-sql: true
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: jdbc:postgresql://127.0.0.1/ga4ghsearchadapterpresto
+    username: ga4ghsearchadapterpresto
+    password: ga4ghsearchadapterpresto
+    driver-class-name: org.postgresql.Driver
+
 ---
 
 spring:

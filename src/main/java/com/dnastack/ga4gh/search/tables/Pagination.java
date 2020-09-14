@@ -7,17 +7,32 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.apache.http.client.utils.URIBuilder;
+import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Data
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
 public class Pagination {
+    @JsonIgnore
+    private String queryJobId;
 
     @JsonProperty("next_page_url")
     private URI nextPageUrl;
 
     @JsonIgnore
     private URI prestoNextPageUrl;
+
+    public URI getNextPageUrl(){
+        if(queryJobId != null && nextPageUrl != null){
+            return UriComponentsBuilder.fromUri(nextPageUrl)
+                                       .queryParam("queryJobId", queryJobId)
+                                       .build()
+                                       .toUri();
+        }
+        return nextPageUrl;
+    }
 
 }

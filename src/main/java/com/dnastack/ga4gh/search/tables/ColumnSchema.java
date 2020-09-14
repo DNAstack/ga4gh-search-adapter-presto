@@ -25,4 +25,7 @@ public class ColumnSchema {
 
     @JsonProperty("$comment")
     private String comment;
+
+    @JsonProperty("$ref")
+    private String ref;
 }

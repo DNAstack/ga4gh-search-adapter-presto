@@ -29,9 +29,15 @@ PRESTO_DATASOURCE_URL=https://<your-presto-server>
 SPRING_PROFILES_ACTIVE=no-auth
 ```
 
+The search adapter requires a Postgres database. To start the app locally quickly with the default settings, you can 
+spin up the database with this docker command:
+```
+docker run -d -p 5432:5432 --name ga4ghsearchadapterpresto -e POSTGRES_USER=ga4ghsearchadapterpresto -e POSTGRES_PASSWORD=ga4ghsearchadapterpresto postgres
+```
+
 ### Run
 ```$xslt
-java -jar /target/ga4gh-discovery-search-service-1.0-SNAPSHOT.jar
+mvn clean spring-boot:run
 ```
 
 # Configuring (Advanced)

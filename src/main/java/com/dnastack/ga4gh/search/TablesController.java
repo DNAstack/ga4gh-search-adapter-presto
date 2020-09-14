@@ -1,14 +1,19 @@
-package com.dnastack.ga4gh.search.tables;
+package com.dnastack.ga4gh.search;
 
 import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
-import com.dnastack.ga4gh.search.adapter.presto.SearchAdapter;
-import com.dnastack.ga4gh.search.adapter.presto.SearchController;
+import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
+import com.dnastack.ga4gh.search.SearchController;
+import com.dnastack.ga4gh.search.repository.QueryJobRepository;
+import com.dnastack.ga4gh.search.tables.TableData;
+import com.dnastack.ga4gh.search.tables.TableError;
 import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
 
 import java.util.List;
-import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
+
+import com.dnastack.ga4gh.search.tables.TableInfo;
+import com.dnastack.ga4gh.search.tables.TablesList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -31,8 +36,11 @@ public class TablesController {
     @Autowired
     private ApplicationConfig applicationConfig;
 
-    private SearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
-        return new SearchAdapter(request, prestoClient, SearchController.parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs());
+    @Autowired
+    private QueryJobRepository queryJobRepository;
+
+    private PrestoSearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
+        return new PrestoSearchAdapter(request, prestoClient, SearchController.parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs(), queryJobRepository);
     }
 
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
@@ -54,7 +62,7 @@ public class TablesController {
     @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public TableInfo getTableInfo(HttpServletRequest request, @PathVariable("table_name") String tableName,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+                                  @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
 
         return getSearchAdapter(request, clientSuppliedCredentials)
                 .getTableInfo(tableName, ServletUriComponentsBuilder.fromCurrentContextPath().toUriString());
@@ -63,8 +71,8 @@ public class TablesController {
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
-    public TableData getTableData(HttpServletRequest request,@PathVariable("table_name") String tableName,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+    public TableData getTableData(HttpServletRequest request, @PathVariable("table_name") String tableName,
+                                  @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
 
         return getSearchAdapter(request, clientSuppliedCredentials)
                 .getTableData(tableName, ServletUriComponentsBuilder.fromCurrentContextPath().toUriString());

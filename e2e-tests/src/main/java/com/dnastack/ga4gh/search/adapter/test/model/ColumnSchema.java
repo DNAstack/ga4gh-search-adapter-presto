@@ -22,4 +22,7 @@ public class ColumnSchema {
 
     @JsonProperty("x-ga4gh-position")
     private int position;
+
+    @JsonProperty("$ref")
+    private String ref;
 }

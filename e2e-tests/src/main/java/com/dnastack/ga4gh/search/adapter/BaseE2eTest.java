@@ -44,6 +44,7 @@ import static org.junit.Assert.fail;
 @Slf4j
 public class BaseE2eTest {
 
+    static Boolean useSSL;
     static RestAssuredConfig config;
 
     @BeforeClass
@@ -53,6 +54,9 @@ public class BaseE2eTest {
             if(new URI(RestAssured.baseURI).getHost().equalsIgnoreCase("localhost")){
                 log.info("E2E BASE URI is at localhost, allowing localhost to occur within URLs of JSON responses.");
                 IsUrl.setAllowLocalhost(true);
+                useSSL=false;
+            }else{
+                useSSL=true;
             }
         }catch(URISyntaxException use){
             throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));

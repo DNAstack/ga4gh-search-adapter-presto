@@ -1,7 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedResponseException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.dnastack.ga4gh.search.tables.DataModel;
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class PrestoCatalog {
-    private final SearchAdapter searchAdapter;
+    private final PrestoSearchAdapter searchAdapter;
     private final String refHost;
     private final String catalogName;
 
@@ -73,7 +73,7 @@ public class PrestoCatalog {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);
-        }catch(PrestoUnexpectedResponseException | PrestoIOException ex){
+        }catch(PrestoUnexpectedHttpResponseException | PrestoIOException ex){
             TableError error = new TableError();
             error.setMessage("Couldn't complete query to list tables");
             error.setSource(catalogName);

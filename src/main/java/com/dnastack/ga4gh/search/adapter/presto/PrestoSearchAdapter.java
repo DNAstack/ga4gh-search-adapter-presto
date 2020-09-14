@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.ga4gh.search.adapter.presto.exception.InvalidQueryJobException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoBadlyQualifiedNameException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInsufficientResourcesException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInternalErrorException;
@@ -8,6 +9,9 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchCatalogExc
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchColumnException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchSchemaException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchTableException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.QueryParsingException;
+import com.dnastack.ga4gh.search.repository.QueryJob;
+import com.dnastack.ga4gh.search.repository.QueryJobRepository;
 import com.dnastack.ga4gh.search.tables.ColumnSchema;
 import com.dnastack.ga4gh.search.tables.DataModel;
 import com.dnastack.ga4gh.search.tables.PageIndexEntry;
@@ -17,6 +21,7 @@ import com.dnastack.ga4gh.search.tables.TableInfo;
 import com.dnastack.ga4gh.search.tables.TablesList;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -26,17 +31,22 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
-public class SearchAdapter {
+public class PrestoSearchAdapter {
     private static final String NEXT_PAGE_SEARCH_TEMPLATE = "/search/%s"; //todo: alternatives?
     private static final String NEXT_PAGE_CATALOG_TEMPLATE = "/tables/catalog/%s";
     private static final URI JSON_SCHEMA_DRAFT7_URI = URI.create("http://json-schema.org/draft-07/schema#");
@@ -51,11 +61,14 @@ public class SearchAdapter {
     private final Map<String, String> extraCredentials;
     private final Set<String> hiddenCatalogs;
 
-    public SearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials, Set<String> hiddenCatalogs) {
+    private QueryJobRepository queryJobRepository;
+
+    public PrestoSearchAdapter(HttpServletRequest request, PrestoClient prestoClient, Map<String, String> extraCredentials, Set<String> hiddenCatalogs, QueryJobRepository queryJobHistory) {
         this.client = prestoClient;
         this.extraCredentials = extraCredentials;
         this.request = request;
         this.hiddenCatalogs = hiddenCatalogs;
+        this.queryJobRepository = queryJobHistory;
     }
 
     private boolean hasMore(TableData tableData) {
@@ -66,24 +79,175 @@ public class SearchAdapter {
     }
 
     // Perform the given query and gather ALL results, by following Presto's nextUrl links
-    public TableData searchAll(String statement){
+    // The query should NOT contain any functions that would not be recognized by Presto.
+    TableData searchAll(String statement){
         TableData tableData = search(statement);
         while(hasMore(tableData)){
-            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath());
+            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null);
             tableData.append(nextPage);
         }
         return tableData;
     }
 
-    TableData search(String statement){
-        JsonNode response = client.query(statement, extraCredentials);
-        return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response);
+    //Pattern to match a two argument function
+    private static final Pattern biFunctionPattern = Pattern.compile("(([A-Za-z0-9_]+)\\(\\s*([^,]+)\\s*,\\s*('[^']+')\\s*\\)(\\s+as\\s+([A-Za-z0-9_]*))?)", Pattern.DOTALL);
+
+
+    @Getter
+    static class SQLFunction {
+        final String functionName;
+        final List<String> args = new ArrayList<>();
+        final String columnAlias;
+
+        public String getFunctionName(){
+            return functionName;
+        }
+        public String getColumnAlias(){
+            return columnAlias;
+        }
+        public List<String> getArgs(){
+            return args;
+        }
+        public SQLFunction(MatchResult matchResult){
+            this.functionName = matchResult.group(2);
+            System.out.println("function name is "+functionName+" groupCount: "+matchResult.groupCount());
+            for(int i = 1; i <= matchResult.groupCount(); ++i){
+                System.out.println("\t+match"+i+" => "+matchResult.group(i));
+            }
+            String alias =  null;
+            for(int i = 3; i < matchResult.groupCount()-1; ++i){
+                System.out.println("\t"+i);
+                System.out.println("\targ "+matchResult.group(i));
+                this.args.add(matchResult.group(i));
+            }
+
+            String asToken = matchResult.group(matchResult.groupCount()-1);
+            if(asToken != null && asToken.strip().startsWith("as")) {
+                System.out.println("\tchecking alias");
+                alias = matchResult.group(matchResult.groupCount());
+                System.out.println("\talias: " + alias);
+            }
+
+            this.columnAlias = alias;
+        }
+
+    }
+
+    //rewrites the query by replacing all instances of functionName(a_0, a_1)
+    //with a_argIndex
+    private String rewriteQuery(String query, String functionName, int argIndex){
+        return biFunctionPattern.matcher(query)
+                                .replaceAll(matchResult-> {
+                           SQLFunction sf = new SQLFunction(matchResult);
+                           if(sf.getFunctionName().equals(functionName)){
+                               String col = sf.getArgs().get(argIndex);
+                               String alias = sf.getColumnAlias();
+                               return (alias == null) ? col : col+" as "+alias;
+                           }
+                          return matchResult.group(1); //pass function through unchanged.
+                       });
+    }
+
+    // Extracts all two-argument SQL functions from a query.
+    private Stream<SQLFunction> parseSQLBiFunctions(String query){
+        Matcher matcher = biFunctionPattern.matcher(query);
+        return matcher.results().map(SQLFunction::new);
     }
 
 
-    public TableData getNextSearchPage(String page){
+    // Given the parsed representation of the ga4gh_type function,
+    // returns the type (second argument of the function), without quotes.
+    // (this will be a JSON schema, or the shorthand $ref:<URL>)
+    private String getGa4ghType(SQLFunction ga4ghFunction){
+        String ga4ghType = ga4ghFunction.getArgs().get(1).strip();
+        if((ga4ghType.startsWith("'") && ga4ghType.endsWith("'")) ||
+           (ga4ghType.startsWith("\"") && ga4ghType.endsWith("\""))){
+            return ga4ghType.substring(1, ga4ghType.length()-1);
+        }else{
+            throw new QueryParsingException("Couldn't parse query: second argument to ga4gh_type must be quoted.");
+        }
+    }
+
+    // Given tableData representing some search result, applies "type casting" of the result as described by the given
+    // parsed ga4gh_type function.
+    private void applyGa4ghTypeSqlFunction(SQLFunction ga4ghTypeFunction, TableData tableData){
+        ObjectMapper objectMapper = new ObjectMapper();
+        DataModel dataModel = tableData.getDataModel();
+        if(dataModel ==  null){
+            return;
+        }
+
+        if(dataModel.getRef() != null){
+            //sanity check
+            throw new RuntimeException("Unable to apply SQL function to response with indirect $ref");
+        }
+
+        Map<String, ColumnSchema> columnSchemaMap = new HashMap<>(dataModel.getProperties());
+
+        String columnName = (ga4ghTypeFunction.getColumnAlias()) != null ? ga4ghTypeFunction.getColumnAlias() : ga4ghTypeFunction.getArgs().get(0);
+        String ga4ghType = getGa4ghType(ga4ghTypeFunction);
+
+        ColumnSchema newColumnSchema;
+        if(ga4ghType.startsWith("$ref:")){
+            String[] parts = ga4ghType.split(":",2);
+            if(parts.length != 2){
+                //This could have been detected earlier, but whatever.
+                throw new QueryParsingException("Unexpected second argument to ga4gh_type function, must be a valid JSON schema or the $ref:<URL> shorthand");
+            }
+            newColumnSchema = ColumnSchema.builder()
+                    .ref(parts[1])
+                    .build();
+        }else{
+            try {
+                newColumnSchema = objectMapper.readValue(ga4ghType, ColumnSchema.class);
+            } catch (IOException e) {
+                throw new QueryParsingException("Unexpected second argument to ga4gh_type function, must be a valid JSON schema or the $ref:<URL> shorthand.", e);
+            }
+        }
+
+        ColumnSchema columnSchema = columnSchemaMap.get(columnName);
+        if(columnSchema == null){
+            throw new QueryParsingException("ga4gh_type was applied to column "+columnName+", but this column was not found in response.");
+        }else{
+            columnSchemaMap.put(columnName, newColumnSchema);
+        }
+        dataModel.setProperties(columnSchemaMap);
+    }
+
+    // Parses the saved query identified by queryJobId, finds all functions that transform the response in some way,
+    // and applies them to the response represented by tableData.
+    private void applyResponseTransforms(String queryJobId, final TableData tableData){
+        QueryJob queryJob = queryJobRepository.findById(queryJobId)
+                                              .orElseThrow(()->new InvalidQueryJobException(queryJobId, "The query corresponding to this search could not be located."));
+        String query = queryJob.getQuery();
+        Stream<SQLFunction> responseTransformingFunctions = parseSQLBiFunctions(query);
+
+        responseTransformingFunctions
+                .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
+                .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
+    }
+
+    public TableData search(String query){
+        Stream<SQLFunction> responseTransformingFunctions = parseSQLBiFunctions(query);
+        String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
+        JsonNode response = client.query(rewrittenQuery, extraCredentials);
+        QueryJob queryJob = QueryJob.builder()
+                                    .query(query)
+                                    .id(UUID.randomUUID().toString())
+                                    .build();
+        queryJob = queryJobRepository.save(queryJob);
+        TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJob.getId());
+        responseTransformingFunctions
+                .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
+                .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
+        return tableData;
+    }
+
+
+    public TableData getNextSearchPage(String page, String queryJobId){
+            log.debug("getNextSearchPage");
             JsonNode response = client.next(page, extraCredentials);
-            return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response);
+            return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId);
 
     }
 
@@ -115,7 +279,7 @@ public class SearchAdapter {
         PrestoCatalog prestoCatalog = new PrestoCatalog(this, getRefHost(), currentCatalog);
         Pagination nextPage = null;
         if(nextCatalog != null){
-            nextPage = new Pagination(getLinkToCatalog(nextCatalog), null);
+            nextPage = new Pagination(null, getLinkToCatalog(nextCatalog), null);
         }
 
         TablesList tablesList = prestoCatalog.getTablesList(nextPage);
@@ -180,13 +344,13 @@ public class SearchAdapter {
     }
 
 
-    private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse) {
+    private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId) {
 
         JsonNode columns;
 
         List<Map<String, Object>> data = new ArrayList<>();
         DataModel dataModel = null;
-        List<Transformer> transformers = new ArrayList<>();
+        List<PrestoDataTransformer> prestoDataTransformers = new ArrayList<>();
 
         if (prestoResponse.hasNonNull("columns")) {
             // Generate data model
@@ -199,7 +363,7 @@ public class SearchAdapter {
                 if(typeSignature != null){
                     rawType = typeSignature.get("rawType").asText();
                 }
-                transformers.add(JsonAdapter.getTransformer(type, rawType));
+                prestoDataTransformers.add(JsonAdapter.getPrestoDataTransformer(type, rawType));
             }
 
             dataModel = generateDataModel(columns);
@@ -211,7 +375,8 @@ public class SearchAdapter {
                     Map<String, Object> rowData = new LinkedHashMap<>();
                     for (int i = 0; i < dataNode.size(); i++) {
                         String content = dataNode.get(i).asText();
-                        rowData.put(columns.get(i).get("name").asText(), transformers.get(i)!=null ? transformers.get(i).transform(content) : content);
+                        rowData.put(columns.get(i).get("name").asText(), prestoDataTransformers.get(i) != null ? prestoDataTransformers
+                                .get(i).transform(content) : content);
                     }
                     data.add(rowData);
                 }
@@ -246,12 +411,16 @@ public class SearchAdapter {
         }
 
         // Generate pagination
-        Pagination pagination = generatePagination(nextPageTemplate, prestoResponse);
+        Pagination pagination = generatePagination(nextPageTemplate, prestoResponse, queryJobId);
 
-        return new TableData(dataModel, Collections.unmodifiableList(data), pagination);
+        TableData tableData = new TableData(dataModel, Collections.unmodifiableList(data), pagination);
+        if(queryJobId != null){
+            applyResponseTransforms(queryJobId, tableData);
+        }
+        return tableData;
     }
 
-    private Pagination generatePagination(String template, JsonNode prestoResponse) {
+    private Pagination generatePagination(String template, JsonNode prestoResponse, String queryJobId) {
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
@@ -263,7 +432,7 @@ public class SearchAdapter {
             log.debug("Generating pagination as "+nextPageUri);
         }
 
-        return new Pagination(nextPageUri, prestoNextPageUri);
+        return new Pagination(queryJobId, nextPageUri, prestoNextPageUri);
     }
 
 
@@ -281,12 +450,10 @@ public class SearchAdapter {
         int position = 0;
         for (JsonNode column : columns) {
             ColumnSchema columnSchema = new ColumnSchema();
-            //Map<String, Object> props = new LinkedHashMap<>();
             String type = column.get("type").asText();
             String format = JsonAdapter.toFormat(type);
             if (JsonAdapter.isArray(type)) {
                 columnSchema.setType("array");
-                //props.put("type", "array");
                 if(format == null) {
                     columnSchema.setItems(
                             ColumnSchema.builder()

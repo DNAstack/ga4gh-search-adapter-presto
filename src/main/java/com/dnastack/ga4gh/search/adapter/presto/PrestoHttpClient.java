@@ -1,7 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedResponseException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
@@ -161,9 +161,9 @@ public class PrestoHttpClient implements PrestoClient {
                prestoState.equalsIgnoreCase("CLIENT_ABORTED") ||
                prestoState.equalsIgnoreCase("CLIENT_ERROR"));
     }
-    private JsonNode getQueryResults(Response httpResponse) throws PrestoUnexpectedResponseException, AuthRequiredException {
+    private JsonNode getQueryResults(Response httpResponse) throws PrestoUnexpectedHttpResponseException, AuthRequiredException {
         if (httpResponse.body() == null) {
-            throw new PrestoUnexpectedResponseException(
+            throw new PrestoUnexpectedHttpResponseException(
                 httpResponse.code(),
                 "Unable to fetch query results",
                 "No response body received from backend - status line was " + httpResponse.code() + " " + httpResponse
@@ -174,11 +174,11 @@ public class PrestoHttpClient implements PrestoClient {
         try{
             httpResponseBody=httpResponse.body().string();
         }catch(IOException ie){
-            throw new PrestoUnexpectedResponseException(httpResponse.code(), "Failed to complete database query: problem with response", "IOException while extracting http response body from Presto", ie);
+            throw new PrestoUnexpectedHttpResponseException(httpResponse.code(), "Failed to complete database query: problem with response", "IOException while extracting http response body from Presto", ie);
         }
 
         if (!httpResponse.isSuccessful()) {
-            throw new PrestoUnexpectedResponseException(httpResponse.code(), "An error occurred during query execution", "Presto Http response was not successful: "+httpResponseBody);
+            throw new PrestoUnexpectedHttpResponseException(httpResponse.code(), "An error occurred during query execution", "Presto Http response was not successful: " + httpResponseBody);
         }
 
         try {
@@ -201,10 +201,10 @@ public class PrestoHttpClient implements PrestoClient {
                 if (error == null) {
                     error = httpResponseBody;
                 }
-                throw new PrestoUnexpectedResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Processing failure, prestoState:"+prestoState+" -- "+ error.toString());
+                throw new PrestoUnexpectedHttpResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Processing failure, prestoState:" + prestoState + " -- " + error.toString());
             }
         }catch(JsonParseException jpe){
-            throw new PrestoUnexpectedResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Error while parsing JSON response from database", jpe);
+            throw new PrestoUnexpectedHttpResponseException(httpResponse.code(), "An errr ocurred during query execution.", "Error while parsing JSON response from database", jpe);
         }catch(IOException iex){
             // should never happen: no I/O is performed by objectMapper.readTree
             throw new AssertionError("IOException when parsing http body string response.");

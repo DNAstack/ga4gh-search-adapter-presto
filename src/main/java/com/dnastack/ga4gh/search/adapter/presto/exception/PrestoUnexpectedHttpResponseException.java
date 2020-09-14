@@ -5,17 +5,17 @@ import lombok.Getter;
 import java.io.IOException;
 
 @Getter
-public class PrestoUnexpectedResponseException extends RuntimeException {
+public class PrestoUnexpectedHttpResponseException extends RuntimeException {
     private final int code;
     private final String logMessage;
 
-    public PrestoUnexpectedResponseException(int code, String message, String logMessage) {
+    public PrestoUnexpectedHttpResponseException(int code, String message, String logMessage) {
         super(message);
         this.code = code;
         this.logMessage = logMessage;
     }
 
-    public PrestoUnexpectedResponseException(int code, String message, String logMessage, Throwable cause) {
+    public PrestoUnexpectedHttpResponseException(int code, String message, String logMessage, Throwable cause) {
         super(message, cause);
         this.code = code;
         this.logMessage = logMessage;

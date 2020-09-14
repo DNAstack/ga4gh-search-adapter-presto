@@ -1,7 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 @FunctionalInterface
-public interface Transformer {
+public interface PrestoDataTransformer {
 
     /**
      *

@@ -16,7 +16,7 @@ public class JsonAdapter {
 
 
 
-    static Transformer getTransformer(String prestoType, String rawType){
+    static PrestoDataTransformer getPrestoDataTransformer(String prestoType, String rawType){
         String lcPrestoType = prestoType.toLowerCase();
 
         if(lcPrestoType.startsWith("timestamp")){

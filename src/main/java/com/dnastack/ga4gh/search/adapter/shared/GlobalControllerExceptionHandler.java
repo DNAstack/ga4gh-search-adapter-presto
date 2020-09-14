@@ -1,6 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.shared;
 
 import brave.Tracer;
+import com.dnastack.ga4gh.search.adapter.presto.exception.InvalidQueryJobException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoBadlyQualifiedNameException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoErrorException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
@@ -11,7 +12,8 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchCatalogExc
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchColumnException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchSchemaException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchTableException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedResponseException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
+import com.dnastack.ga4gh.search.adapter.presto.exception.QueryParsingException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -66,8 +68,8 @@ public class GlobalControllerExceptionHandler {
         ));
     }
 
-    @ExceptionHandler({PrestoUnexpectedResponseException.class})
-    public ResponseEntity<?> handlePrestoUnexpectedResponseException(PrestoUnexpectedResponseException ex){
+    @ExceptionHandler({PrestoUnexpectedHttpResponseException.class})
+    public ResponseEntity<?> handlePrestoUnexpectedResponseException(PrestoUnexpectedHttpResponseException ex){
         log.error("Unexpected response from Presto", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new UserFacingError(ex.getMessage(), tracer.currentSpan().context().traceIdString()
         ));
@@ -85,6 +87,18 @@ public class GlobalControllerExceptionHandler {
         logPrestoError(ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new UserFacingError(ex.getPrestoError(), tracer.currentSpan().context().traceIdString()
         ));
+    }
+
+    @ExceptionHandler({QueryParsingException.class})
+    public ResponseEntity<?> handleQueryParsingException(QueryParsingException qex){
+        log.error("query parsing error  ", qex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new UserFacingError("Unable to parse query", tracer.currentSpan().context().traceIdString()));
+    }
+
+    @ExceptionHandler({InvalidQueryJobException.class})
+    public ResponseEntity<?> handleInvalidQueryJobException(InvalidQueryJobException iqje){
+        log.error("Invalid query job "+iqje.getQueryJobId());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new UserFacingError("The query corresponding to this search could not be found ("+iqje.getQueryJobId()+")", tracer.currentSpan().context().traceIdString()));
     }
 
     @ExceptionHandler({UncheckedIOException.class})
