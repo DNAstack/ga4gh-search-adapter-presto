@@ -20,9 +20,6 @@ public class ColumnSchema {
     @JsonProperty("type")
     private String type;
 
-    @JsonProperty("x-ga4gh-position")
-    private int position;
-
     @JsonProperty("$comment")
     private String comment;
 

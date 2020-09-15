@@ -447,7 +447,7 @@ public class PrestoSearchAdapter {
 
     private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
         Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
-        int position = 0;
+
         for (JsonNode column : columns) {
             ColumnSchema columnSchema = new ColumnSchema();
             String type = column.get("type").asText();
@@ -473,7 +473,6 @@ public class PrestoSearchAdapter {
                     columnSchema.setFormat(format);
                 }
             }
-            columnSchema.setPosition(position++);
 
             schemaJson.put(column.get("name").asText(), columnSchema);
         }
