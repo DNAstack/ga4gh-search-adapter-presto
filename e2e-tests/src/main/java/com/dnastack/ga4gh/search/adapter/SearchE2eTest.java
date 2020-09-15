@@ -381,6 +381,7 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void ga4ghTypeAsInlineGivesBackTypeAsInline() throws IOException{
         ObjectMapper objectMapper = new ObjectMapper();
+
         ColumnSchema columnSchema = ColumnSchema.builder()
                 .format("foo")
                 .type("string")
@@ -640,7 +641,7 @@ public class SearchE2eTest extends BaseE2eTest {
         assumeThat(walletClientSecret, notNullValue());
 
         //@formatter:off
-        givenAuthenticatedRequest(searchAdapterAudience, "junk_scope")
+        givenAuthenticatedRequest( "junk_scope")
         .when()
             .get("/tables")
         .then()
@@ -656,7 +657,7 @@ public class SearchE2eTest extends BaseE2eTest {
         assumeThat(walletClientSecret, notNullValue());
 
         //@formatter:off
-        givenAuthenticatedRequest(searchAdapterAudience, "read:data_model") // but not read:data
+        givenAuthenticatedRequest( "read:data_model") // but not read:data
         .when()
             .get("/table/{tableName}/data", prestoPaginationTestTable)
         .then()

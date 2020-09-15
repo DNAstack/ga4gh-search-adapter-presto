@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.test.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ColumnSchema {
     @JsonProperty("items")
     private ColumnSchema items;
@@ -19,9 +21,6 @@ public class ColumnSchema {
 
     @JsonProperty("type")
     private String type;
-
-    @JsonProperty("x-ga4gh-position")
-    private int position;
 
     @JsonProperty("$ref")
     private String ref;
