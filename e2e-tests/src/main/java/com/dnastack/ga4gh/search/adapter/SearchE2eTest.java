@@ -141,14 +141,6 @@ public class SearchE2eTest extends BaseE2eTest {
      */
     private static Map<String, String> extraCredentials = new HashMap<>();
 
-
-//    private static String inMemoryCatalog;
-//    private static String inMemorySchema;
-//    private static String unqualifiedDateTimeTestTable;
-//    private static String unqualifiedPaginationTestTable;
-//    private static Map<String, Map<String, String>> expectedValues;
-//    private static final Map<String, String> expectedFormats = new HashMap<>();
-
     @BeforeClass
     public static void beforeClass() throws Exception {
         walletClientId = optionalEnv("E2E_WALLET_CLIENT_ID", null);
@@ -172,44 +164,7 @@ public class SearchE2eTest extends BaseE2eTest {
         log.info("Setting up test tables");
         setupTestTables();
         log.info("Done setting up test tables");
-        /*
-
-    private static String prestoTestUri;  // MUST be in format jdbc:presto://host:port
-    private static String prestoTestUser;
-    private static String prestoTestPass;
-         */
-//       // unqualifiedDateTimeTestTable = requiredEnv("E2E_INMEMORY_DATETIMETESTTABLE");
-       // unqualifiedPaginationTestTable = requiredEnv("E2E_INMEMORY_PAGINATIONTESTTABLE");
-       // String[] pairs = requiredEnv("E2E_DATETIMETESTTABLE_TYPE_MAP").split(",");
-       // initMapFromPairs(pairs, expectedFormats);
-       /* expectedValues = System.getenv().entrySet().stream()
-                               .filter(v->v.getKey().startsWith("E2E_DATETIMETESTTABLE_VALUE_MAP"))
-                               .collect(Collectors.toMap(e->getZoneFromEnvVarName(e.getKey()), e->getExpectedValuesFromEnvVarValue(e.getValue())));
-
-        */
     }
-
-
-//    private static String getZoneFromEnvVarName(String envVarName){
-//        return envVarName.substring("E2E_DATETIMETESTTABLE_VALUE_MAP_".length());
-//    }
-//
-//    private static Map<String, String> getExpectedValuesFromEnvVarValue(String value){
-//        String[] pairs = value.split(",");
-//        Map<String, String> expectedValuesForZone = new HashMap<>();
-//        initMapFromPairs(pairs, expectedValuesForZone);
-//        return expectedValuesForZone;
-//    }
-//
-//    private static void initMapFromPairs(String[] pairs, Map<String, String> m){
-//        for(String pair : pairs){
-//            String[] splitPair = pair.split("::");
-//            String key = splitPair[0].trim();
-//            String val = splitPair[1].trim();
-//            m.put(key, val);
-//        }
-//    }
-
 
     static Connection getTestDatabaseConnection() throws SQLException{
         log.info("Logging in to {} with user {} and pass {}", prestoTestUri, prestoTestUser, prestoTestPass);
@@ -448,8 +403,6 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(result.getDataModel().getProperties().get("bf").getRef(), is("http://path/to/whatever.com"));
 
     }
-
-
 
     private void assertDatesAndTimesHaveCorrectValuesForZone(String zone, Map<String, String> expectedValues) throws IOException{
         SearchRequest query = new SearchRequest(String.format("SELECT * FROM " + prestoDateTimeTestTable + " WHERE zone='%s'", zone));
