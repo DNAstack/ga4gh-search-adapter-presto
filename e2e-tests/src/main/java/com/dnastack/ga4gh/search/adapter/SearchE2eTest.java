@@ -374,8 +374,23 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
-    public void ga4ghTypeWithRefAndAliasGivesBackRef() throws IOException{
+    public void ga4ghTypeWithRefAndAliasWithAsGivesBackRef() throws IOException{
         SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '$ref:http://path/to/whatever.com') as bf FROM %s", prestoPaginationTestTable));
+        Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
+        result = searchApiGetAllPages(result);
+        if(result.getData() == null){
+            throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
+        }
+
+        assertThat(result.getDataModel(), not(nullValue()));
+        assertThat(result.getDataModel().getProperties(), not(nullValue()));
+        assertThat(result.getDataModel().getProperties().keySet(), contains("bf"));
+        assertThat(result.getDataModel().getProperties().get("bf").getRef(), is("http://path/to/whatever.com"));
+    }
+
+    @Test
+    public void ga4ghTypeWithRefAndAliasWithoutAsGivesBackRef() throws IOException{
+        SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '$ref:http://path/to/whatever.com') bf FROM %s", prestoPaginationTestTable));
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
         if(result.getData() == null){

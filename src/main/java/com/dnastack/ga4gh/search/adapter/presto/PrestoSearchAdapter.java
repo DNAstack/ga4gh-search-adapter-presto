@@ -90,8 +90,8 @@ public class PrestoSearchAdapter {
     }
 
     //Pattern to match a two argument function
-    private static final Pattern biFunctionPattern = Pattern.compile("(([A-Za-z0-9_]+)\\(\\s*([^,]+)\\s*,\\s*('[^']+')\\s*\\)(\\s+as\\s+([A-Za-z0-9_]*))?)", Pattern.DOTALL);
-
+    //private static final Pattern biFunctionPattern = Pattern.compile("(([A-Za-z0-9_]+)\\(\\s*([^,]+)\\s*,\\s*('[^']+')\\s*\\)(\\s+as\\s+([A-Za-z0-9_]*))?)", Pattern.DOTALL);
+    private static final Pattern biFunctionPattern = Pattern.compile("(([A-Za-z0-9_]+)\\(\\s*([^,]+)\\s*,\\s*('[^']+')\\s*\\)((\\s+as)?\\s+((?!FROM\\s+)[A-Za-z0-9_]*))?)", Pattern.DOTALL|Pattern.CASE_INSENSITIVE);
 
     @Getter
     static class SQLFunction {
@@ -110,25 +110,11 @@ public class PrestoSearchAdapter {
         }
         public SQLFunction(MatchResult matchResult){
             this.functionName = matchResult.group(2);
-            System.out.println("function name is "+functionName+" groupCount: "+matchResult.groupCount());
-            for(int i = 1; i <= matchResult.groupCount(); ++i){
-                System.out.println("\t+match"+i+" => "+matchResult.group(i));
-            }
-            String alias =  null;
-            for(int i = 3; i < matchResult.groupCount()-1; ++i){
-                System.out.println("\t"+i);
-                System.out.println("\targ "+matchResult.group(i));
+            for(int i = 3; i < matchResult.groupCount()-2; ++i){
                 this.args.add(matchResult.group(i));
             }
-
-            String asToken = matchResult.group(matchResult.groupCount()-1);
-            if(asToken != null && asToken.strip().startsWith("as")) {
-                System.out.println("\tchecking alias");
-                alias = matchResult.group(matchResult.groupCount());
-                System.out.println("\talias: " + alias);
-            }
-
-            this.columnAlias = alias;
+            this.columnAlias = matchResult.group(matchResult.groupCount());
+            log.debug("Extracted function "+this.functionName+" with alias "+((columnAlias!=null) ? columnAlias : "null"));
         }
 
     }
