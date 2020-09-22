@@ -1,7 +1,6 @@
 package com.dnastack.ga4gh.search.tables;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

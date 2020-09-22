@@ -13,6 +13,7 @@ import com.dnastack.ga4gh.search.tables.TablesList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,7 +31,7 @@ public class PrestoCatalog {
             " WHERE table_schema != 'information_schema'" +
             " ORDER BY 1, 2, 3";
 
-    private TableInfo getTableInfo(Map<String, Object> row){
+    private TableInfo getTableInfo(Map<String, Object> row) {
         String schema = (String) row.get("table_schema");
         String table = (String) row.get("table_name");
         String qualifiedTableName = catalogName + "." + schema + "." + table;
@@ -39,13 +40,13 @@ public class PrestoCatalog {
         return new TableInfo(qualifiedTableName, null, DataModel.builder().ref(ref).build());
     }
 
-    private List<TableInfo> getTableInfoList(TableData tableData){
+    private List<TableInfo> getTableInfoList(TableData tableData) {
         return tableData.getData().stream()
                         .map(this::getTableInfo)
                         .collect(Collectors.toList());
     }
 
-    private List<TableInfo> combineTableInfo(List<List<TableInfo>> tableInfoLists){
+    private List<TableInfo> combineTableInfo(List<List<TableInfo>> tableInfoLists) {
         return tableInfoLists.stream()
                              .flatMap(innerList->innerList.stream())
                              .collect(Collectors.toList());
@@ -56,12 +57,12 @@ public class PrestoCatalog {
     }
 
 
-    public TablesList getTablesList(Pagination nextPage){
+    public TablesList getTablesList(Pagination nextPage, HttpServletRequest request, Map<String, String> extraCredentials) {
         try {
-            TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)));
+            TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)), request, extraCredentials);
             List<TableInfo> tableInfoList = getTableInfoList(tables);
             return new TablesList(tableInfoList, null, nextPage);
-        }catch(AuthRequiredException ex){
+        } catch (AuthRequiredException ex) {
             SearchAuthRequest searchAuthRequest = ex.getAuthorizationRequest();
             TableError error = new TableError();
             error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
@@ -69,16 +70,16 @@ public class PrestoCatalog {
             error.setSource(searchAuthRequest.getKey());
             error.setCode(TableError.ErrorCode.AUTH_CHALLENGE);
             error.setAttributes(searchAuthRequest.getResourceDescription());
-            if(log.isTraceEnabled()){
+            if(log.isTraceEnabled()) {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);
-        }catch(PrestoUnexpectedHttpResponseException | PrestoIOException ex){
+        } catch (PrestoUnexpectedHttpResponseException | PrestoIOException ex) {
             TableError error = new TableError();
             error.setMessage("Couldn't complete query to list tables");
             error.setSource(catalogName);
             error.setCode(TableError.ErrorCode.PRESTO_QUERY);
-            if(log.isTraceEnabled()){
+            if(log.isTraceEnabled()) {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);

@@ -1,6 +1,5 @@
 package com.dnastack.ga4gh.search;
 
-import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
@@ -24,34 +23,26 @@ import java.util.stream.Collectors;
 public class SearchController {
 
     @Autowired
-    private PrestoClient prestoClient;
-
-    @Autowired
-    private ApplicationConfig applicationConfig;
-
-    @Autowired
-    private QueryJobRepository queryJobRepository;
-
-    private PrestoSearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
-        return new PrestoSearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs(), queryJobRepository);
-    }
+    private PrestoSearchAdapter prestoSearchAdapter;
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
-    public TableData search(HttpServletRequest request, @RequestBody SearchRequest searchRequest,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        return getSearchAdapter(request, clientSuppliedCredentials).search(searchRequest.getSqlQuery());
+    public TableData search(@RequestBody SearchRequest searchRequest,
+                            HttpServletRequest request,
+                            @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+        return prestoSearchAdapter
+                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials));
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
-    public TableData getNextPaginatedResponse(HttpServletRequest request,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials,
-                                              @RequestParam("queryJobId") String queryJobId) {
+    public TableData getNextPaginatedResponse(@RequestParam("queryJobId") String queryJobId,
+                                              HttpServletRequest request,
+                                              @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
         String page = request.getRequestURI()
                              .split(request.getContextPath() + "/search/")[1];
-        TableData tableData = getSearchAdapter(request, clientSuppliedCredentials)
-                .getNextSearchPage(page, queryJobId);
+        TableData tableData = prestoSearchAdapter
+                .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials));
         return tableData;
     }
 
