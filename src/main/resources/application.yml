@@ -91,7 +91,7 @@ spring:
   security:
     enabled: false
   liquibase:
-    enabled: false
+    enabled: true
   datasource:
     continue-on-error: true
 management:
