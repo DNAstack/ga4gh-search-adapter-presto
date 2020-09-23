@@ -23,6 +23,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -91,6 +93,8 @@ public class SearchE2eTest extends BaseE2eTest {
 
     private static final String INSERT_PAGINATION_TEST_TABLE_ENTRY_TEMPLATE = "INSERT INTO %s(bogusfield) VALUES('%s')";
 
+    private static final String INSERT_JSON_TEST_TABLE_ENTRY_TEMPLATE =
+        "INSERT INTO %s (id, data) VALUES('foo', JSON '{\"name\": \"Foo\", \"age\": 25}')";
 
     private static final String TEST_DATE = "2020-05-27";
     private static final String TEST_TIME_LOS_ANGELES ="12:22:27.000 America/Los_Angeles";
@@ -111,6 +115,8 @@ public class SearchE2eTest extends BaseE2eTest {
     private static final String CREATE_PAGINATION_TEST_TABLE_TEMPLATE = "CREATE TABLE %s("
                                                                         + "id integer,"
                                                                         + "bogusfield varchar(64))";
+
+    private static final String CREATE_JSON_TEST_TABLE_TEMPLATE = "CREATE TABLE %s (id varchar(8), data json)";
 
     private static final String DELETE_TEST_TABLE_TEMPLATE = "DROP TABLE %s";
 
@@ -166,18 +172,19 @@ public class SearchE2eTest extends BaseE2eTest {
         log.info("Done setting up test tables");
     }
 
-    static Connection getTestDatabaseConnection() throws SQLException{
+    static Connection getTestDatabaseConnection() throws SQLException {
         log.info("Logging in to {} with user {} and pass {}", prestoTestUri, prestoTestUser, prestoTestPass);
         log.info("Driver dump:");
+
         try {
             Class.forName("io.prestosql.jdbc.PrestoDriver");
             //Class.forName("org.postgresql.Driver");
         } catch (ClassNotFoundException ce) {
             throw new RuntimeException("Class not found", ce);
         }
-        DriverManager.drivers().forEach(driver->{
-            log.info("Got driver "+driver.toString());
-        });
+
+        DriverManager.drivers().forEach(driver -> log.info("Got driver " + driver.toString()));
+
         Properties properties = new Properties();
 
         if (prestoTestUser != null) {
@@ -194,9 +201,11 @@ public class SearchE2eTest extends BaseE2eTest {
             properties.setProperty("accessToken", getToken(prestoAudience, prestoScopes));
         }
 
-        properties.setProperty("SSL", useSSL.toString());
+        properties.setProperty("SSL", prestoTestUri.contains("localhost") ? "false" : "true");
 
-        Connection conn =  DriverManager.getConnection(prestoTestUri, properties);
+        log.info("properties: {}", properties);
+
+        Connection conn = DriverManager.getConnection(prestoTestUri, properties);
         return conn;
     }
 
@@ -217,24 +226,26 @@ public class SearchE2eTest extends BaseE2eTest {
 
     private static String prestoDateTimeTestTable;
     private static String prestoPaginationTestTable;
+    private static String prestoJsonTestTable;
     private static String unqualifiedPaginationTestTable; //just the table name (no catalog or schema)
 
     private static void setupTestTables() throws IOException{
+        String randomFactor = RandomStringUtils.randomAlphanumeric(16);
         String query = null;
         try(Connection conn = getTestDatabaseConnection()) {
             Statement statement = conn.createStatement();
-            prestoDateTimeTestTable = getFullyQualifiedTestTableName("dateTimeTest_" + RandomStringUtils.randomAlphanumeric(16));
+            prestoDateTimeTestTable = getFullyQualifiedTestTableName("dateTimeTest_" + randomFactor);
 
             query = String.format(CREATE_DATETIME_TEST_TABLE_TEMPLATE, prestoDateTimeTestTable);
             statement.execute(query);
 
-            //setup table entries
+            // setup table entries
             query = String.format(INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE, prestoDateTimeTestTable, "LosAngeles",
                                   TEST_DATE, TEST_TIME_LOS_ANGELES,
                                   TEST_DATE_TIME_LOS_ANGELES,
                                   TEST_DATE_TIME_LOS_ANGELES,
                                   TEST_DATE_TIME_LOS_ANGELES, TEST_TIME_LOS_ANGELES);
-            //TEST_DATE_TIME_LOS_ANGELES); //Blocked by https://github.com/prestosql/presto/issues/4715
+            // TEST_DATE_TIME_LOS_ANGELES); //Blocked by https://github.com/prestosql/presto/issues/4715
 
             statement.execute(query);
 
@@ -249,8 +260,8 @@ public class SearchE2eTest extends BaseE2eTest {
                                  );
             statement.execute(query);
 
-            //create a test table with a bunch of bogus entries to test pagination.
-            unqualifiedPaginationTestTable = "pagination_" + RandomStringUtils.randomAlphanumeric(16);
+            // create a test table with a bunch of bogus entries to test pagination.
+            unqualifiedPaginationTestTable = "pagination_" + randomFactor;
             prestoPaginationTestTable = getFullyQualifiedTestTableName(unqualifiedPaginationTestTable);
 
             query = String.format(CREATE_PAGINATION_TEST_TABLE_TEMPLATE, prestoPaginationTestTable);
@@ -262,7 +273,11 @@ public class SearchE2eTest extends BaseE2eTest {
                 statement.execute(query);
             }
 
+            log.info("JSON Test Table");
 
+            prestoJsonTestTable = getFullyQualifiedTestTableName("jsonTest_" + randomFactor);
+            statement.execute(String.format(CREATE_JSON_TEST_TABLE_TEMPLATE, prestoJsonTestTable));
+            statement.execute(String.format(INSERT_JSON_TEST_TABLE_ENTRY_TEMPLATE, prestoJsonTestTable));
         } catch (SQLException se) {
             log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
             throw new RuntimeException("Unable to setup test tables.  query="+query, se);
@@ -275,7 +290,6 @@ public class SearchE2eTest extends BaseE2eTest {
             log.info("Trying to remove datetime test table " + prestoDateTimeTestTable);
             try (Connection conn = getTestDatabaseConnection()) {
                 Statement statement = conn.createStatement();
-
                 statement.execute(String.format(DELETE_TEST_TABLE_TEMPLATE, prestoDateTimeTestTable));
                 log.info("Successfully removed datetime test table " + prestoDateTimeTestTable);
                 prestoDateTimeTestTable = null;
@@ -284,6 +298,11 @@ public class SearchE2eTest extends BaseE2eTest {
                 statement.execute(String.format(DELETE_TEST_TABLE_TEMPLATE, prestoPaginationTestTable));
                 log.info("Successfully removed pagination test table " + prestoPaginationTestTable);
                 prestoPaginationTestTable = null;
+
+                statement = conn.createStatement();
+                statement.execute(String.format(DELETE_TEST_TABLE_TEMPLATE, prestoJsonTestTable));
+                log.info("Successfully removed json test table " + prestoJsonTestTable);
+                prestoJsonTestTable = null;
             } catch (SQLException se) {
                 log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
                 throw new RuntimeException("Unable to setup test tables: ", se);
@@ -312,6 +331,27 @@ public class SearchE2eTest extends BaseE2eTest {
         return listTableResponse;
     }
 
+    @Test
+    public void jsonFieldIsDeclaredAsObject() throws IOException {
+        String qualifiedTableName = prestoJsonTestTable;
+        Table tableInfo = searchApiGetRequest(String.format("/table/%s/info", qualifiedTableName), 200, Table.class);
+        assertThat(tableInfo, not(nullValue()));
+        assertThat(tableInfo.getName(), equalTo(qualifiedTableName));
+
+        assertThat(tableInfo.getDataModel().getProperties().get("data").getType(), equalTo("object"));
+    }
+
+    @Test
+    public void jsonFieldIsRepresentedAsObject() throws IOException {
+        Table tableData = searchApiGetRequest("/table/" + prestoJsonTestTable + "/data", 200, Table.class);
+        assertThat(tableData, not(nullValue()));
+        tableData = searchApiGetAllPages(tableData);
+
+        Map<String, Object> jsonField = (Map<String, Object>) tableData.getData().get(0).get("data");
+
+        assertThat(jsonField.get("name"), equalTo("Foo"));
+        assertThat(jsonField.get("age"), equalTo(25));
+    }
 
     @Test
     public void datesAndTimesHaveCorrectTypes() throws IOException{
