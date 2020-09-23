@@ -26,7 +26,7 @@ public class PrestoErrorException extends RuntimeException{
         this.prestoError = prestoError;
     }
 
-    public String toString(){
+    public String toString() {
         return prestoError.toString();
     }
 

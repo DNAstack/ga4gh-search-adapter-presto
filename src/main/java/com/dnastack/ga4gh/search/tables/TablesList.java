@@ -32,9 +32,9 @@ public class TablesList {
     @JsonProperty("index")
     private List<PageIndexEntry> index;
 
-    public TablesList(List<TableInfo> tableInfos, TableError error, Pagination pagination){
+    public TablesList(List<TableInfo> tableInfos, TableError error, Pagination pagination) {
         this.tableInfos = tableInfos;
-        if(error != null) {
+        if (error != null) {
             this.errors = List.of(error);
         }
         this.error = error;

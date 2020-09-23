@@ -50,15 +50,15 @@ public class BaseE2eTest {
     @BeforeClass
     public static void setupRestAssured() {
         RestAssured.baseURI = requiredEnv("E2E_BASE_URI");
-        try{
-            if(new URI(RestAssured.baseURI).getHost().equalsIgnoreCase("localhost")){
+        try {
+            if (new URI(RestAssured.baseURI).getHost().equalsIgnoreCase("localhost")) {
                 log.info("E2E BASE URI is at localhost, allowing localhost to occur within URLs of JSON responses.");
                 IsUrl.setAllowLocalhost(true);
                 useSSL=false;
-            }else{
+            } else {
                 useSSL=true;
             }
-        }catch(URISyntaxException use){
+        } catch (URISyntaxException use) {
             throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));
         }
 

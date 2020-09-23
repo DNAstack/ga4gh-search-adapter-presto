@@ -29,7 +29,7 @@ class UserFacingError {
     @JsonProperty("trace_id")
     private String traceId;
 
-    public UserFacingError(PrestoError prestoError, String traceId){
+    public UserFacingError(PrestoError prestoError, String traceId) {
         this.message = prestoError.getMessage();
         this.errorCode = prestoError.getErrorCode();
         this.errorName = prestoError.getErrorName();
@@ -37,7 +37,7 @@ class UserFacingError {
         this.traceId = traceId;
     }
 
-    public UserFacingError(String message, String traceId){
+    public UserFacingError(String message, String traceId) {
         this(message, null, null, null, traceId);
     }
 }

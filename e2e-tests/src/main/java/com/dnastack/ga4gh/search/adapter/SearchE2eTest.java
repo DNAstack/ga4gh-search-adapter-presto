@@ -169,10 +169,10 @@ public class SearchE2eTest extends BaseE2eTest {
     static Connection getTestDatabaseConnection() throws SQLException{
         log.info("Logging in to {} with user {} and pass {}", prestoTestUri, prestoTestUser, prestoTestPass);
         log.info("Driver dump:");
-        try{
+        try {
             Class.forName("io.prestosql.jdbc.PrestoDriver");
             //Class.forName("org.postgresql.Driver");
-        }catch(ClassNotFoundException ce){
+        } catch (ClassNotFoundException ce) {
             throw new RuntimeException("Class not found", ce);
         }
         DriverManager.drivers().forEach(driver->{
@@ -180,17 +180,17 @@ public class SearchE2eTest extends BaseE2eTest {
         });
         Properties properties = new Properties();
 
-        if(prestoTestUser != null) {
+        if (prestoTestUser != null) {
             properties.setProperty("user", prestoTestUser);
-        }else{
+        } else {
             properties.setProperty("user", "e2etestuser");
         }
 
-        if(prestoTestPass != null) {
+        if (prestoTestPass != null) {
             properties.setProperty("password", prestoTestPass);
         }
 
-        if(prestoAudience != null){
+        if (prestoAudience != null) {
             properties.setProperty("accessToken", getToken(prestoAudience, prestoScopes));
         }
 
@@ -200,8 +200,8 @@ public class SearchE2eTest extends BaseE2eTest {
         return conn;
     }
 
-    private static void assertTestDatabaseConnection(){
-        try (Connection conn = getTestDatabaseConnection()){
+    private static void assertTestDatabaseConnection() {
+        try (Connection conn = getTestDatabaseConnection()) {
             if (conn != null) {
                 log.info("Test database connection is valid for " + prestoTestUri);
             } else {
@@ -221,7 +221,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     private static void setupTestTables() throws IOException{
         String query = null;
-        try(Connection conn = getTestDatabaseConnection()){
+        try(Connection conn = getTestDatabaseConnection()) {
             Statement statement = conn.createStatement();
             prestoDateTimeTestTable = getFullyQualifiedTestTableName("dateTimeTest_" + RandomStringUtils.randomAlphanumeric(16));
 
@@ -255,7 +255,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
             query = String.format(CREATE_PAGINATION_TEST_TABLE_TEMPLATE, prestoPaginationTestTable);
             statement.execute(query);
-            for(int i = 0; i < 120; ++i){
+            for(int i = 0; i < 120; ++i) {
                 String testValue = "testValue_"+i;
                 query = String.format(INSERT_PAGINATION_TEST_TABLE_ENTRY_TEMPLATE,
                                       prestoPaginationTestTable, testValue);
@@ -263,15 +263,15 @@ public class SearchE2eTest extends BaseE2eTest {
             }
 
 
-        }catch(SQLException se){
+        } catch (SQLException se) {
             log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
             throw new RuntimeException("Unable to setup test tables.  query="+query, se);
         }
     }
 
     @AfterClass
-    public static void removeTestTables(){
-        if(prestoDateTimeTestTable != null) {
+    public static void removeTestTables() {
+        if (prestoDateTimeTestTable != null) {
             log.info("Trying to remove datetime test table " + prestoDateTimeTestTable);
             try (Connection conn = getTestDatabaseConnection()) {
                 Statement statement = conn.createStatement();
@@ -296,7 +296,7 @@ public class SearchE2eTest extends BaseE2eTest {
         extraCredentials.clear();
     }
 
-    private static String getFullyQualifiedTestTableName(String tableName){
+    private static String getFullyQualifiedTestTableName(String tableName) {
         return inMemoryCatalog+"."+inMemorySchema+"."+tableName;
     }
 
@@ -347,7 +347,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest(q);
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
         }
 
@@ -363,7 +363,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '$ref:http://path/to/whatever.com') FROM %s", prestoPaginationTestTable));
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
         }
 
@@ -378,7 +378,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '$ref:http://path/to/whatever.com') as bf FROM %s", prestoPaginationTestTable));
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
         }
 
@@ -393,7 +393,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '$ref:http://path/to/whatever.com') bf FROM %s", prestoPaginationTestTable));
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
         }
 
@@ -408,7 +408,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest(String.format("SELECT ga4gh_type(bogusfield, '{\"$ref\":\"http://path/to/whatever.com\"}') as bf FROM %s", prestoPaginationTestTable));
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
         }
 
@@ -426,9 +426,9 @@ public class SearchE2eTest extends BaseE2eTest {
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
         result = searchApiGetAllPages(result);
 
-        if(result.getData() == null){
+        if (result.getData() == null) {
             throw new RuntimeException("Expected results for query "+query.getQuery()+", but none were found.");
-        }else if(result.getData().size() > 1){
+        } else if (result.getData().size() > 1) {
             throw new RuntimeException("Found more than one test table entry for "+zone+" time zone, but only one was expected.");
         }
 
@@ -448,7 +448,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void datesAndTimesHaveCorrectValuesForDatesAndTimesInsertedWithZone() throws IOException{
-        for(Map.Entry<String, Map<String, String>> e : EXPECTED_VALUES.entrySet()){
+        for(Map.Entry<String, Map<String, String>> e : EXPECTED_VALUES.entrySet()) {
            log.info("Checking date and time was inserted correctly for zone "+e.getKey());
             assertDatesAndTimesHaveCorrectValuesForZone(e.getKey(), e.getValue());
         }
@@ -466,7 +466,7 @@ public class SearchE2eTest extends BaseE2eTest {
         ListTableResponse currentPage = getFirstPageOfTableListing();
 
         List<PageIndexEntry> pageIndex = currentPage.getIndex();
-        if(pageIndex.size() == 1){
+        if (pageIndex.size() == 1) {
             assertThat(currentPage.getPagination(), is(nullValue()));
             return;
         }
@@ -486,7 +486,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 assertThat(currentPage.getPagination().getNextPageUrl(), is(pageIndex.get(i + 1).getUrl()));
             }
         }
-        if(pageIndex.size() > MAX_PAGES_TO_TRAVERSE){
+        if (pageIndex.size() > MAX_PAGES_TO_TRAVERSE) {
             log.info("next page trail did not end after "+MAX_PAGES_TO_TRAVERSE+" requests, but was consistent with page index over that range.");
         }
     }
@@ -522,9 +522,9 @@ public class SearchE2eTest extends BaseE2eTest {
 
 
         Table result = searchApiRequest(Method.POST, "/search", query, 200, Table.class);
-        while(result.getPagination() != null){
+        while(result.getPagination() != null) {
             result = searchApiGetRequest(result.getPagination().getNextPageUrl().toString(), 200, Table.class);
-            if(result.getDataModel() != null){
+            if (result.getDataModel() != null) {
                 break;
             }
         }
@@ -644,10 +644,10 @@ public class SearchE2eTest extends BaseE2eTest {
      * first non-null data model encountered.  null only if original table parameter is null.
      */
     static Table searchApiGetAllPages(Table table) throws IOException {
-        while(table.getPagination() != null && table.getPagination().getNextPageUrl() != null){
+        while(table.getPagination() != null && table.getPagination().getNextPageUrl() != null) {
             String nextPageUri = table.getPagination().getNextPageUrl().toString();
             Table nextResult = searchApiGetRequest(nextPageUri, 200, Table.class);
-            if(nextResult.getData() != null){
+            if (nextResult.getData() != null) {
                 log.info("Got "+nextResult.getData().size()+" results");
             }
             table.append(nextResult);
@@ -715,22 +715,22 @@ public class SearchE2eTest extends BaseE2eTest {
      */
     private static UserFacingError searchUntilException(Object query, int expectedErrorStatus) throws IOException{
         Response response = getResponse(Method.POST, "/search", query);
-        if(response.getStatusCode() == HttpStatus.SC_OK){
+        if (response.getStatusCode() == HttpStatus.SC_OK) {
             log.info("Got status OK after POSTing search");
             Table table = response.then().log().ifValidationFails(LogDetail.ALL).extract().as(Table.class);
-            while(table.getPagination() != null && table.getPagination().getNextPageUrl() != null){
+            while(table.getPagination() != null && table.getPagination().getNextPageUrl() != null) {
                 String nextPageUri = table.getPagination().getNextPageUrl().toString();
                 Response nextPageResponse = getResponse(Method.GET, nextPageUri, null);
                 log.info("Looking for status "+expectedErrorStatus+" by following nextPageUri trail, most recent request returned "+nextPageResponse.getStatusCode());
-                if(nextPageResponse.getStatusCode() == expectedErrorStatus){
+                if (nextPageResponse.getStatusCode() == expectedErrorStatus) {
                     return nextPageResponse.then().log().ifValidationFails(LogDetail.ALL).extract().as(UserFacingError.class);
-                }else if(nextPageResponse.getStatusCode() != HttpStatus.SC_OK){
+                } else if (nextPageResponse.getStatusCode() != HttpStatus.SC_OK) {
                     throw new AssertionError("Unexpected response status " + response.getStatusCode() + " (sent GET /"+nextPageUri+", expecting " + expectedErrorStatus + " or 200");
-                }else {
+                } else {
                     table = nextPageResponse.then().log().ifValidationFails(LogDetail.ALL).extract().as(Table.class);
                 }
             }
-        }else if(response.getStatusCode() == expectedErrorStatus){
+        } else if (response.getStatusCode() == expectedErrorStatus) {
             return response.then().log().ifValidationFails(LogDetail.ALL).extract().as(UserFacingError.class);
         }
         throw new AssertionError("Expected to receive status "+expectedErrorStatus+" somewhere on the nextUri trail, but never found it.");

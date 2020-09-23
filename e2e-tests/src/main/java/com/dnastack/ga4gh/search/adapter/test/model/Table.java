@@ -31,23 +31,23 @@ public class Table {
         return additionalProperties;
     }
 
-    private static <T> List<T> concat(List<T> l1, List<T> l2){
-        if(l1 != null && l2 != null){
+    private static <T> List<T> concat(List<T> l1, List<T> l2) {
+        if (l1 != null && l2 != null) {
             List<T> result = new ArrayList<>(l1.size() + l2.size());
             result.addAll(l1);
             result.addAll(l2);
             return result;
-        }else if(l1 != null){
+        } else if (l1 != null) {
             return List.copyOf(l1);
-        }else if(l2 != null){
+        } else if (l2 != null) {
             return List.copyOf(l2);
-        }else{
+        } else {
             return null;
         }
     }
 
-    public void append(Table tableData){
-        if(tableData != null) {
+    public void append(Table tableData) {
+        if (tableData != null) {
             if (tableData.getData() != null) {
                 this.data = concat(this.data, tableData.getData());
             }

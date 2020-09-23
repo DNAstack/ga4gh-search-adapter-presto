@@ -80,7 +80,7 @@ public class TablesController {
     private HttpHeaders getExtraAuthHeaders(TablesList listTables) {
         HttpHeaders headers = new HttpHeaders();
         TableError error = listTables.getError();
-        if(error != null && error.getCode().equals(ErrorCode.AUTH_CHALLENGE)){
+        if (error != null && error.getCode().equals(ErrorCode.AUTH_CHALLENGE)) {
             headers.add("WWW-Authenticate",
                         "GA4GH-Search realm:\"" + escapeQuotes(error.getSource()) + "\"");
         }

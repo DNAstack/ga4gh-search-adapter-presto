@@ -70,7 +70,7 @@ public class PrestoCatalog {
             error.setSource(searchAuthRequest.getKey());
             error.setCode(TableError.ErrorCode.AUTH_CHALLENGE);
             error.setAttributes(searchAuthRequest.getResourceDescription());
-            if(log.isTraceEnabled()) {
+            if (log.isTraceEnabled()) {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);
@@ -79,7 +79,7 @@ public class PrestoCatalog {
             error.setMessage("Couldn't complete query to list tables");
             error.setSource(catalogName);
             error.setCode(TableError.ErrorCode.PRESTO_QUERY);
-            if(log.isTraceEnabled()) {
+            if (log.isTraceEnabled()) {
                 log.error("Error when fetching tables for {}", catalogName, ex);
             }
             return new TablesList(null, error, null);

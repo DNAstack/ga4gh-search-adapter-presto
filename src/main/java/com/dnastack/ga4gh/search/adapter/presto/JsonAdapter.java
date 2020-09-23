@@ -14,32 +14,30 @@ public class JsonAdapter {
         return prestoType.contains("[]") || prestoType.contains("array");
     }
 
-
-
-    static PrestoDataTransformer getPrestoDataTransformer(String prestoType, String rawType){
+    static PrestoDataTransformer getPrestoDataTransformer(String prestoType, String rawType) {
         String lcPrestoType = prestoType.toLowerCase();
 
-        if(lcPrestoType.startsWith("timestamp")){
-            if(lcPrestoType.endsWith("with time zone")) {
+        if (lcPrestoType.startsWith("timestamp")) {
+            if (lcPrestoType.endsWith("with time zone")) {
                 return DateTimeUtils::convertToIso8601TimestampWithTimeZone;
-            }else{
+            } else {
                 return DateTimeUtils::convertToIso8601Timestamp;
             }
-        }else if(lcPrestoType.equals("time with time zone")){
+        } else if (lcPrestoType.equals("time with time zone")) {
             return DateTimeUtils::convertToIso8601TimeWithTimeZone;
-        }else if(lcPrestoType.equals("time")){
+        } else if (lcPrestoType.equals("time")) {
             return DateTimeUtils::convertToIso8601TimeWithoutTimeZone;
         }
         return null;
     }
 
-    static String toFormat(String prestoType){
+    static String toFormat(String prestoType) {
         String lcPrestoType = prestoType.toLowerCase();
-        if(lcPrestoType.startsWith("timestamp")){
+        if (lcPrestoType.startsWith("timestamp")) {
             return "date-time";
-        }else if(lcPrestoType.startsWith("time")){
+        } else if (lcPrestoType.startsWith("time")) {
             return "time";
-        }else if(lcPrestoType.startsWith("date")){
+        } else if (lcPrestoType.startsWith("date")) {
             return "date";
         }
         return prestoType;

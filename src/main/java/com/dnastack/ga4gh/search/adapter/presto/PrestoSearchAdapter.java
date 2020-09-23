@@ -123,7 +123,7 @@ public class PrestoSearchAdapter {
         return biFunctionPattern.matcher(query)
                                 .replaceAll(matchResult-> {
                            SQLFunction sf = new SQLFunction(matchResult);
-                           if(sf.getFunctionName().equals(functionName)) {
+                           if (sf.getFunctionName().equals(functionName)) {
                                String col = sf.getArgs().get(argIndex);
                                String alias = sf.getColumnAlias();
                                return (alias == null) ? col : col+" as "+alias;
@@ -144,7 +144,7 @@ public class PrestoSearchAdapter {
     // (this will be a JSON schema, or the shorthand $ref:<URL>)
     private String getGa4ghType(SQLFunction ga4ghFunction) {
         String ga4ghType = ga4ghFunction.getArgs().get(1).strip();
-        if((ga4ghType.startsWith("'") && ga4ghType.endsWith("'")) ||
+        if ((ga4ghType.startsWith("'") && ga4ghType.endsWith("'")) ||
            (ga4ghType.startsWith("\"") && ga4ghType.endsWith("\""))) {
             return ga4ghType.substring(1, ga4ghType.length()-1);
         } else {
@@ -157,11 +157,11 @@ public class PrestoSearchAdapter {
     private void applyGa4ghTypeSqlFunction(SQLFunction ga4ghTypeFunction, TableData tableData) {
         ObjectMapper objectMapper = new ObjectMapper();
         DataModel dataModel = tableData.getDataModel();
-        if(dataModel ==  null) {
+        if (dataModel ==  null) {
             return;
         }
 
-        if(dataModel.getRef() != null) {
+        if (dataModel.getRef() != null) {
             //sanity check
             throw new RuntimeException("Unable to apply SQL function to response with indirect $ref");
         }
@@ -172,9 +172,9 @@ public class PrestoSearchAdapter {
         String ga4ghType = getGa4ghType(ga4ghTypeFunction);
 
         ColumnSchema newColumnSchema;
-        if(ga4ghType.startsWith("$ref:")) {
+        if (ga4ghType.startsWith("$ref:")) {
             String[] parts = ga4ghType.split(":",2);
-            if(parts.length != 2) {
+            if (parts.length != 2) {
                 //This could have been detected earlier, but whatever.
                 throw new QueryParsingException("Unexpected second argument to ga4gh_type function, must be a valid JSON schema or the $ref:<URL> shorthand");
             }
@@ -190,7 +190,7 @@ public class PrestoSearchAdapter {
         }
 
         ColumnSchema columnSchema = columnSchemaMap.get(columnName);
-        if(columnSchema == null) {
+        if (columnSchema == null) {
             throw new QueryParsingException("ga4gh_type was applied to column "+columnName+", but this column was not found in response.");
         } else {
             columnSchemaMap.put(columnName, newColumnSchema);
@@ -262,7 +262,7 @@ public class PrestoSearchAdapter {
     private TablesList getTables(String currentCatalog, String nextCatalog, HttpServletRequest request, Map<String, String> extraCredentials) {
         PrestoCatalog prestoCatalog = new PrestoCatalog(this, getRefHost(), currentCatalog);
         Pagination nextPage = null;
-        if(nextCatalog != null) {
+        if (nextCatalog != null) {
             nextPage = new Pagination(null, getLinkToCatalog(nextCatalog, request), null);
         }
 
@@ -273,7 +273,7 @@ public class PrestoSearchAdapter {
 
     public TablesList getTables(HttpServletRequest request, Map<String, String> extraCredentials) {
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
-        if(catalogs == null || catalogs.isEmpty()) {
+        if (catalogs == null || catalogs.isEmpty()) {
             return new TablesList(List.of(), null, null);
         }
         Iterator<String> catalogIt = catalogs.iterator();
@@ -285,7 +285,7 @@ public class PrestoSearchAdapter {
 
     public TablesList getTablesInCatalog(String catalog, HttpServletRequest request, Map<String, String> extraCredentials) {
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
-        if(catalogs != null) {
+        if (catalogs != null) {
             Iterator<String> catalogIt = catalogs.iterator();
             while (catalogIt.hasNext()) {
                 if (catalogIt.next().equals(catalog)) {
@@ -304,7 +304,7 @@ public class PrestoSearchAdapter {
     public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
         String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
         TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials);
-        if(tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
+        if (tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
             tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
             attachCommentsToDataModel(tableData, tableName, request, extraCredentials);
         }
@@ -318,7 +318,7 @@ public class PrestoSearchAdapter {
 
     public TableInfo getTableInfo(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
         String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
-        if(!isValidPrestoName(tableName)) {
+        if (!isValidPrestoName(tableName)) {
             //triggers a 404.
            throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
         }
@@ -346,7 +346,7 @@ public class PrestoSearchAdapter {
                 String type = column.get("type").asText();
                 JsonNode typeSignature = column.get("typeSignature");
                 String rawType = null;
-                if(typeSignature != null) {
+                if (typeSignature != null) {
                     rawType = typeSignature.get("rawType").asText();
                 }
                 prestoDataTransformers.add(JsonAdapter.getPrestoDataTransformer(type, rawType));

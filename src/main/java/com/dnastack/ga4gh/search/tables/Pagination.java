@@ -23,8 +23,8 @@ public class Pagination {
     @JsonIgnore
     private URI prestoNextPageUrl;
 
-    public URI getNextPageUrl(){
-        if(queryJobId != null && nextPageUrl != null){
+    public URI getNextPageUrl() {
+        if (queryJobId != null && nextPageUrl != null) {
             return UriComponentsBuilder.fromUri(nextPageUrl)
                                        .queryParam("queryJobId", queryJobId)
                                        .build()

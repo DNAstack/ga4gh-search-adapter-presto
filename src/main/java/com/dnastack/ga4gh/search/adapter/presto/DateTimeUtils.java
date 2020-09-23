@@ -63,9 +63,8 @@ public class DateTimeUtils {
      * </p>
      * @return iso8601 form of timestamp with timezone.
      */
-    public static String convertToIso8601TimestampWithTimeZone(String timestampWithTimeZone)
-    {
-        if(timestampWithTimeZone.equalsIgnoreCase("null")){
+    public static String convertToIso8601TimestampWithTimeZone(String timestampWithTimeZone) {
+        if (timestampWithTimeZone.equalsIgnoreCase("null")) {
             return null;
         }
         String ts = TIMESTAMP_WITH_TIME_ZONE_FORMATTER
@@ -83,8 +82,8 @@ public class DateTimeUtils {
      * </p>
      * @return iso8601 form of timestamp with timezone.
      */
-    public static String convertToIso8601Timestamp(String timestamp){
-        if(timestamp.equalsIgnoreCase("null")){
+    public static String convertToIso8601Timestamp(String timestamp) {
+        if (timestamp.equalsIgnoreCase("null")) {
             return null;
         }
         String ts = TIMESTAMP_WITHOUT_TIME_ZONE_FORMATTER
@@ -133,7 +132,7 @@ public class DateTimeUtils {
      */
     public static String convertToIso8601TimeWithTimeZone(String timeWithTimeZone)
     {
-        if(timeWithTimeZone.equalsIgnoreCase("null")){
+        if (timeWithTimeZone.equalsIgnoreCase("null")) {
             return null;
         }
 
@@ -155,14 +154,14 @@ public class DateTimeUtils {
      */
     public static String convertToIso8601TimeWithoutTimeZone(String value)
     {
-        if(value.equalsIgnoreCase("null")){
+        if (value.equalsIgnoreCase("null")) {
             return null;
         }
         return TIME_FORMATTER.parseDateTime(value).toDateTimeISO().toLocalTime().toString();
     }
 
 //
-//    public static void main(String[] args){
+//    public static void main(String[] args) {
 //        System.out.println("ISO8601 Timestamp with Time zone (UTC)\t"+convertToIso8601TimestampWithTimeZone("2020-05-27 12:22:27.000 UTC"));
 //        System.out.println("ISO8601 Time with Time zone (UTC)\t"+convertToIso8601TimeWithTimeZone("12:22:27.000 UTC"));
 //        System.out.println("ISO8601 Timestamp with Time zone (Los Angeles)\t"+convertToIso8601TimestampWithTimeZone("2020-05-27 12:22:27.000 America/Los_Angeles"));

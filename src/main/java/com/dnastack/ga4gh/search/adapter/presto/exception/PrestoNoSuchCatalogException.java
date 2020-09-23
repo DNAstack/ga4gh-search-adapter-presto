@@ -6,7 +6,7 @@ import lombok.Value;
 @Value
 public class PrestoNoSuchCatalogException extends PrestoErrorException {
 
-    public PrestoNoSuchCatalogException(String message){
+    public PrestoNoSuchCatalogException(String message) {
         this(message, null);
     }
 
