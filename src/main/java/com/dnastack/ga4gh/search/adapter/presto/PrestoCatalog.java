@@ -4,12 +4,12 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
-import com.dnastack.ga4gh.search.tables.DataModel;
-import com.dnastack.ga4gh.search.tables.Pagination;
-import com.dnastack.ga4gh.search.tables.TableData;
-import com.dnastack.ga4gh.search.tables.TableError;
-import com.dnastack.ga4gh.search.tables.TableInfo;
-import com.dnastack.ga4gh.search.tables.TablesList;
+import com.dnastack.ga4gh.search.model.DataModel;
+import com.dnastack.ga4gh.search.model.Pagination;
+import com.dnastack.ga4gh.search.model.TableData;
+import com.dnastack.ga4gh.search.model.TableError;
+import com.dnastack.ga4gh.search.model.TableInfo;
+import com.dnastack.ga4gh.search.model.TablesList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

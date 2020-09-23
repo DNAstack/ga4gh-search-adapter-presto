@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.tables;
+package com.dnastack.ga4gh.search.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -130,8 +130,7 @@ public class DateTimeUtils {
      *
      * @return stack representation of TIME WITH TIME ZONE type
      */
-    public static String convertToIso8601TimeWithTimeZone(String timeWithTimeZone)
-    {
+    public static String convertToIso8601TimeWithTimeZone(String timeWithTimeZone) {
         if (timeWithTimeZone.equalsIgnoreCase("null")) {
             return null;
         }
@@ -152,8 +151,7 @@ public class DateTimeUtils {
      *
      * @return stack representation of TIME type
      */
-    public static String convertToIso8601TimeWithoutTimeZone(String value)
-    {
+    public static String convertToIso8601TimeWithoutTimeZone(String value) {
         if (value.equalsIgnoreCase("null")) {
             return null;
         }

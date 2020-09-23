@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.tables;
+package com.dnastack.ga4gh.search.model;
 
 import java.util.Map;
 import lombok.Data;

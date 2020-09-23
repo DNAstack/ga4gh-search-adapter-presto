@@ -1,10 +1,8 @@
-package com.dnastack.ga4gh.search;
+package com.dnastack.ga4gh.search.controller;
 
-import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
-import com.dnastack.ga4gh.search.repository.QueryJobRepository;
-import com.dnastack.ga4gh.search.tables.TableData;
+import com.dnastack.ga4gh.search.model.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;

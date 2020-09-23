@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search;
+package com.dnastack.ga4gh.search.controller;
 
 import com.dnastack.ga4gh.search.ServiceInfo;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,17 +1,15 @@
-package com.dnastack.ga4gh.search;
+package com.dnastack.ga4gh.search.controller;
 
-import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
-import com.dnastack.ga4gh.search.repository.QueryJobRepository;
-import com.dnastack.ga4gh.search.tables.TableData;
-import com.dnastack.ga4gh.search.tables.TableError;
-import com.dnastack.ga4gh.search.tables.TableError.ErrorCode;
+import com.dnastack.ga4gh.search.model.TableData;
+import com.dnastack.ga4gh.search.model.TableError;
+import com.dnastack.ga4gh.search.model.TableError.ErrorCode;
 
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 
-import com.dnastack.ga4gh.search.tables.TableInfo;
-import com.dnastack.ga4gh.search.tables.TablesList;
+import com.dnastack.ga4gh.search.model.TableInfo;
+import com.dnastack.ga4gh.search.model.TablesList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
