@@ -1,14 +1,19 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 
 @Slf4j
 public class JsonAdapter {
-    static List<String> intAliases = List.of("int");
-    static List<String> numberAliases = List.of("number","float","double","real");
-    static List<String> booleanAliases = List.of("bool");
+    static final List<String> intAliases = List.of("int");
+    static final List<String> numberAliases = List.of("number","float","double","real");
+    static final List<String> booleanAliases = List.of("bool");
+
+    static final ObjectMapper jsonStringMapper = new ObjectMapper();
 
     static boolean isArray(String prestoType) {
         return prestoType.contains("[]") || prestoType.contains("array");
@@ -27,8 +32,19 @@ public class JsonAdapter {
             return DateTimeUtils::convertToIso8601TimeWithTimeZone;
         } else if (lcPrestoType.equals("time")) {
             return DateTimeUtils::convertToIso8601TimeWithoutTimeZone;
+        } else if (lcPrestoType.equals("json")) {
+            return JsonAdapter::convertFromJsonStringToObject;
         }
+
         return null;
+    }
+
+    static Object convertFromJsonStringToObject(String content) {
+        try {
+            return jsonStringMapper.readValue(content, Object.class);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     static String toFormat(String prestoType) {

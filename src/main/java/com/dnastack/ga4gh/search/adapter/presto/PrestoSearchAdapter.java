@@ -453,6 +453,8 @@ public class PrestoSearchAdapter {
                                         .format(format)
                                         .build());
                 }
+            } else if (type.equals("json")) {
+                columnSchema.setType("object");
             } else {
                 columnSchema.setType(JsonAdapter.toJsonType(type));
                 if (format != null) {
