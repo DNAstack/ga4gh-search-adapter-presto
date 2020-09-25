@@ -11,6 +11,10 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchColumnExce
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchSchemaException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchTableException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.QueryParsingException;
+import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
+import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
+import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
+import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.repository.QueryJob;
 import com.dnastack.ga4gh.search.repository.QueryJobRepository;
 import com.dnastack.ga4gh.search.model.ColumnSchema;
@@ -68,6 +72,12 @@ public class PrestoSearchAdapter {
 
     @Autowired
     private ApplicationConfig applicationConfig;
+
+    @Autowired
+    private TablesRegistryClient tablesRegistryClient;
+
+    @Autowired
+    private OAuthClientConfig oAuthClientConfig;
 
     private boolean hasMore(TableData tableData) {
         if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
@@ -137,7 +147,6 @@ public class PrestoSearchAdapter {
         Matcher matcher = biFunctionPattern.matcher(query);
         return matcher.results().map(SQLFunction::new);
     }
-
 
     // Given the parsed representation of the ga4gh_type function,
     // returns the type (second argument of the function), without quotes.
@@ -302,11 +311,21 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-        String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+
         TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials);
-        if (tableData.getDataModel() != null) { //only fill in the id if the data model is actually ready.
-            tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
-            attachCommentsToDataModel(tableData, tableName, request, extraCredentials);
+
+        // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
+        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+
+        // Otherwise extract dataModel from tableData
+        if (dataModel == null & tableData.getDataModel() != null) {
+            dataModel = tableData.getDataModel();
+        }
+
+        // Fill in the id & comments if the data model is ready
+        if (dataModel != null) {
+            dataModel.setId(getDataModelId(tableName));
+            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
         }
         return tableData;
     }
@@ -317,17 +336,27 @@ public class PrestoSearchAdapter {
     }
 
     public TableInfo getTableInfo(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-        String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
         if (!isValidPrestoName(tableName)) {
             //triggers a 404.
            throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
         }
 
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials);
-        tableData.getDataModel().setId(URI.create(String.format("%s/table/%s/info", refHost, tableName)));
-        attachCommentsToDataModel(tableData, tableName, request, extraCredentials);
-        return new TableInfo(tableName, null, tableData.getDataModel());
 
+        // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
+        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+
+        // Otherwise extract dataModel from tableData
+        if (dataModel == null & tableData.getDataModel() != null) {
+            dataModel = tableData.getDataModel();
+        }
+
+        // Fill in the id & comments if the data model is ready
+        if (dataModel != null) {
+            dataModel.setId(getDataModelId(tableName));
+            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
+        }
+        return new TableInfo(tableName, dataModel.getDescription(), dataModel);
     }
 
     private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
@@ -494,12 +523,12 @@ public class PrestoSearchAdapter {
         return catalogSet;
     }
 
-    private void attachCommentsToDataModel(TableData tableData, String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-        if (tableData.getDataModel() == null) {
+    private void attachCommentsToDataModel(DataModel dataModel, String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
+        if (dataModel == null) {
             return;
         }
 
-        Map<String, ColumnSchema> dataModelProperties = tableData.getDataModel().getProperties();
+        Map<String, ColumnSchema> dataModelProperties = dataModel.getProperties();
 
         if (dataModelProperties == null) {
             return;
@@ -515,5 +544,21 @@ public class PrestoSearchAdapter {
                 dataModelProperties.get(columnName).setComment(comment);
             }
         }
+    }
+
+    private URI getDataModelId(String tableName) {
+        String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+        return URI.create(String.format("%s/table/%s/info", refHost, tableName));
+    }
+
+    private DataModel getDataModelFromTablesRegistry(String tableName) {
+        ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
+                oAuthClientConfig.getClientId(), tableName);
+
+        if(registryEntry == null || registryEntry.getTableCollections().isEmpty()) {
+            return null;
+        }
+
+        return registryEntry.getTableCollections().get(0).getTableSchema();
     }
 }

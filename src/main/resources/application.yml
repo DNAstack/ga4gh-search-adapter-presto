@@ -13,7 +13,6 @@ server:
 cors:
   urls: http://localhost:8089
 
-
 app:
   service-info:
     id:
@@ -22,6 +21,13 @@ app:
     documentation-url:
     contact-url:
     version:
+  tables-registry:
+    url: http://localhost:8080
+    auth:
+      authentication-uri: http://localhost:8081/oauth/token
+      client-id: search-presto-public-client-credentials-dev
+      client-secret: search-presto-public-client-credentials-dev
+      audience: http://localhost:8080
 
 presto:
   datasource:
@@ -74,7 +80,6 @@ app:
       client-id: ga4gh-search-adapter-presto
       client-secret: dev-secret-never-use-in-prod
       audience: http://presto.local
-
 ---
 
 spring:
