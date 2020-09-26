@@ -1,6 +1,7 @@
 package com.dnastack.ga4gh.search.controller;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
+import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
 import com.dnastack.ga4gh.search.model.TableError;
 import com.dnastack.ga4gh.search.model.TableError.ErrorCode;
@@ -32,8 +33,14 @@ public class TablesController {
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTables(HttpServletRequest request,
                                                 @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        TablesList tablesList = prestoSearchAdapter
+        TablesList tablesList = null;
+
+        try {
+            tablesList = prestoSearchAdapter
                 .getTables(request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TablesList.class);
+        }
 
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
     }
@@ -43,8 +50,15 @@ public class TablesController {
     public ResponseEntity<TablesList> getTablesByCatalog(@PathVariable("catalogName") String catalogName,
                                                          HttpServletRequest request,
                                                          @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        TablesList tablesList = prestoSearchAdapter
+        TablesList tablesList = null;
+
+        try {
+            tablesList = prestoSearchAdapter
                 .getTablesInCatalog(catalogName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TablesList.class);
+        }
+
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
 
     }
@@ -55,9 +69,16 @@ public class TablesController {
                                   HttpServletRequest request,
                                   @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
 
-        return prestoSearchAdapter
-                .getTableInfo(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        TableInfo tableInfo = null;
 
+        try {
+            tableInfo = prestoSearchAdapter
+                .getTableInfo(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableInfo.class);
+        }
+
+        return tableInfo;
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
@@ -66,9 +87,16 @@ public class TablesController {
                                   HttpServletRequest request,
                                   @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
 
-        return prestoSearchAdapter
-                .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        TableData tableData = null;
 
+        try {
+            tableData = prestoSearchAdapter
+                .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableData.class);
+        }
+
+        return tableData;
     }
 
     private static String escapeQuotes(String s) {

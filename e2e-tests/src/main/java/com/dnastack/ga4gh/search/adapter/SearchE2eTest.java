@@ -841,6 +841,7 @@ public class SearchE2eTest extends BaseE2eTest {
         // a real client wouldn't use the key to decide what to get; that would complect the client with catalog naming choices!
         // a real client should do a credential lookup using the type and resource-description!
         String tokenEnvName = "E2E_SEARCH_CREDENTIALS_" + searchAuthRequest.getKey().toUpperCase();
+        log.info("Credential Key: {}", searchAuthRequest.getKey());
         String configuredToken = optionalEnv(tokenEnvName, null);
         if (configuredToken != null) {
             log.info("Using {} to satisfy auth challenge", tokenEnvName);

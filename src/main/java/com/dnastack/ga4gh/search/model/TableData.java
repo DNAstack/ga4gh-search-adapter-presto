@@ -22,6 +22,9 @@ public class TableData {
     @JsonProperty("data")
     private List<Map<String, Object>> data;
 
+    @JsonProperty("errors")
+    private List<TableError> errors;
+
     @JsonProperty("pagination")
     private Pagination pagination;
 

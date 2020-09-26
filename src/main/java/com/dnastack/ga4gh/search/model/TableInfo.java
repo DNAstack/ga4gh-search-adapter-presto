@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @EqualsAndHashCode
 @NoArgsConstructor
@@ -18,10 +20,12 @@ public class TableInfo implements Comparable<TableInfo> {
     @JsonProperty("description")
     private String description;
 
-
     //private Map<String, Object> dataModel;
     @JsonProperty("data_model")
     private DataModel dataModel;
+
+    @JsonProperty("errors")
+    private List<TableError> errors;
 
     @Override
     public int compareTo(TableInfo o) {

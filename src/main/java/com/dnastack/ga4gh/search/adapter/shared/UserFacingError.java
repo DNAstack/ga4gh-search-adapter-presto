@@ -9,6 +9,7 @@ import lombok.Value;
 import lombok.AllArgsConstructor;
 import org.slf4j.MDC;
 
+@Deprecated
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

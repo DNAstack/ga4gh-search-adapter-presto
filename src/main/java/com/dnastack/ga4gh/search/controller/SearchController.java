@@ -2,6 +2,7 @@ package com.dnastack.ga4gh.search.controller;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
+import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,8 +29,16 @@ public class SearchController {
     public TableData search(@RequestBody SearchRequest searchRequest,
                             HttpServletRequest request,
                             @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        return prestoSearchAdapter
+        TableData tableData = null;
+
+        try {
+            tableData = prestoSearchAdapter
                 .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableData.class);
+        }
+
+        return tableData;
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
@@ -39,8 +48,15 @@ public class SearchController {
                                               @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
         String page = request.getRequestURI()
                              .split(request.getContextPath() + "/search/")[1];
-        TableData tableData = prestoSearchAdapter
+        TableData tableData = null;
+
+        try {
+            tableData = prestoSearchAdapter
                 .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableData.class);
+        }
+
         return tableData;
     }
 

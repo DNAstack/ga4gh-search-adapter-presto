@@ -1,20 +1,11 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.ApplicationConfig;
-import com.dnastack.ga4gh.search.adapter.presto.exception.InvalidQueryJobException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoBadlyQualifiedNameException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInsufficientResourcesException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInternalErrorException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoInvalidQueryException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchCatalogException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchColumnException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchSchemaException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoNoSuchTableException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.QueryParsingException;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
+import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.repository.QueryJob;
 import com.dnastack.ga4gh.search.repository.QueryJobRepository;
 import com.dnastack.ga4gh.search.model.ColumnSchema;
@@ -66,6 +57,9 @@ public class PrestoSearchAdapter {
 
     @Autowired
     private PrestoClient client;
+
+    @Autowired
+    private ThrowableTransformer throwableTransformer;
 
     @Autowired
     private QueryJobRepository queryJobRepository;
@@ -268,7 +262,7 @@ public class PrestoSearchAdapter {
     }
 
     private TablesList getTables(String currentCatalog, String nextCatalog, HttpServletRequest request, Map<String, String> extraCredentials) {
-        PrestoCatalog prestoCatalog = new PrestoCatalog(this, getRefHost(), currentCatalog);
+        PrestoCatalog prestoCatalog = new PrestoCatalog(this, throwableTransformer, getRefHost(), currentCatalog);
         Pagination nextPage = null;
         if (nextCatalog != null) {
             nextPage = new Pagination(null, getLinkToCatalog(nextCatalog, request), null);
@@ -355,11 +349,10 @@ public class PrestoSearchAdapter {
             dataModel.setId(getDataModelId(tableName));
             attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
         }
-        return new TableInfo(tableName, dataModel.getDescription(), dataModel);
+        return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
     }
 
     private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
-
         JsonNode columns;
 
         List<Map<String, Object>> data = new ArrayList<>();
@@ -381,7 +374,6 @@ public class PrestoSearchAdapter {
             }
 
             dataModel = generateDataModel(columns);
-
 
             // Generate data
             if (prestoResponse.hasNonNull("data")) {
@@ -419,7 +411,7 @@ public class PrestoSearchAdapter {
                     throw new PrestoInternalErrorException(prestoError);
                 }
             } catch (IOException ex) {
-                throw new UncheckedIOException(ex);
+                throw new UncheckedTableDataConstructionException(ex);
             }
 
         }
@@ -427,7 +419,7 @@ public class PrestoSearchAdapter {
         // Generate pagination
         Pagination pagination = generatePagination(nextPageTemplate, prestoResponse, queryJobId, request);
 
-        TableData tableData = new TableData(dataModel, Collections.unmodifiableList(data), pagination);
+        TableData tableData = new TableData(dataModel, Collections.unmodifiableList(data), null, pagination);
         if (queryJobId != null) {
             applyResponseTransforms(queryJobId, tableData);
         }

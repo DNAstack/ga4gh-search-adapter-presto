@@ -1,13 +1,8 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
-import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
-import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
-import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.dnastack.ga4gh.search.model.DataModel;
 import com.dnastack.ga4gh.search.model.Pagination;
 import com.dnastack.ga4gh.search.model.TableData;
-import com.dnastack.ga4gh.search.model.TableError;
 import com.dnastack.ga4gh.search.model.TableInfo;
 import com.dnastack.ga4gh.search.model.TablesList;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +17,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PrestoCatalog {
     private final PrestoSearchAdapter searchAdapter;
+    private final ThrowableTransformer throwableTransformer;
     private final String refHost;
     private final String catalogName;
 
@@ -37,7 +33,7 @@ public class PrestoCatalog {
         String qualifiedTableName = catalogName + "." + schema + "." + table;
         String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
         log.trace("Got table "+qualifiedTableName);
-        return new TableInfo(qualifiedTableName, null, DataModel.builder().ref(ref).build());
+        return new TableInfo(qualifiedTableName, null, DataModel.builder().ref(ref).build(), null);
     }
 
     private List<TableInfo> getTableInfoList(TableData tableData) {
@@ -56,35 +52,16 @@ public class PrestoCatalog {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-
     public TablesList getTablesList(Pagination nextPage, HttpServletRequest request, Map<String, String> extraCredentials) {
         try {
             TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)), request, extraCredentials);
             List<TableInfo> tableInfoList = getTableInfoList(tables);
             return new TablesList(tableInfoList, null, nextPage);
-        } catch (AuthRequiredException ex) {
-            SearchAuthRequest searchAuthRequest = ex.getAuthorizationRequest();
-            TableError error = new TableError();
-            error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
-                             + ", request requires additional authorization information");
-            error.setSource(searchAuthRequest.getKey());
-            error.setCode(TableError.ErrorCode.AUTH_CHALLENGE);
-            error.setAttributes(searchAuthRequest.getResourceDescription());
+        } catch (Throwable t) {
             if (log.isTraceEnabled()) {
-                log.error("Error when fetching tables for {}", catalogName, ex);
+                log.error("Error when fetching tables for {}", catalogName, t);
             }
-            return new TablesList(null, error, null);
-        } catch (PrestoUnexpectedHttpResponseException | PrestoIOException ex) {
-            TableError error = new TableError();
-            error.setMessage("Couldn't complete query to list tables");
-            error.setSource(catalogName);
-            error.setCode(TableError.ErrorCode.PRESTO_QUERY);
-            if (log.isTraceEnabled()) {
-                log.error("Error when fetching tables for {}", catalogName, ex);
-            }
-            return new TablesList(null, error, null);
+            return new TablesList(null, throwableTransformer.transform(t, catalogName), null);
         }
     }
-
-
 }

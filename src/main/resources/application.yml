@@ -83,15 +83,6 @@ app:
 ---
 
 spring:
-  profiles: basic-auth
-  security:
-    user:
-      password: FpmJj24y9RRRYQnpXXOHEIEJK6lwPjnY09
-
-
----
-
-spring:
   profiles: no-auth
   security:
     enabled: false
