@@ -583,37 +583,29 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void getTableInfoWithUnknownCatalogGives404AndMessageAndTraceId() throws Exception {
         final String prestoTableWithBadCatalog = "e2etest_olywlypolywoly.public." + unqualifiedPaginationTestTable;
-        UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadCatalog + "/info", 404, UserFacingError.class);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadCatalog + "/info", 404, TableInfo.class);
+        runBasicAssertionOnTableErrorList(info.getErrors());
     }
 
     @Test
     public void getTableInfoWithUnknownSchemaGives404AndMessageAndTraceId() throws Exception {
         final String prestoTableWithBadSchema = inMemoryCatalog + ".e2etest_olywolypolywoly." + unqualifiedPaginationTestTable;
-        UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadSchema + "/info", 404, UserFacingError.class);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadSchema + "/info", 404, TableInfo.class);
+        runBasicAssertionOnTableErrorList(info.getErrors());
     }
 
     @Test
     public void getTableInfoWithUnknownTableGives404AndMessageAndTraceId() throws Exception {
         final String prestoTableWithBadTable = inMemoryCatalog + "." + inMemorySchema + "." + "e2etest_olywolypolywoly";
-        UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, UserFacingError.class);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, TableInfo.class);
+        runBasicAssertionOnTableErrorList(info.getErrors());
     }
 
     @Test
     public void getTableInfoWithBadlyQualifiedTableGives404AndMessageAndTraceId() throws Exception {
         final String prestoTableWithBadTable = "e2etest_olywolypolywoly";
-        UserFacingError error = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, UserFacingError.class);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, TableInfo.class);
+        runBasicAssertionOnTableErrorList(info.getErrors());
     }
 
     @Test
@@ -671,6 +663,13 @@ public class SearchE2eTest extends BaseE2eTest {
             .statusCode(403)
             .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
         //@formatter:on
+    }
+
+    static void runBasicAssertionOnTableErrorList(List<TableError> errors) {
+        assertThat(errors, not(nullValue()));
+        assertThat(errors.size(), equalTo(1));
+        assertThat(errors.get(0).getMessage(), not(nullValue()));
+        assertThat(errors.get(0).getAttributes().get("traceId"), not(nullValue()));
     }
 
 
