@@ -354,7 +354,7 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void datesAndTimesHaveCorrectTypes() throws IOException {
         String qualifiedTableName = prestoDateTimeTestTable;
-        Table tableInfo = searchApiGetRequest("/table/" + qualifiedTableName + "/info", 200, Table.class);
+        TableInfo tableInfo = searchApiGetRequest("/table/" + qualifiedTableName + "/info", 200, TableInfo.class);
         assertThat(tableInfo, not(nullValue()));
         assertThat(tableInfo.getName(), equalTo(qualifiedTableName));
         assertThat(tableInfo.getDataModel(), not(nullValue()));
@@ -533,23 +533,15 @@ public class SearchE2eTest extends BaseE2eTest {
     @Test
     public void malformedSqlQueryShouldReturn400AndMessageAndTraceId() throws Exception {
         SearchRequest query = new SearchRequest("SELECT * FROM FROM E2ETEST LIMIT STRAWBERRY");
-        log.info("Running bad query");
-        UserFacingError error = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
-        log.info("Got error " + error);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        Table data = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
+        runBasicAssertionOnTableErrorList(data.getErrors());
     }
 
     @Test
     public void sqlQueryWithBadColumnShouldReturn400AndMessageAndTraceId() throws Exception {
         SearchRequest query = new SearchRequest("SELECT e2etest_olywolypolywoly FROM " + prestoPaginationTestTable + " LIMIT 10");
-        log.info("Running bad query");
-        UserFacingError error = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
-        log.info("Got error " + error);
-        assertThat(error, not(nullValue()));
-        assertThat(error.getMessage(), not(nullValue()));
-        assertThat(error.getTraceId(), not(nullValue()));
+        Table data = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
+        runBasicAssertionOnTableErrorList(data.getErrors());
     }
 
     @Test
@@ -751,7 +743,7 @@ public class SearchE2eTest extends BaseE2eTest {
      * @return UserFacingError The error object describing the expected error.
      * @throws IOException
      */
-    private static UserFacingError searchUntilException(Object query, int expectedErrorStatus) throws IOException {
+    private static Table searchUntilException(Object query, int expectedErrorStatus) throws IOException {
         Response response = getResponse(Method.POST, "/search", query);
         if (response.getStatusCode() == HttpStatus.SC_OK) {
             log.info("Got status OK after POSTing search");
@@ -761,7 +753,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 Response nextPageResponse = getResponse(Method.GET, nextPageUri, null);
                 log.info("Looking for status " + expectedErrorStatus + " by following nextPageUri trail, most recent request returned " + nextPageResponse.getStatusCode());
                 if (nextPageResponse.getStatusCode() == expectedErrorStatus) {
-                    return nextPageResponse.then().log().ifValidationFails(LogDetail.ALL).extract().as(UserFacingError.class);
+                    return nextPageResponse.then().log().ifValidationFails(LogDetail.ALL).extract().as(Table.class);
                 } else if (nextPageResponse.getStatusCode() != HttpStatus.SC_OK) {
                     throw new AssertionError("Unexpected response status " + response.getStatusCode() + " (sent GET /" + nextPageUri + ", expecting " + expectedErrorStatus + " or 200");
                 } else {
@@ -769,7 +761,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 }
             }
         } else if (response.getStatusCode() == expectedErrorStatus) {
-            return response.then().log().ifValidationFails(LogDetail.ALL).extract().as(UserFacingError.class);
+            return response.then().log().ifValidationFails(LogDetail.ALL).extract().as(Table.class);
         }
         throw new AssertionError("Expected to receive status " + expectedErrorStatus + " somewhere on the nextUri trail, but never found it.");
     }
@@ -840,7 +832,6 @@ public class SearchE2eTest extends BaseE2eTest {
         // a real client wouldn't use the key to decide what to get; that would complect the client with catalog naming choices!
         // a real client should do a credential lookup using the type and resource-description!
         String tokenEnvName = "E2E_SEARCH_CREDENTIALS_" + searchAuthRequest.getKey().toUpperCase();
-        log.info("Credential Key: {}", searchAuthRequest.getKey());
         String configuredToken = optionalEnv(tokenEnvName, null);
         if (configuredToken != null) {
             log.info("Using {} to satisfy auth challenge", tokenEnvName);

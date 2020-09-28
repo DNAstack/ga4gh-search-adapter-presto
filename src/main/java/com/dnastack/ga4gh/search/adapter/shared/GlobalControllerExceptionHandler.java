@@ -56,77 +56,6 @@ public class GlobalControllerExceptionHandler {
         return reply(apiErrorException, tracer.currentSpan().context().traceIdString());
     }
 
-//    @ExceptionHandler({PrestoNoSuchCatalogException.class, PrestoNoSuchSchemaException.class, PrestoNoSuchTableException.class})
-//    public ResponseEntity<?> handleNoSuchThingException(PrestoErrorException ex) {
-//        logPrestoError(ex);
-//        return reply(ex, tracer.currentSpan().context().traceIdString());
-//    }
-//
-//    @ExceptionHandler({PrestoBadlyQualifiedNameException.class})
-//    public ResponseEntity<?> handleBadlyQualifiedNameException(PrestoBadlyQualifiedNameException ex) {
-//        log.error("Table name given was not fully qualified", ex);
-//        return reply(ex, tracer.currentSpan().context().traceIdString());
-//    }
-//
-//    @ExceptionHandler({PrestoNoSuchColumnException.class, PrestoInvalidQueryException.class})
-//    public ResponseEntity<?> handleBadQueryException(PrestoErrorException ex) {
-//        logPrestoError(ex);
-//        return reply(ex, tracer.currentSpan().context().traceIdString());
-//    }
-
-//    @ExceptionHandler({PrestoInternalErrorException.class})
-//    public ResponseEntity<?> handleInternalErrorException(PrestoErrorException ex) {
-//        logPrestoError(ex);
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new UserFacingError(ex.getPrestoError(), tracer.currentSpan().context().traceIdString()
-//        ));
-//    }
-
-//    @ExceptionHandler({PrestoUnexpectedHttpResponseException.class})
-//    public ResponseEntity<?> handlePrestoUnexpectedResponseException(PrestoUnexpectedHttpResponseException ex) {
-//        log.error("Unexpected response from Presto", ex);
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new UserFacingError(ex.getMessage(), tracer.currentSpan().context().traceIdString()
-//        ));
-//    }
-
-//    @ExceptionHandler({PrestoIOException.class})
-//    public ResponseEntity<?> handlePrestoIOException(PrestoIOException ex) {
-//        log.error("Presto IO error", ex);
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new UserFacingError(ex.getMessage(), tracer.currentSpan().context().traceIdString()
-//        ));
-//    }
-
-//    @ExceptionHandler({PrestoInsufficientResourcesException.class})
-//    public ResponseEntity<?> handleInternalErrorException(PrestoInsufficientResourcesException ex) {
-//        logPrestoError(ex);
-//        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new UserFacingError(ex.getPrestoError(), tracer.currentSpan().context().traceIdString()
-//        ));
-//    }
-
-//    @ExceptionHandler({QueryParsingException.class})
-//    public ResponseEntity<?> handleQueryParsingException(QueryParsingException qex) {
-//        log.error("query parsing error  ", qex);
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new UserFacingError("Unable to parse query", tracer.currentSpan().context().traceIdString()));
-//    }
-
-//    @ExceptionHandler({InvalidQueryJobException.class})
-//    public ResponseEntity<?> handleInvalidQueryJobException(InvalidQueryJobException iqje) {
-//        log.error("Invalid query job " + iqje.getQueryJobId());
-//        return reply(iqje, tracer.currentSpan().context().traceIdString());
-//    }
-
-//    @ExceptionHandler({UncheckedIOException.class})
-//    public ResponseEntity<?> handleInternalErrorException(UncheckedIOException ex) {
-//
-//        log.error("Unknown error", ex);
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new UserFacingError("Unknown error", tracer.currentSpan().context().traceIdString()));
-//    }
-
-//    @ExceptionHandler({UncheckedTableDataConstructionException.class})
-//    public ResponseEntity<?> handleTableDataConstructionError(UncheckedTableDataConstructionException ex) {
-//        log.error("Error while constructing a table (data) object", ex);
-//        return reply(ex, tracer.currentSpan().context().traceIdString());
-//    }
-
     private ResponseEntity<?> reply(Throwable throwable, String traceId) {
         HttpStatus status = getResponseStatus(throwable);
         Class<?> responseClass = TableData.class;
@@ -152,6 +81,9 @@ public class GlobalControllerExceptionHandler {
 
         // For debugging only
         // TODO Maybe remove it later.
+        error.getAttributes().put("exceptionClassType", throwable instanceof TableApiErrorException
+            ? ((TableApiErrorException) throwable).getPreviousException().getClass().getName()
+            : throwable.getClass().getName());
         error.getAttributes().put("responseClassType", responseClass.getName());
 
         Object body = null;

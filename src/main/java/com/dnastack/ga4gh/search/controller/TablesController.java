@@ -39,6 +39,7 @@ public class TablesController {
             tablesList = prestoSearchAdapter
                 .getTables(request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
+            ex.printStackTrace();
             throw new TableApiErrorException(ex, TablesList.class);
         }
 
@@ -56,6 +57,7 @@ public class TablesController {
             tablesList = prestoSearchAdapter
                 .getTablesInCatalog(catalogName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
+            ex.printStackTrace();
             throw new TableApiErrorException(ex, TablesList.class);
         }
 
@@ -93,6 +95,7 @@ public class TablesController {
             tableData = prestoSearchAdapter
                 .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
+            ex.printStackTrace();
             throw new TableApiErrorException(ex, TableData.class);
         }
 

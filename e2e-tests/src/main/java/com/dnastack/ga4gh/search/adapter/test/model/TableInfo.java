@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.test.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,7 +21,6 @@ public class TableInfo implements Comparable<TableInfo> {
     @JsonProperty("description")
     private String description;
 
-    //private Map<String, Object> dataModel;
     @JsonProperty("data_model")
     private DataModel dataModel;
 

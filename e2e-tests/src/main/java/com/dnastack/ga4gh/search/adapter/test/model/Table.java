@@ -3,6 +3,7 @@ package com.dnastack.ga4gh.search.adapter.test.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class Table {
     private String description;
     private DataModel dataModel;
     private List<Map<String, Object>> data;
+    private List<TableError> errors;
     private Pagination pagination;
 
     // track additional JSON properties so we can see them when we log errors
