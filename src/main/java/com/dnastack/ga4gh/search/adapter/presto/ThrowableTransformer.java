@@ -42,7 +42,6 @@ public class ThrowableTransformer {
         } else if (throwable instanceof QueryParsingException) {
             error.setMessage("Unable to parse query");
         } else if (throwable instanceof UncheckedIOException) {
-            //
             error.setMessage("Unchecked IO Error");
             error.getAttributes().putAll(Map.of(
                 "details", throwable.getMessage()
