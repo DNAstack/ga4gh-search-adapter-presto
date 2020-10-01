@@ -533,6 +533,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest("SELECT * FROM FROM E2ETEST LIMIT STRAWBERRY");
         Table data = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
         runBasicAssertionOnTableErrorList(data.getErrors());
+        assertThat(data.getErrors().get(0).getStatus(), equalTo(400));
     }
 
     @Test
@@ -540,6 +541,7 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest query = new SearchRequest("SELECT e2etest_olywolypolywoly FROM " + prestoPaginationTestTable + " LIMIT 10");
         Table data = searchUntilException(query, HttpStatus.SC_BAD_REQUEST);
         runBasicAssertionOnTableErrorList(data.getErrors());
+        assertThat(data.getErrors().get(0).getStatus(), equalTo(400));
     }
 
     @Test
@@ -575,6 +577,7 @@ public class SearchE2eTest extends BaseE2eTest {
         final String prestoTableWithBadCatalog = "e2etest_olywlypolywoly.public." + unqualifiedPaginationTestTable;
         TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadCatalog + "/info", 404, TableInfo.class);
         runBasicAssertionOnTableErrorList(info.getErrors());
+        assertThat(info.getErrors().get(0).getStatus(), equalTo(404));
     }
 
     @Test
@@ -582,6 +585,7 @@ public class SearchE2eTest extends BaseE2eTest {
         final String prestoTableWithBadSchema = inMemoryCatalog + ".e2etest_olywolypolywoly." + unqualifiedPaginationTestTable;
         TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadSchema + "/info", 404, TableInfo.class);
         runBasicAssertionOnTableErrorList(info.getErrors());
+        assertThat(info.getErrors().get(0).getStatus(), equalTo(404));
     }
 
     @Test
@@ -589,6 +593,7 @@ public class SearchE2eTest extends BaseE2eTest {
         final String prestoTableWithBadTable = inMemoryCatalog + "." + inMemorySchema + "." + "e2etest_olywolypolywoly";
         TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, TableInfo.class);
         runBasicAssertionOnTableErrorList(info.getErrors());
+        assertThat(info.getErrors().get(0).getStatus(), equalTo(404));
     }
 
     @Test
@@ -596,6 +601,7 @@ public class SearchE2eTest extends BaseE2eTest {
         final String prestoTableWithBadTable = "e2etest_olywolypolywoly";
         TableInfo info = searchApiGetRequest("/table/" + prestoTableWithBadTable + "/info", 404, TableInfo.class);
         runBasicAssertionOnTableErrorList(info.getErrors());
+        assertThat(info.getErrors().get(0).getStatus(), equalTo(404));
     }
 
     @Test
