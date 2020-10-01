@@ -19,12 +19,10 @@ public class TablesList {
     @JsonProperty("tables")
     private List<TableInfo> tableInfos;
 
-    // TODO: this is only a list for historical reasons.
-    // remove this after co-ordinating with frontend.
     @JsonProperty("errors")
-    @Deprecated
     private List<TableError> errors;
 
+    @Deprecated
     @JsonProperty("error")
     private TableError error;
 
@@ -43,5 +41,7 @@ public class TablesList {
         this.pagination = pagination;
     }
 
-
+    public static TablesList errorInstance(TableError tableError) {
+        return new TablesList(null, tableError, null);
+    }
 }

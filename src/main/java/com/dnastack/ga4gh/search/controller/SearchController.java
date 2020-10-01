@@ -35,7 +35,7 @@ public class SearchController {
             tableData = prestoSearchAdapter
                 .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
-            throw new TableApiErrorException(ex, TableData.class);
+            throw new TableApiErrorException(ex, TableData::errorInstance);
         }
 
         return tableData;
@@ -54,7 +54,7 @@ public class SearchController {
             tableData = prestoSearchAdapter
                 .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
-            throw new TableApiErrorException(ex, TableData.class);
+            throw new TableApiErrorException(ex, TableData::errorInstance);
         }
 
         return tableData;

@@ -3,9 +3,8 @@ package com.dnastack.ga4gh.search.controller;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
-import com.dnastack.ga4gh.search.model.TableError;
-import com.dnastack.ga4gh.search.model.TableError.ErrorCode;
 
+import java.util.LinkedList;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 
@@ -14,6 +13,7 @@ import com.dnastack.ga4gh.search.model.TablesList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,7 +40,7 @@ public class TablesController {
                 .getTables(request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new TableApiErrorException(ex, TablesList.class);
+            throw new TableApiErrorException(ex, TablesList::errorInstance);
         }
 
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
@@ -58,7 +58,7 @@ public class TablesController {
                 .getTablesInCatalog(catalogName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new TableApiErrorException(ex, TablesList.class);
+            throw new TableApiErrorException(ex, TablesList::errorInstance);
         }
 
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
@@ -77,7 +77,7 @@ public class TablesController {
             tableInfo = prestoSearchAdapter
                 .getTableInfo(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
-            throw new TableApiErrorException(ex, TableInfo.class);
+            throw new TableApiErrorException(ex, TableInfo::errorInstance);
         }
 
         return tableInfo;
@@ -96,7 +96,7 @@ public class TablesController {
                 .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new TableApiErrorException(ex, TableData.class);
+            throw new TableApiErrorException(ex, TableData::errorInstance);
         }
 
         return tableData;
@@ -108,11 +108,22 @@ public class TablesController {
 
     private HttpHeaders getExtraAuthHeaders(TablesList listTables) {
         HttpHeaders headers = new HttpHeaders();
-        TableError error = listTables.getError();
-        if (error != null && error.getCode().equals(ErrorCode.AUTH_CHALLENGE)) {
-            headers.add("WWW-Authenticate",
-                        "GA4GH-Search realm:\"" + escapeQuotes(error.getSource()) + "\"");
+
+        if (listTables.getErrors() != null) {
+            final List<String> unauthenticatedRealmNames = new LinkedList<>();
+
+            listTables.getErrors().forEach(error -> {
+                if (error.getStatus() == HttpStatus.UNAUTHORIZED.value()) {
+                    unauthenticatedRealmNames.add(error.getSource());
+                }
+            });
+
+            if (listTables.getErrors().size() == unauthenticatedRealmNames.size()) {
+                headers.add("WWW-Authenticate",
+                    "GA4GH-Search realm:\"" + escapeQuotes(unauthenticatedRealmNames.get(0)) + "\"");
+            }
         }
+
         return headers;
     }
 }

@@ -23,8 +23,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -660,8 +658,8 @@ public class SearchE2eTest extends BaseE2eTest {
     static void runBasicAssertionOnTableErrorList(List<TableError> errors) {
         assertThat(errors, not(nullValue()));
         assertThat(errors.size(), equalTo(1));
-        assertThat(errors.get(0).getMessage(), not(nullValue()));
-        assertThat(errors.get(0).getAttributes().get("traceId"), not(nullValue()));
+        assertThat(errors.get(0).getTitle(), not(nullValue()));
+        assertThat(errors.get(0).getDetails(), not(nullValue()));
     }
 
 

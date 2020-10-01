@@ -4,60 +4,79 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.dnastack.ga4gh.search.model.TableError;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.UncheckedIOException;
-import java.util.HashMap;
 import java.util.Map;
 
 @Service
 public class ThrowableTransformer {
+    private static final Map<Class<?>, HttpStatus> responseStatuses = Map.of(
+        AuthRequiredException.class, HttpStatus.UNAUTHORIZED,
+        PrestoNoSuchCatalogException.class, HttpStatus.NOT_FOUND,
+        PrestoNoSuchSchemaException.class, HttpStatus.NOT_FOUND,
+        PrestoNoSuchTableException.class, HttpStatus.NOT_FOUND,
+        PrestoBadlyQualifiedNameException.class, HttpStatus.NOT_FOUND,
+        PrestoNoSuchColumnException.class, HttpStatus.BAD_REQUEST,
+        PrestoInvalidQueryException.class, HttpStatus.BAD_REQUEST,
+        PrestoInsufficientResourcesException.class, HttpStatus.SERVICE_UNAVAILABLE,
+        QueryParsingException.class, HttpStatus.BAD_REQUEST,
+        InvalidQueryJobException.class, HttpStatus.BAD_REQUEST
+    );
+
     public TableError transform(Throwable throwable) {
         return transform(throwable, null);
     }
 
     public TableError transform(Throwable throwable, String catalogName) {
         TableError error = new TableError();
-        error.setMessage("Encountered an unexpected error (" + throwable.getClass().getName() + ")");
+        error.setTitle("Encountered an unexpected error");
+        error.setStatus(getResponseStatus(throwable));
+        error.setDetails(throwable.getClass().getName());
         error.setSource(catalogName);
-        error.setCode(TableError.ErrorCode.ERROR_RESPONSE);
-        error.setAttributes(new HashMap<>());
 
         if (throwable instanceof AuthRequiredException) {
             SearchAuthRequest searchAuthRequest = ((AuthRequiredException) throwable).getAuthorizationRequest();
-            error.setMessage("User is not authorized to access catalog: " + searchAuthRequest.getKey()
-                + ", request requires additional authorization information");
+            error.setTitle("Authentication Required");
             error.setSource(searchAuthRequest.getKey());
-            error.setCode(TableError.ErrorCode.AUTH_CHALLENGE);
-            error.getAttributes().put("resourceDescription", searchAuthRequest.getResourceDescription());
+            error.setDetails("User is not authorized to access catalog: " + searchAuthRequest.getKey()
+                + ", request requires additional authorization information");
         } else if (throwable instanceof PrestoUnexpectedHttpResponseException || throwable instanceof PrestoIOException) {
-            error.setMessage(throwable.getMessage()); // TODO Change to "Presto error"
-            error.setCode(TableError.ErrorCode.PRESTO_QUERY); // TODO Change to ERROR_RESPONSE
+            error.setTitle(throwable.getMessage());
         } else if (throwable instanceof PrestoErrorException) {
             handlePrestoError(error, (PrestoErrorException) throwable);
         } else if (throwable instanceof PrestoBadlyQualifiedNameException) {
-            error.setMessage(throwable.getMessage());
+            error.setTitle(throwable.getMessage());
         } else if (throwable instanceof InvalidQueryJobException) {
-            error.setMessage("The query corresponding to this search could not be found (" + ((InvalidQueryJobException) throwable).getQueryJobId() + ")");
+            error.setTitle("The query corresponding to this search could not be found (" + ((InvalidQueryJobException) throwable).getQueryJobId() + ")");
         } else if (throwable instanceof QueryParsingException) {
-            error.setMessage("Unable to parse query");
+            error.setTitle("Unable to parse query");
         } else if (throwable instanceof UncheckedIOException) {
-            error.setMessage("Unchecked IO Error");
-            error.getAttributes().putAll(Map.of(
-                "details", throwable.getMessage()
-            ));
+            error.setTitle("Unchecked IO Error");
+            error.setDetails(throwable.getMessage());
         }
 
         return error;
     }
 
+    public int getResponseStatus(Throwable throwable) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        if (responseStatuses.containsKey(throwable.getClass())) {
+            status = responseStatuses.get(throwable.getClass());
+        }
+
+        return status.value();
+    }
+
     private void handlePrestoError(TableError error, PrestoErrorException prestoErrorException) {
         var prestoError = prestoErrorException.getPrestoError();
-        error.setMessage(prestoError.getMessage());
-        error.getAttributes().putAll(Map.of(
-            "errorCode", prestoError.getErrorCode(),
-            "errorName", prestoError.getErrorName(),
-            "errorType", prestoError.getErrorType()
+        error.setTitle(prestoError.getMessage());
+        error.setDetails(String.format(
+            "%s: %s: %s",
+            prestoError.getErrorType(),
+            prestoError.getErrorCode(),
+            prestoError.getErrorName()
         ));
     }
 }

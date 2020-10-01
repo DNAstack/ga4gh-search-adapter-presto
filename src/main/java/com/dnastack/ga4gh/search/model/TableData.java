@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -46,7 +47,6 @@ public class TableData {
     }
 
     public void append(TableData tableData) {
-
         if (tableData.getData() != null) {
             this.data = concat(this.data, tableData.getData());
         }
@@ -54,7 +54,9 @@ public class TableData {
             this.dataModel = tableData.getDataModel();
         }
         this.pagination = tableData.getPagination();
-
     }
 
+    public static TableData errorInstance(TableError error) {
+        return new TableData(null, null, List.of(error), null);
+    }
 }
