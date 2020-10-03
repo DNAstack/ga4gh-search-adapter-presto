@@ -89,6 +89,15 @@ SPRING_SECURITY_USER_NAME={some-user-name}
 SPRING_SECURITY_USER_PASSWORD={some-password}
 ```
 
+## Postgres Configuration
+The search adapter uses presto to save queries, so that it can reparse them during pagination to re-evaluate functions
+that need to be processed prior to submitting queries to presto.
+
+The following is a quick start for local development:
+```
+docker pull postgres:latest
+docker run -p 5432:5432 --rm --name ga4ghsearchadapterpresto -e POSTGRES_USER=ga4ghsearchadapterpresto -e POSTGRES_DB=ga4ghsearchadapterpresto -e POSTGRES_PASSWORD=ga4ghsearchadapterpresto postgres
+``` 
 ## Presto Source Configuration
 
 There are a number of required configuration properties that need to be set in order to communicate with a presto deployment. 
