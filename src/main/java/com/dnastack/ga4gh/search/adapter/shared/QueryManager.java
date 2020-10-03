@@ -32,7 +32,7 @@ public class QueryManager {
         long sleepTime;
 
         // Backoff Part1: Constant Sleep
-        if(constSleepCount < MAX_STATIC_SLEEPS) {
+        if (constSleepCount < MAX_STATIC_SLEEPS) {
             constSleepCount++;
             sleepTime = CONST_SLEEP_TIME;
         }

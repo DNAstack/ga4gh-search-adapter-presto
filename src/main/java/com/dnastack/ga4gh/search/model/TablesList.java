@@ -1,5 +1,6 @@
-package com.dnastack.ga4gh.search.tables;
+package com.dnastack.ga4gh.search.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,17 +13,16 @@ import java.util.List;
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TablesList {
 
     @JsonProperty("tables")
     private List<TableInfo> tableInfos;
 
-    // TODO: this is only a list for historical reasons.
-    // remove this after co-ordinating with frontend.
     @JsonProperty("errors")
-    @Deprecated
     private List<TableError> errors;
 
+    @Deprecated
     @JsonProperty("error")
     private TableError error;
 
@@ -32,14 +32,16 @@ public class TablesList {
     @JsonProperty("index")
     private List<PageIndexEntry> index;
 
-    public TablesList(List<TableInfo> tableInfos, TableError error, Pagination pagination){
+    public TablesList(List<TableInfo> tableInfos, TableError error, Pagination pagination) {
         this.tableInfos = tableInfos;
-        if(error != null) {
+        if (error != null) {
             this.errors = List.of(error);
         }
         this.error = error;
         this.pagination = pagination;
     }
 
-
+    public static TablesList errorInstance(TableError tableError) {
+        return new TablesList(null, tableError, null);
+    }
 }

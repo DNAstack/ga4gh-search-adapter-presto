@@ -3,6 +3,7 @@ package com.dnastack.ga4gh.search.adapter.test.model;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
@@ -12,6 +13,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Table Data
+ *
+ * This is equivalent to the TableData class
+ */
 @Data
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy.class)
 public class Table {
@@ -19,6 +25,7 @@ public class Table {
     private String description;
     private DataModel dataModel;
     private List<Map<String, Object>> data;
+    private List<TableError> errors;
     private Pagination pagination;
 
     // track additional JSON properties so we can see them when we log errors
@@ -31,23 +38,23 @@ public class Table {
         return additionalProperties;
     }
 
-    private static <T> List<T> concat(List<T> l1, List<T> l2){
-        if(l1 != null && l2 != null){
+    private static <T> List<T> concat(List<T> l1, List<T> l2) {
+        if (l1 != null && l2 != null) {
             List<T> result = new ArrayList<>(l1.size() + l2.size());
             result.addAll(l1);
             result.addAll(l2);
             return result;
-        }else if(l1 != null){
+        } else if (l1 != null) {
             return List.copyOf(l1);
-        }else if(l2 != null){
+        } else if (l2 != null) {
             return List.copyOf(l2);
-        }else{
+        } else {
             return null;
         }
     }
 
-    public void append(Table tableData){
-        if(tableData != null) {
+    public void append(Table tableData) {
+        if (tableData != null) {
             if (tableData.getData() != null) {
                 this.data = concat(this.data, tableData.getData());
             }

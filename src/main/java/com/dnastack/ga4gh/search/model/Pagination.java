@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.tables;
+package com.dnastack.ga4gh.search.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.apache.http.client.utils.URIBuilder;
-import org.springframework.web.util.UriBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Data
@@ -25,8 +23,8 @@ public class Pagination {
     @JsonIgnore
     private URI prestoNextPageUrl;
 
-    public URI getNextPageUrl(){
-        if(queryJobId != null && nextPageUrl != null){
+    public URI getNextPageUrl() {
+        if (queryJobId != null && nextPageUrl != null) {
             return UriComponentsBuilder.fromUri(nextPageUrl)
                                        .queryParam("queryJobId", queryJobId)
                                        .build()

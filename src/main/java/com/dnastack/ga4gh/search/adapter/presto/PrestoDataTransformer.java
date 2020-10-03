@@ -9,5 +9,5 @@ public interface PrestoDataTransformer {
      * @return A transformed version of content.  Content may need to be transformed if it is in a format incompatible
      * with the search specification.
      */
-    String transform(String content);
+    Object transform(String content);
 }

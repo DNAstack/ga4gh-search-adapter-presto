@@ -21,7 +21,7 @@ public class IsUrl extends TypeSafeMatcher<String> {
         return new IsUrl();
     }
 
-    public static void setAllowLocalhost(boolean allowLocalhost){
+    public static void setAllowLocalhost(boolean allowLocalhost) {
         urlValidator = allowLocalhost ? new UrlValidator(UrlValidator.ALLOW_LOCAL_URLS) : UrlValidator.getInstance();
     }
 

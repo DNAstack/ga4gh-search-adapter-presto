@@ -1,11 +1,9 @@
-package com.dnastack.ga4gh.search;
+package com.dnastack.ga4gh.search.controller;
 
-import com.dnastack.ga4gh.search.ApplicationConfig;
-import com.dnastack.ga4gh.search.adapter.presto.PrestoClient;
 import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
-import com.dnastack.ga4gh.search.repository.QueryJobRepository;
-import com.dnastack.ga4gh.search.tables.TableData;
+import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
+import com.dnastack.ga4gh.search.model.TableData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,34 +22,41 @@ import java.util.stream.Collectors;
 public class SearchController {
 
     @Autowired
-    private PrestoClient prestoClient;
-
-    @Autowired
-    private ApplicationConfig applicationConfig;
-
-    @Autowired
-    private QueryJobRepository queryJobRepository;
-
-    private PrestoSearchAdapter getSearchAdapter(HttpServletRequest request, List<String> clientSuppliedCredentials){
-        return new PrestoSearchAdapter(request, prestoClient, parseCredentialsHeader(clientSuppliedCredentials), applicationConfig.getHiddenCatalogs(), queryJobRepository);
-    }
+    private PrestoSearchAdapter prestoSearchAdapter;
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
-    public TableData search(HttpServletRequest request, @RequestBody SearchRequest searchRequest,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
-        return getSearchAdapter(request, clientSuppliedCredentials).search(searchRequest.getSqlQuery());
+    public TableData search(@RequestBody SearchRequest searchRequest,
+                            HttpServletRequest request,
+                            @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+        TableData tableData = null;
+
+        try {
+            tableData = prestoSearchAdapter
+                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableData::errorInstance);
+        }
+
+        return tableData;
     }
 
     @PreAuthorize("hasAuthority('SCOPE_read:data')")
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
-    public TableData getNextPaginatedResponse(HttpServletRequest request,
-        @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials,
-                                              @RequestParam("queryJobId") String queryJobId) {
+    public TableData getNextPaginatedResponse(@RequestParam("queryJobId") String queryJobId,
+                                              HttpServletRequest request,
+                                              @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
         String page = request.getRequestURI()
                              .split(request.getContextPath() + "/search/")[1];
-        TableData tableData = getSearchAdapter(request, clientSuppliedCredentials)
-                .getNextSearchPage(page, queryJobId);
+        TableData tableData = null;
+
+        try {
+            tableData = prestoSearchAdapter
+                .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials));
+        } catch (Exception ex) {
+            throw new TableApiErrorException(ex, TableData::errorInstance);
+        }
+
         return tableData;
     }
 

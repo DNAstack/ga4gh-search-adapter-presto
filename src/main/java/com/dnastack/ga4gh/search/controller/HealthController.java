@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search;
+package com.dnastack.ga4gh.search.controller;
 
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;

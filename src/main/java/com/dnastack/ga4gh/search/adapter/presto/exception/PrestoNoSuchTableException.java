@@ -2,7 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto.exception;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoError;
 
-public class PrestoNoSuchTableException extends PrestoErrorException{
+public class PrestoNoSuchTableException extends PrestoErrorException {
 
     public PrestoNoSuchTableException(PrestoError prestoError) {
         super(prestoError);

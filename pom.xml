@@ -51,8 +51,9 @@
     <version.nimbus>8.6</version.nimbus>
     <version.joda>2.10.3</version.joda>
     <version.bouncy.castle>1.64</version.bouncy.castle>
+    <feign.version>10.2.0</feign.version>
+    <feign-form.version>3.8.0</feign-form.version>
   </properties>
-
 
   <dependencies>
     <dependency>
@@ -139,25 +140,42 @@
       <artifactId>micrometer-registry-azure-monitor</artifactId>
       <version>${version.micrometer}</version>
     </dependency>
-
-
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
       <version>${version.joda}</version>
     </dependency>
-
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
-
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <!--Feign-->
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-core</artifactId>
+      <version>${feign.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.openfeign.form</groupId>
+      <artifactId>feign-form</artifactId>
+      <version>${feign-form.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-okhttp</artifactId>
+      <version>${feign.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.openfeign</groupId>
+      <artifactId>feign-jackson</artifactId>
+      <version>${feign.version}</version>
     </dependency>
   </dependencies>
 
