@@ -25,7 +25,7 @@ app:
 
 presto:
   datasource:
-    url: "http://localhost:8089"
+    url: "http://localhost:8091"
     username: "ga4gh-search-adapter-presto"
   results:
     default-page-size: 100

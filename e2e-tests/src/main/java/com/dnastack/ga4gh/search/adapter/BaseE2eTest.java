@@ -61,7 +61,6 @@ public class BaseE2eTest {
         }catch(URISyntaxException use){
             throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));
         }
-
     }
 
     protected static String requiredEnv(String name) {
@@ -90,7 +89,5 @@ public class BaseE2eTest {
         }
         return val;
     }
-
-
 
 }
