@@ -511,51 +511,12 @@ public class PrestoSearchAdapter {
     }
 
     private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
-        //Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
 
         return StreamSupport.stream(columns.spliterator(), false)
                      .map(column->{
                          return Map.entry(column.get("name").asText(), getColumnSchema(column.get("typeSignature")));
                      }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-//
-//        for (JsonNode column : columns) {
-//            ColumnSchema columnSchema = getColumnSchema(column.get("typeSignature"));
-//
-//            ColumnSchema columnSchema = new ColumnSchema();
-//            final String type = column.get("type").asText();
-//            final String rawType = column.get("typeSignature").get("rawType").asText();
-//            String format = JsonAdapter.toFormat(type);
-//
-//            if (rawType.equalsIgnoreCase("array")) {
-//                columnSchema.setType("array");
-//                if (format == null) {
-//                    column.get("typeSignature").get(
-//                    columnSchema.setItems(
-//                            ColumnSchema.builder()
-//                                .type(JsonAdapter.toJsonType(type))
-//                                .build());
-//
-//                } else {
-//                    columnSchema.setItems(
-//                            ColumnSchema.builder()
-//                                        .type(JsonAdapter.toJsonType(type))
-//                                        .format(format)
-//                                        .build());
-//                }
-//            } else if (type.equals("json")) {
-//                columnSchema.setType("object");
-//            } else {
-//                columnSchema.setType(JsonAdapter.toJsonType(type));
-//                if (format != null) {
-//                    columnSchema.setFormat(format);
-//                }
-//            }
-//
-//            schemaJson.put(column.get("name").asText(), columnSchema);
-//        }
-//
-//        return schemaJson;
     }
 
 
