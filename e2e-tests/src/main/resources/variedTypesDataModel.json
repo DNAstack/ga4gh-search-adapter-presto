@@ -1,0 +1,102 @@
+{
+    "description": "Automatically generated schema",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "properties": {
+        "simpleArray": {
+            "items": {
+                "format": "integer",
+                "type": "int"
+            },
+            "type": "array",
+            "$comment": "array[int]"
+        },
+        "jsonField": {
+            "type": "object",
+            "$comment": "json"
+        },
+        "integerField": {
+            "format": "integer",
+            "type": "int"
+        },
+        "exists": {
+            "format": "boolean",
+            "type": "boolean"
+        },
+        "mapField": {
+            "type": "object",
+            "$comment": "map(string, object)",
+            "properties": {
+                "key": {
+                    "format": "varchar",
+                    "type": "string"
+                },
+                "value": {
+                    "type": "object",
+                    "$comment": "row(string,string)",
+                    "properties": {
+                        "firstfield": {
+                            "format": "varchar",
+                            "type": "string"
+                        },
+                        "secondfield": {
+                            "format": "varchar",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "multiDimArray": {
+            "items": {
+                "items": {
+                    "format": "integer",
+                    "type": "int"
+                },
+                "type": "array",
+                "$comment": "array[int]"
+            },
+            "type": "array",
+            "$comment": "array[array]"
+        },
+        "varcharField": {
+            "format": "varchar",
+            "type": "string"
+        },
+        "datasetAlleleResponses": {
+            "items": {
+                "type": "object",
+                "$comment": "row(string,boolean,array)",
+                "properties": {
+                    "datasetid": {
+                        "format": "varchar",
+                        "type": "string"
+                    },
+                    "exists": {
+                        "format": "boolean",
+                        "type": "boolean"
+                    },
+                    "info": {
+                        "items": {
+                            "type": "object",
+                            "$comment": "row(string,string)",
+                            "properties": {
+                                "key": {
+                                    "format": "varchar",
+                                    "type": "string"
+                                },
+                                "value": {
+                                    "format": "varchar",
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "type": "array",
+                        "$comment": "array[object]"
+                    }
+                }
+            },
+            "type": "array",
+            "$comment": "array[object]"
+        }
+    }
+}

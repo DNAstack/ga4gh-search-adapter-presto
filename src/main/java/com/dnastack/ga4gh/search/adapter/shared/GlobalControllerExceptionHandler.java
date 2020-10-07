@@ -40,7 +40,7 @@ public class GlobalControllerExceptionHandler {
     @ExceptionHandler({TableApiErrorException.class})
     public ResponseEntity<?> handleTableApiErrorException(TableApiErrorException throwable) {
         String traceId = tracer.currentSpan().context().traceIdString();
-        TableError error = throwableTransformer.transform(throwable.getPreviousException());
+        TableError error = throwableTransformer.transform(throwable.getPreviousException(), null);
 
         if (traceId != null) {
             error.setDetails(traceId + ": " + error.getDetails());

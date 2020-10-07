@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -42,6 +43,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Configuration
@@ -226,6 +228,7 @@ public class PrestoSearchAdapter {
         responseTransformingFunctions
                 .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
                 .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
+
         return tableData;
     }
 
@@ -353,7 +356,7 @@ public class PrestoSearchAdapter {
     }
 
     private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
-        JsonNode columns;
+
 
         List<Map<String, Object>> data = new ArrayList<>();
         DataModel dataModel = null;
@@ -361,7 +364,7 @@ public class PrestoSearchAdapter {
 
         if (prestoResponse.hasNonNull("columns")) {
             // Generate data model
-            columns = prestoResponse.get("columns");
+            final JsonNode columns = prestoResponse.get("columns");
             for(JsonNode column : columns) {
                 int i = 0;
                 String type = column.get("type").asText();
@@ -451,41 +454,108 @@ public class PrestoSearchAdapter {
                  .build();
     }
 
-    private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
-        Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
 
-        for (JsonNode column : columns) {
-            ColumnSchema columnSchema = new ColumnSchema();
-            String type = column.get("type").asText();
-            String format = JsonAdapter.toFormat(type);
-            if (JsonAdapter.isArray(type)) {
-                columnSchema.setType("array");
-                if (format == null) {
-                    columnSchema.setItems(
-                            ColumnSchema.builder()
-                                .type(JsonAdapter.toJsonType(type))
-                                .build());
+    private ColumnSchema getColumnSchema(JsonNode value){
+        final String rawType = value.get("rawType").asText();
+        final String format = JsonAdapter.toFormat(value.get("rawType").asText());
+        if(rawType.equalsIgnoreCase("array")) {
+            ColumnSchema columnSchema = getColumnSchema(value.get("arguments").get(0).get("value"));
+            return ColumnSchema.builder()
+                    .type("array")
+                    .comment("array["+columnSchema.getType()+"]")
+                    .items(columnSchema)
+                    .build();
+        }else if(rawType.equalsIgnoreCase("row")) {
+            JsonNode args = value.get("arguments");
 
-                } else {
-                    columnSchema.setItems(
-                            ColumnSchema.builder()
-                                        .type(JsonAdapter.toJsonType(type))
-                                        .format(format)
-                                        .build());
-                }
-            } else if (type.equals("json")) {
-                columnSchema.setType("object");
-            } else {
-                columnSchema.setType(JsonAdapter.toJsonType(type));
-                if (format != null) {
-                    columnSchema.setFormat(format);
-                }
-            }
+            Map<String, ColumnSchema> m = StreamSupport.stream(args.spliterator(), false)
+                         .collect(
+                                 Collectors.toMap(rowArg->rowArg.get("value").get("fieldName").get("name").asText(),
+                                                  rowArg->getColumnSchema(rowArg.get("value").get("typeSignature")),
+                                                  (k,v)->{ throw new UnexpectedQueryResponseException("rows must have unique key names. Duplicate key "+k+", value="+v); },
+                                                  LinkedHashMap::new)); //maintain key order to generate better comment.
 
-            schemaJson.put(column.get("name").asText(), columnSchema);
+
+            return ColumnSchema.builder()
+                    .type("object")
+                    .comment(String.format("row(%s)", Strings.join(
+                            m.values().stream()
+                             .map(cs->cs.getType())
+                             .collect(Collectors.toList()), ',')))
+                    .properties(m)
+                    .build();
+        }else if(rawType.equalsIgnoreCase("map")){
+
+            ColumnSchema keySchema = getColumnSchema(value.get("arguments").get(0).get("value"));
+            ColumnSchema valueSchema = getColumnSchema(value.get("arguments").get(1).get("value"));
+
+            return ColumnSchema.builder()
+                    .type("object")
+                    .comment(String.format("map(%s, %s)", keySchema.getType(), valueSchema.getType()))
+                    .properties(Map.of("key", keySchema, "value", valueSchema))
+                    .build();
+
+        }else if(rawType.equalsIgnoreCase("json")) {
+            return ColumnSchema.builder()
+                               .type("object")
+                               .comment("json")
+                               .build();
+        }else {
+            //must be a primitive.
+            return ColumnSchema.builder()
+                    .type(JsonAdapter.toJsonType(rawType))
+                    .format(format)
+                    .build();
         }
 
-        return schemaJson;
+    }
+
+    private Map<String, ColumnSchema> getJsonSchemaProperties(JsonNode columns) {
+        //Map<String, ColumnSchema> schemaJson = new LinkedHashMap<>();
+
+        return StreamSupport.stream(columns.spliterator(), false)
+                     .map(column->{
+                         return Map.entry(column.get("name").asText(), getColumnSchema(column.get("typeSignature")));
+                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+//
+//        for (JsonNode column : columns) {
+//            ColumnSchema columnSchema = getColumnSchema(column.get("typeSignature"));
+//
+//            ColumnSchema columnSchema = new ColumnSchema();
+//            final String type = column.get("type").asText();
+//            final String rawType = column.get("typeSignature").get("rawType").asText();
+//            String format = JsonAdapter.toFormat(type);
+//
+//            if (rawType.equalsIgnoreCase("array")) {
+//                columnSchema.setType("array");
+//                if (format == null) {
+//                    column.get("typeSignature").get(
+//                    columnSchema.setItems(
+//                            ColumnSchema.builder()
+//                                .type(JsonAdapter.toJsonType(type))
+//                                .build());
+//
+//                } else {
+//                    columnSchema.setItems(
+//                            ColumnSchema.builder()
+//                                        .type(JsonAdapter.toJsonType(type))
+//                                        .format(format)
+//                                        .build());
+//                }
+//            } else if (type.equals("json")) {
+//                columnSchema.setType("object");
+//            } else {
+//                columnSchema.setType(JsonAdapter.toJsonType(type));
+//                if (format != null) {
+//                    columnSchema.setFormat(format);
+//                }
+//            }
+//
+//            schemaJson.put(column.get("name").asText(), columnSchema);
+//        }
+//
+//        return schemaJson;
     }
 
 

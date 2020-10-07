@@ -32,6 +32,9 @@ public class ColumnSchema {
     @JsonProperty("$ref")
     private String ref;
 
+    @JsonProperty("properties")
+    private Map<String, ColumnSchema> properties;
+
     @JsonIgnore
     private final Map<String, Object> additionalProperties = new LinkedHashMap<>();
 
