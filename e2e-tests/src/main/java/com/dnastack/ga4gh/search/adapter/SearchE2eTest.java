@@ -4,6 +4,7 @@ import com.dnastack.ga4gh.search.adapter.test.model.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
+import io.opencensus.resource.Resource;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
@@ -17,12 +18,15 @@ import io.restassured.specification.RequestSpecification;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.Assertions;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -160,7 +164,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
         inMemoryCatalog = optionalEnv("E2E_INMEMORY_TESTCATALOG", "memory"); //memory
         inMemorySchema = optionalEnv("E2E_INMEMORY_TESTSCHEMA", "default"); //default
-        prestoTestUri = optionalEnv("E2E_PRESTO_JDBCURI", "jdbc:presto://localhost:8081");
+        prestoTestUri = optionalEnv("E2E_PRESTO_JDBCURI", "jdbc:presto://localhost:8091");
         prestoTestUser = optionalEnv("E2E_PRESTO_USERNAME", null);
         prestoTestPass = optionalEnv("E2E_PRESTO_PASSWORD", null);
         prestoAudience = optionalEnv("E2E_PRESTO_AUDIENCE", null);
@@ -527,6 +531,44 @@ public class SearchE2eTest extends BaseE2eTest {
         }
     }
 
+
+    @Test
+    public void searchQueryOnVariedTypesReturnsCorrectDataModel() throws Exception{
+        String query = "SELECT ("+
+          "((42428060 IS NULL) OR MOD(42428060, 1337) = 0) "+
+           "AND 'A' = 'A' "+
+           "AND 'T' = 'T' "+
+          ")  as \"exists\", "+
+          "'bogusValue' as varcharField, "+
+          "1245359 as integerField, "+
+          "array[1,2,3] as simpleArray, "+
+          "array[array[1,2,3], array[4,5,6]] as multiDimArray, "+
+          "MAP(ARRAY['myFirstRow', 'mySecondRow'], ARRAY[cast(row('row1FieldValue1', 'row1FieldValue2') as row(firstField varchar, secondField varchar)), cast(row('row2FieldValue1', 'row2FieldValue2') as row(firstField varchar, secondField varchar))]) as mapField, "+
+          "CAST(MAP(ARRAY['jsonkey1', 'jsonkey2', 'jsonkey3'], ARRAY['foo', 'bar', 'baz']) AS JSON) as jsonField, "+
+          "ARRAY[ "+
+          "  cast(row('ExampleDataset', true, array[row('Sample', 'Info')]) as row(datasetId varchar, \"exists\" boolean, \"info\" row(\"key\" varchar, \"value\" varchar) array)) "+
+          "] as datasetAlleleResponses";
+
+        DataModel expectedDataModel;
+        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesDataModel.json")) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            expectedDataModel = objectMapper.readValue(is, DataModel.class);
+        }
+
+        SearchRequest searchRequest = new SearchRequest(query);
+        log.info("Running query {}", query);
+        Table result = searchApiRequest(Method.POST, "/search", searchRequest, 200, Table.class);
+        result = searchApiGetAllPages(result);
+
+        if (result.getData() == null) {
+            throw new RuntimeException("Expected results for query " + query + ", but none were found.");
+        } else if (result.getDataModel() == null) {
+            throw new RuntimeException("No data model was returned for query "+query);
+        }
+
+        DataModel actualDataModel = result.getDataModel();
+        Assertions.assertThat(expectedDataModel).usingRecursiveComparison().isEqualTo(actualDataModel);
+    }
 
     @Test
     public void malformedSqlQueryShouldReturn400AndMessageAndTraceId() throws Exception {

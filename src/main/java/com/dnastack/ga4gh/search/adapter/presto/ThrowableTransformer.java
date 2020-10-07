@@ -10,24 +10,25 @@ import org.springframework.stereotype.Service;
 import java.io.UncheckedIOException;
 import java.util.Map;
 
+import static java.util.Map.entry;
+
 @Service
 public class ThrowableTransformer {
-    private static final Map<Class<?>, HttpStatus> responseStatuses = Map.of(
-        AuthRequiredException.class, HttpStatus.UNAUTHORIZED,
-        PrestoNoSuchCatalogException.class, HttpStatus.NOT_FOUND,
-        PrestoNoSuchSchemaException.class, HttpStatus.NOT_FOUND,
-        PrestoNoSuchTableException.class, HttpStatus.NOT_FOUND,
-        PrestoBadlyQualifiedNameException.class, HttpStatus.NOT_FOUND,
-        PrestoNoSuchColumnException.class, HttpStatus.BAD_REQUEST,
-        PrestoInvalidQueryException.class, HttpStatus.BAD_REQUEST,
-        PrestoInsufficientResourcesException.class, HttpStatus.SERVICE_UNAVAILABLE,
-        QueryParsingException.class, HttpStatus.BAD_REQUEST,
-        InvalidQueryJobException.class, HttpStatus.BAD_REQUEST
-    );
 
-    public TableError transform(Throwable throwable) {
-        return transform(throwable, null);
-    }
+    private static final Map<Class<?>, HttpStatus> responseStatuses = Map.ofEntries(
+        entry(AuthRequiredException.class, HttpStatus.UNAUTHORIZED),
+        entry(PrestoNoSuchCatalogException.class, HttpStatus.NOT_FOUND),
+        entry(PrestoNoSuchSchemaException.class, HttpStatus.NOT_FOUND),
+        entry(PrestoNoSuchTableException.class, HttpStatus.NOT_FOUND),
+        entry(PrestoBadlyQualifiedNameException.class, HttpStatus.NOT_FOUND),
+        entry(PrestoNoSuchColumnException.class, HttpStatus.BAD_REQUEST),
+        entry(PrestoInvalidQueryException.class, HttpStatus.BAD_REQUEST),
+        entry(PrestoInsufficientResourcesException.class, HttpStatus.SERVICE_UNAVAILABLE),
+        entry(QueryParsingException.class, HttpStatus.BAD_REQUEST),
+        entry(InvalidQueryJobException.class, HttpStatus.BAD_REQUEST),
+        entry(UnexpectedQueryResponseException.class, HttpStatus.INTERNAL_SERVER_ERROR));
+
+
 
     public TableError transform(Throwable throwable, String catalogName) {
         TableError error = new TableError();
@@ -54,6 +55,9 @@ public class ThrowableTransformer {
             error.setTitle("Unable to parse query");
         } else if (throwable instanceof UncheckedIOException) {
             error.setTitle("Unchecked IO Error");
+            error.setDetails(throwable.getMessage());
+        } else if (throwable instanceof UnexpectedQueryResponseException){
+            error.setTitle("Unexpected query response");
             error.setDetails(throwable.getMessage());
         }
 
