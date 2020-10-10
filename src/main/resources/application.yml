@@ -22,7 +22,7 @@ app:
     contact-url:
     version:
   tables-registry:
-    url: http://localhost:8080  #Disable use of table registry by default.
+    url: http://localhost:8080
     auth:
       authentication-uri: http://localhost:8081/oauth/token
       client-id: search-presto-public-client-credentials-dev
