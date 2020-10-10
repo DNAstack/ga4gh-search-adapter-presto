@@ -1,6 +1,7 @@
 package com.dnastack.ga4gh.search.adapter;
 
 import com.dnastack.ga4gh.search.adapter.test.model.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -285,7 +286,7 @@ public class SearchE2eTest extends BaseE2eTest {
         }
     }
 
-    @AfterClass
+//    @AfterClass
     public static void removeTestTables() {
         if (prestoDateTimeTestTable != null) {
             log.info("Trying to remove datetime test table " + prestoDateTimeTestTable);
@@ -532,28 +533,21 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
 
-    @Test
-    public void searchQueryOnVariedTypesReturnsCorrectDataModel() throws Exception{
+    private Table executeSearchQueryOnVariedTypes() throws Exception{
         String query = "SELECT ("+
-          "((42428060 IS NULL) OR MOD(42428060, 1337) = 0) "+
-           "AND 'A' = 'A' "+
-           "AND 'T' = 'T' "+
-          ")  as \"exists\", "+
-          "'bogusValue' as varcharField, "+
-          "1245359 as integerField, "+
-          "array[1,2,3] as simpleArray, "+
-          "array[array[1,2,3], array[4,5,6]] as multiDimArray, "+
-          "MAP(ARRAY['myFirstRow', 'mySecondRow'], ARRAY[cast(row('row1FieldValue1', 'row1FieldValue2') as row(firstField varchar, secondField varchar)), cast(row('row2FieldValue1', 'row2FieldValue2') as row(firstField varchar, secondField varchar))]) as mapField, "+
-          "CAST(MAP(ARRAY['jsonkey1', 'jsonkey2', 'jsonkey3'], ARRAY['foo', 'bar', 'baz']) AS JSON) as jsonField, "+
-          "ARRAY[ "+
-          "  cast(row('ExampleDataset', true, array[row('Sample', 'Info')]) as row(datasetId varchar, \"exists\" boolean, \"info\" row(\"key\" varchar, \"value\" varchar) array)) "+
-          "] as datasetAlleleResponses";
-
-        DataModel expectedDataModel;
-        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesDataModel.json")) {
-            ObjectMapper objectMapper = new ObjectMapper();
-            expectedDataModel = objectMapper.readValue(is, DataModel.class);
-        }
+                       "((42428060 IS NULL) OR MOD(42428060, 1337) = 0) "+
+                       "AND 'A' = 'A' "+
+                       "AND 'T' = 'T' "+
+                       ")  as \"exists\", "+
+                       "'bogusValue' as varcharField, "+
+                       "1245359 as integerField, "+
+                       "array[1,2,3] as simpleArray, "+
+                       "array[array[1,2,3], array[4,5,6]] as multiDimArray, "+
+                       "MAP(ARRAY['myFirstRow', 'mySecondRow'], ARRAY[cast(row('row1FieldValue1', 'row1FieldValue2') as row(firstField varchar, secondField varchar)), cast(row('row2FieldValue1', 'row2FieldValue2') as row(firstField varchar, secondField varchar))]) as mapField, "+
+                       "CAST(MAP(ARRAY['jsonkey1', 'jsonkey2', 'jsonkey3'], ARRAY['foo', 'bar', 'baz']) AS JSON) as jsonField, "+
+                       "ARRAY[ "+
+                       "  cast(row('ExampleDataset', true, array[row('Sample', 'Info')]) as row(datasetId varchar, \"exists\" boolean, \"info\" row(\"key\" varchar, \"value\" varchar) array)) "+
+                       "] as datasetAlleleResponses";
 
         SearchRequest searchRequest = new SearchRequest(query);
         log.info("Running query {}", query);
@@ -565,9 +559,35 @@ public class SearchE2eTest extends BaseE2eTest {
         } else if (result.getDataModel() == null) {
             throw new RuntimeException("No data model was returned for query "+query);
         }
+        return result;
+    }
+
+    @Test
+    public void searchQueryOnVariedTypesReturnsCorrectData() throws Exception{
+        Table result = executeSearchQueryOnVariedTypes();
+        List<Map<String, Object>> expectedData;
+        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesData.json")) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            expectedData = objectMapper.readValue(is, new TypeReference<List<Map<String, Object>>>(){});
+        }
+        List<Map<String, Object>> actualData = result.getData();
+        Assertions.assertThat(actualData).usingRecursiveComparison().isEqualTo(expectedData);
+    }
+
+    @Test
+    public void searchQueryOnVariedTypesReturnsCorrectDataModel() throws Exception{
+
+        Table result = executeSearchQueryOnVariedTypes();
+        DataModel expectedDataModel;
+        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesDataModel.json")) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            expectedDataModel = objectMapper.readValue(is, DataModel.class);
+        }
+
+
 
         DataModel actualDataModel = result.getDataModel();
-        Assertions.assertThat(expectedDataModel).usingRecursiveComparison().isEqualTo(actualDataModel);
+        Assertions.assertThat(actualDataModel).usingRecursiveComparison().isEqualTo(expectedDataModel);
     }
 
     @Test

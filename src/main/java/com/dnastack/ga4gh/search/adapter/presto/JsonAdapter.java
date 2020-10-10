@@ -19,7 +19,7 @@ public class JsonAdapter {
         return prestoType.contains("[]") || prestoType.contains("array");
     }
 
-    static PrestoDataTransformer getPrestoDataTransformer(String prestoType, String rawType) {
+    static PrestoDataTransformer getPrestoDataTransformer(String prestoType) {
         String lcPrestoType = prestoType.toLowerCase();
 
         if (lcPrestoType.startsWith("timestamp")) {

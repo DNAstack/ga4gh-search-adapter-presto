@@ -2,55 +2,36 @@
     "description": "Automatically generated schema",
     "$schema": "http://json-schema.org/draft-07/schema#",
     "properties": {
-        "simpleArray": {
-            "items": {
-                "format": "integer",
-                "type": "int"
-            },
-            "type": "array",
-            "$comment": "array[int]"
+        "exists": {
+            "format": "boolean",
+            "type": "boolean",
+            "$comment": "boolean"
         },
-        "jsonField": {
-            "type": "object",
-            "$comment": "json"
+        "varcharField": {
+            "format": "varchar",
+            "type": "string",
+            "$comment": "varchar"
         },
         "integerField": {
             "format": "integer",
-            "type": "int"
+            "type": "int",
+            "$comment": "integer"
         },
-        "exists": {
-            "format": "boolean",
-            "type": "boolean"
-        },
-        "mapField": {
-            "type": "object",
-            "$comment": "map(string, object)",
-            "properties": {
-                "key": {
-                    "format": "varchar",
-                    "type": "string"
-                },
-                "value": {
-                    "type": "object",
-                    "$comment": "row(string,string)",
-                    "properties": {
-                        "firstfield": {
-                            "format": "varchar",
-                            "type": "string"
-                        },
-                        "secondfield": {
-                            "format": "varchar",
-                            "type": "string"
-                        }
-                    }
-                }
-            }
+        "simpleArray": {
+            "items": {
+                "format": "integer",
+                "type": "int",
+                "$comment": "integer"
+            },
+            "type": "array",
+            "$comment": "array[int]"
         },
         "multiDimArray": {
             "items": {
                 "items": {
                     "format": "integer",
-                    "type": "int"
+                    "type": "int",
+                    "$comment": "integer"
                 },
                 "type": "array",
                 "$comment": "array[int]"
@@ -58,9 +39,36 @@
             "type": "array",
             "$comment": "array[array]"
         },
-        "varcharField": {
-            "format": "varchar",
-            "type": "string"
+        "mapField": {
+            "type": "object",
+            "$comment": "map(string, object)",
+            "properties": {
+                "key": {
+                    "format": "varchar",
+                    "type": "string",
+                    "$comment": "varchar"
+                },
+                "value": {
+                    "type": "object",
+                    "$comment": "row(string,string)",
+                    "properties": {
+                        "firstfield": {
+                            "format": "varchar",
+                            "type": "string",
+                            "$comment": "varchar"
+                        },
+                        "secondfield": {
+                            "format": "varchar",
+                            "type": "string",
+                            "$comment": "varchar"
+                        }
+                    }
+                }
+            }
+        },
+        "jsonField": {
+            "type": "object",
+            "$comment": "json"
         },
         "datasetAlleleResponses": {
             "items": {
@@ -69,11 +77,13 @@
                 "properties": {
                     "datasetid": {
                         "format": "varchar",
-                        "type": "string"
+                        "type": "string",
+                        "$comment": "varchar"
                     },
                     "exists": {
                         "format": "boolean",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "$comment": "boolean"
                     },
                     "info": {
                         "items": {
@@ -82,11 +92,13 @@
                             "properties": {
                                 "key": {
                                     "format": "varchar",
-                                    "type": "string"
+                                    "type": "string",
+                                    "$comment": "varchar"
                                 },
                                 "value": {
                                     "format": "varchar",
-                                    "type": "string"
+                                    "type": "string",
+                                    "$comment": "varchar"
                                 }
                             }
                         },

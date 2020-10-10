@@ -4,6 +4,7 @@ import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.adapter.shared.AuthRequiredException;
 import com.dnastack.ga4gh.search.adapter.shared.SearchAuthRequest;
 import com.dnastack.ga4gh.search.model.TableError;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.util.Map;
 import static java.util.Map.entry;
 
 @Service
+@Slf4j
 public class ThrowableTransformer {
 
     private static final Map<Class<?>, HttpStatus> responseStatuses = Map.ofEntries(
@@ -61,6 +63,7 @@ public class ThrowableTransformer {
             error.setDetails(throwable.getMessage());
         }
 
+        log.error(throwable.getMessage(), throwable);
         return error;
     }
 
