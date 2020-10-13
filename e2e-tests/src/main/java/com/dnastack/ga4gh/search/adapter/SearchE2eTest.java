@@ -286,7 +286,7 @@ public class SearchE2eTest extends BaseE2eTest {
         }
     }
 
-//    @AfterClass
+    @AfterClass
     public static void removeTestTables() {
         if (prestoDateTimeTestTable != null) {
             log.info("Trying to remove datetime test table " + prestoDateTimeTestTable);
