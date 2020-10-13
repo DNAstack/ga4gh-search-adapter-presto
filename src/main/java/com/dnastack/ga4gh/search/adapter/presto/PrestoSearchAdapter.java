@@ -649,7 +649,7 @@ public class PrestoSearchAdapter {
     }
 
     private DataModel getDataModelFromTablesRegistry(String tableName) {
-        if(tablesRegistryClientConfig.getSkip()){
+        if(tablesRegistryClientConfig.getSkip() != null &&  tablesRegistryClientConfig.getSkip() == true){
             return null;
         }else if(tablesRegistryClient == null){
             tablesRegistryClient = tablesRegistryClientConfig.tablesRegistryClient();
