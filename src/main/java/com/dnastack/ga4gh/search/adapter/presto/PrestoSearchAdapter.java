@@ -4,6 +4,7 @@ import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
+import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.repository.QueryJob;
@@ -15,8 +16,14 @@ import com.dnastack.ga4gh.search.model.Pagination;
 import com.dnastack.ga4gh.search.model.TableData;
 import com.dnastack.ga4gh.search.model.TableInfo;
 import com.dnastack.ga4gh.search.model.TablesList;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.google.common.collect.Streams;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
@@ -38,9 +45,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -70,6 +79,8 @@ public class PrestoSearchAdapter {
     private ApplicationConfig applicationConfig;
 
     @Autowired
+    private TablesRegistryClientConfig tablesRegistryClientConfig;
+
     private TablesRegistryClient tablesRegistryClient;
 
     @Autowired
@@ -356,36 +367,19 @@ public class PrestoSearchAdapter {
     }
 
     private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
-
-
         List<Map<String, Object>> data = new ArrayList<>();
         DataModel dataModel = null;
         List<PrestoDataTransformer> prestoDataTransformers = new ArrayList<>();
 
         if (prestoResponse.hasNonNull("columns")) {
-            // Generate data model
             final JsonNode columns = prestoResponse.get("columns");
-            for(JsonNode column : columns) {
-                int i = 0;
-                String type = column.get("type").asText();
-                JsonNode typeSignature = column.get("typeSignature");
-                String rawType = null;
-                if (typeSignature != null) {
-                    rawType = typeSignature.get("rawType").asText();
-                }
-                prestoDataTransformers.add(JsonAdapter.getPrestoDataTransformer(type, rawType));
-            }
-
             dataModel = generateDataModel(columns);
-
-            // Generate data
             if (prestoResponse.hasNonNull("data")) {
-                for (JsonNode dataNode : prestoResponse.get("data")) {
+                for (JsonNode dataNode : prestoResponse.get("data")) { //for each row
                     Map<String, Object> rowData = new LinkedHashMap<>();
-                    for (int i = 0; i < dataNode.size(); i++) {
-                        String content = dataNode.get(i).asText();
-                        rowData.put(columns.get(i).get("name").asText(), prestoDataTransformers.get(i) != null ? prestoDataTransformers
-                                .get(i).transform(content) : content);
+                    int i = 0;
+                    for(Map.Entry<String, ColumnSchema> entry : dataModel.getProperties().entrySet()){
+                        rowData.put(entry.getKey(), getData(entry.getValue(), dataNode.get(i++)));
                     }
                     data.add(rowData);
                 }
@@ -455,18 +449,93 @@ public class PrestoSearchAdapter {
     }
 
 
-    private ColumnSchema getColumnSchema(JsonNode value){
-        final String rawType = value.get("rawType").asText();
-        final String format = JsonAdapter.toFormat(value.get("rawType").asText());
+    private static <T, K, U> Collector<T, ?, Map<K,U>> toSortedMap(Function<? super T, ? extends K> keyMapper,
+                                                                        Function<? super T, ? extends U> valueMapper) {
+        return Collectors.toMap(keyMapper,
+                         valueMapper,
+                         (k,v)->{ throw new UnexpectedQueryResponseException("Duplicate key "+k); },
+                         LinkedHashMap::new);
+    }
+
+
+    private Object getData(ColumnSchema columnSchema, JsonNode prestoDataArray){
+            if(columnSchema.getRawType().equals("map")){
+                LinkedHashMap<String, Object> map = new LinkedHashMap<>();
+                if(prestoDataArray.getNodeType() != JsonNodeType.OBJECT){
+                    throw new UnexpectedQueryResponseException("Expected value for map was not of type object for schema "+columnSchema);
+                }
+
+                ColumnSchema mapEntryColumnSchema = columnSchema.getProperties().get("value");
+                return Streams.stream(prestoDataArray.fields())
+                       .map(mapEntry-> Map.entry(mapEntry.getKey(), getData(mapEntryColumnSchema, mapEntry.getValue())))
+                       .collect(toSortedMap(deepMapEntry->deepMapEntry.getKey(), deepMapEntry->deepMapEntry.getValue()));
+            }else if(columnSchema.getRawType().equals("row")) {
+                if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
+                    throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
+                }
+                int j = 0;
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (Map.Entry<String, ColumnSchema> rowPropertyTypeInfo : columnSchema.getProperties().entrySet()) {
+                    JsonNode rowValue = prestoDataArray.get(j++);
+                    row.put(rowPropertyTypeInfo.getKey(), getData(rowPropertyTypeInfo.getValue(), rowValue));
+                }
+                return row;
+            }else if(columnSchema.getRawType().equals("array")){
+                if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
+                    throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
+                }
+                ColumnSchema itemSchema = columnSchema.getItems();
+                return StreamSupport.stream(prestoDataArray.spliterator(), false)
+                             .map(arrayValue->getData(itemSchema, arrayValue))
+                             .collect(Collectors.toUnmodifiableList());
+            }else if(columnSchema.getRawType() == "json") { //json or primitive.
+                try {
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    return objectMapper.readValue(prestoDataArray.asText(), new TypeReference<Map<String, Object>>() {
+
+                    });
+                } catch (IOException e) {
+                    throw new UnexpectedQueryResponseException("JSON came back badly formatted: "+prestoDataArray.asText());
+                }
+            }else{
+
+                if(prestoDataArray.isTextual()){
+                    //currently only textual types are transformed.
+                    PrestoDataTransformer transformer =  JsonAdapter.getPrestoDataTransformer(columnSchema.getRawType());
+                    if (transformer == null){
+                        return prestoDataArray.asText();
+                    }else{
+                        return transformer.transform(prestoDataArray.asText());
+                    }
+                }else if(prestoDataArray.isBoolean()){
+                    return prestoDataArray.asBoolean();
+                }else if(prestoDataArray.isIntegralNumber()){
+                    return prestoDataArray.asLong();
+                }else if(prestoDataArray.isFloatingPointNumber()) {
+                    return prestoDataArray.asDouble();
+                }else if(prestoDataArray.isNull()) {
+                    return null;
+                }else{
+                    throw new UnexpectedQueryResponseException("Unexpected value type in data for schema "+columnSchema);
+                }
+            }
+
+    }
+
+
+    private ColumnSchema getColumnSchema(JsonNode prestoTypeDescription){
+        final String rawType = prestoTypeDescription.get("rawType").asText();
+        final String format = JsonAdapter.toFormat(prestoTypeDescription.get("rawType").asText());
         if(rawType.equalsIgnoreCase("array")) {
-            ColumnSchema columnSchema = getColumnSchema(value.get("arguments").get(0).get("value"));
+            ColumnSchema columnSchema = getColumnSchema(prestoTypeDescription.get("arguments").get(0).get("value"));
             return ColumnSchema.builder()
                     .type("array")
+                    .rawType(rawType)
                     .comment("array["+columnSchema.getType()+"]")
                     .items(columnSchema)
                     .build();
         }else if(rawType.equalsIgnoreCase("row")) {
-            JsonNode args = value.get("arguments");
+            JsonNode args = prestoTypeDescription.get("arguments");
 
             Map<String, ColumnSchema> m = StreamSupport.stream(args.spliterator(), false)
                          .collect(
@@ -478,6 +547,7 @@ public class PrestoSearchAdapter {
 
             return ColumnSchema.builder()
                     .type("object")
+                    .rawType(rawType)
                     .comment(String.format("row(%s)", Strings.join(
                             m.values().stream()
                              .map(cs->cs.getType())
@@ -486,11 +556,12 @@ public class PrestoSearchAdapter {
                     .build();
         }else if(rawType.equalsIgnoreCase("map")){
 
-            ColumnSchema keySchema = getColumnSchema(value.get("arguments").get(0).get("value"));
-            ColumnSchema valueSchema = getColumnSchema(value.get("arguments").get(1).get("value"));
+            ColumnSchema keySchema = getColumnSchema(prestoTypeDescription.get("arguments").get(0).get("value"));
+            ColumnSchema valueSchema = getColumnSchema(prestoTypeDescription.get("arguments").get(1).get("value"));
 
             return ColumnSchema.builder()
                     .type("object")
+                    .rawType(rawType)
                     .comment(String.format("map(%s, %s)", keySchema.getType(), valueSchema.getType()))
                     .properties(Map.of("key", keySchema, "value", valueSchema))
                     .build();
@@ -498,12 +569,16 @@ public class PrestoSearchAdapter {
         }else if(rawType.equalsIgnoreCase("json")) {
             return ColumnSchema.builder()
                                .type("object")
+                               .rawType(rawType)
                                .comment("json")
                                .build();
         }else {
             //must be a primitive.
+            String type = JsonAdapter.toJsonType(rawType);
             return ColumnSchema.builder()
-                    .type(JsonAdapter.toJsonType(rawType))
+                    .type(type)
+                    .rawType(rawType)
+                    .comment(rawType)
                     .format(format)
                     .build();
         }
@@ -515,7 +590,7 @@ public class PrestoSearchAdapter {
         return StreamSupport.stream(columns.spliterator(), false)
                      .map(column->{
                          return Map.entry(column.get("name").asText(), getColumnSchema(column.get("typeSignature")));
-                     }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                     }).collect(toSortedMap(Map.Entry::getKey, Map.Entry::getValue));
 
     }
 
@@ -574,6 +649,12 @@ public class PrestoSearchAdapter {
     }
 
     private DataModel getDataModelFromTablesRegistry(String tableName) {
+        if(tablesRegistryClientConfig.getSkip()){
+            return null;
+        }else if(tablesRegistryClient == null){
+            tablesRegistryClient = tablesRegistryClientConfig.tablesRegistryClient();
+        }
+
         ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
                 oAuthClientConfig.getClientId(), tableName);
 

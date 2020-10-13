@@ -23,6 +23,7 @@ public class TableData {
     private DataModel dataModel;
 
     @JsonProperty("data")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private List<Map<String, Object>> data;
 
     @JsonProperty("errors")

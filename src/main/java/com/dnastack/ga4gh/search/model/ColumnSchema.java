@@ -36,6 +36,9 @@ public class ColumnSchema {
     private Map<String, ColumnSchema> properties;
 
     @JsonIgnore
+    private String rawType; //The corresponding Presto "Raw type".
+
+    @JsonIgnore
     private final Map<String, Object> additionalProperties = new LinkedHashMap<>();
 
     @JsonAnyGetter

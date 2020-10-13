@@ -2,6 +2,7 @@ package com.dnastack.ga4gh.search.client.tablesregistry;
 
 import com.dnastack.ga4gh.search.client.common.SimpleLogger;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.AccessToken;
+import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.OAuthRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,7 +29,8 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties("app.tables-registry")
 public class TablesRegistryClientConfig {
 
-    String url;
+    private Boolean skip;
+    private String url;
 
     @Autowired
     private SimpleLogger simpleLogger;
@@ -59,16 +61,16 @@ public class TablesRegistryClientConfig {
         };
     }
 
-    @Bean
+    //@Bean
     public TablesRegistryClient tablesRegistryClient() {
-
         return Feign.builder()
-                .client(new OkHttpClient())
-                .encoder(new JacksonEncoder(mapper))
-                .decoder(new JacksonDecoder(mapper))
-                .logger(simpleLogger)
-                .logLevel(Logger.Level.BASIC)
-                .requestInterceptor(getRequestInterceptor())
-                .target(TablesRegistryClient.class, getUrl());
+                    .client(new OkHttpClient())
+                    .encoder(new JacksonEncoder(mapper))
+                    .decoder(new JacksonDecoder(mapper))
+                    .logger(simpleLogger)
+                    .logLevel(Logger.Level.BASIC)
+                    .requestInterceptor(getRequestInterceptor())
+                    .target(TablesRegistryClient.class, getUrl());
+
     }
 }
