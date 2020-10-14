@@ -1,7 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
 import com.dnastack.ga4gh.search.ApplicationConfig;
-import com.dnastack.ga4gh.search.adapter.security.AuthConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClientConfig;
@@ -16,10 +15,8 @@ import com.dnastack.ga4gh.search.model.Pagination;
 import com.dnastack.ga4gh.search.model.TableData;
 import com.dnastack.ga4gh.search.model.TableInfo;
 import com.dnastack.ga4gh.search.model.TablesList;
-import com.fasterxml.jackson.annotation.JsonUnwrapped;
-import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -91,17 +88,6 @@ public class PrestoSearchAdapter {
             return true;
         }
         return false;
-    }
-
-    // Perform the given query and gather ALL results, by following Presto's nextUrl links
-    // The query should NOT contain any functions that would not be recognized by Presto.
-    TableData searchAll(String statement, HttpServletRequest request, Map<String, String> extraCredentials) {
-        TableData tableData = search(statement, request, extraCredentials);
-        while(hasMore(tableData)) {
-            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
-            tableData.append(nextPage);
-        }
-        return tableData;
     }
 
     // Pattern to match ga4gh_type two argument function
@@ -213,44 +199,59 @@ public class PrestoSearchAdapter {
         dataModel.setProperties(columnSchemaMap);
     }
 
-    // Parses the saved query identified by queryJobId, finds all functions that transform the response in some way,
-    // and applies them to the response represented by tableData.
-    private void applyResponseTransforms(String queryJobId, final TableData tableData) {
-        QueryJob queryJob = queryJobRepository.findById(queryJobId)
-                                              .orElseThrow(()->new InvalidQueryJobException(queryJobId, "The query corresponding to this search could not be located."));
-        String query = queryJob.getQuery();
-        Stream<SQLFunction> responseTransformingFunctions = parseSQLBiFunctions(query);
-
-        responseTransformingFunctions
-                .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
-                .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
-    }
-
-    public TableData search(String query, HttpServletRequest request, Map<String, String> extraCredentials) {
-        Stream<SQLFunction> responseTransformingFunctions = parseSQLBiFunctions(query);
-        String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
-        JsonNode response = client.query(rewrittenQuery, extraCredentials);
-        QueryJob queryJob = QueryJob.builder()
-                                    .query(query)
-                                    .id(UUID.randomUUID().toString())
-                                    .build();
-        queryJob = queryJobRepository.save(queryJob);
-        TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJob.getId(), request);
-        responseTransformingFunctions
-                .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
-                .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
-
+    // Perform the given query and gather ALL results, by following Presto's nextUrl links
+    // The query should NOT contain any functions that would not be recognized by Presto.
+    public TableData searchAll(String statement,
+                        HttpServletRequest request,
+                        Map<String, String> extraCredentials,
+                        DataModel dataModel) {
+        TableData tableData = search(statement, request, extraCredentials, dataModel);
+        while (hasMore(tableData)) {
+            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
+            tableData.append(nextPage);
+        }
         return tableData;
     }
 
+    public TableData search(String query,
+                            HttpServletRequest request,
+                            Map<String, String> extraCredentials,
+                            DataModel dataModel) {
 
-    public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
-            log.debug("getNextSearchPage");
-            JsonNode response = client.next(page, extraCredentials);
-            return toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId, request);
-
+        String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
+        JsonNode response = client.query(rewrittenQuery, extraCredentials);
+        QueryJob queryJob = createQueryJob(query, dataModel);
+        TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJob.getId(), request);
+        return tableData;
     }
 
+    public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
+        log.debug("getNextSearchPage");
+        JsonNode response = client.next(page, extraCredentials);
+        TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId, request);
+        populateTableSchemaIfAvailable(queryJobId, tableData);
+        return tableData;
+    }
+
+    private QueryJob createQueryJob(String query, DataModel dataModel) {
+
+        String tableSchema = null;
+        if (dataModel != null) {
+            try {
+                tableSchema = new ObjectMapper().writeValueAsString(dataModel);
+            } catch (JsonProcessingException ex) {
+                throw new RuntimeException("Error while parsing table schema.", ex);
+            }
+        }
+
+        QueryJob queryJob = QueryJob.builder()
+                .query(query)
+                .id(UUID.randomUUID().toString())
+                .schema(tableSchema)
+                .build();
+        return queryJobRepository.save(queryJob);
+    }
+    
     private URI getLinkToCatalog(String catalog, HttpServletRequest request) {
         return ServletUriComponentsBuilder.fromContextPath(request)
                                    .path(String.format(NEXT_PAGE_CATALOG_TEMPLATE, catalog))
@@ -312,64 +313,65 @@ public class PrestoSearchAdapter {
         throw new PrestoNoSuchCatalogException("No such catalog " + catalog);
     }
 
-
     private static String quote(String sqlIdentifier) {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
     public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
 
-        TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials);
-
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
 
-        // Otherwise extract dataModel from tableData
-        if (dataModel == null & tableData.getDataModel() != null) {
-            dataModel = tableData.getDataModel();
-        }
+        // Populate the dataModel only if there is tableData
+        if (!tableData.getData().isEmpty()) {
 
-        // Fill in the id & comments if the data model is ready
-        if (dataModel != null) {
-            dataModel.setId(getDataModelId(tableName));
-            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
+            // If the dataModel is not available from tables-registry, use the one from tableData
+            // Fill in the id & comments if the data model is ready
+            if (dataModel == null && tableData.getDataModel() != null) {
+                dataModel = tableData.getDataModel();
+                dataModel.setId(getDataModelId(tableName));
+                attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
+            } else {
+                tableData.setDataModel(dataModel);
+            }
         }
         return tableData;
     }
 
+    public TableInfo getTableInfo(String tableName,
+                                  HttpServletRequest request,
+                                  Map<String, String> extraCredentials) {
+        if (!isValidPrestoName(tableName)) {
+            //triggers a 404.
+            throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
+        }
+
+        // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
+        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
+
+        // If the dataModel is not available from tables-registry, use the one from tableData
+        // Fill in the id & comments if the data model is ready
+        if (dataModel == null && tableData.getDataModel() != null) {
+            dataModel = tableData.getDataModel();
+            dataModel.setId(getDataModelId(tableName));
+            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
+        }
+
+        return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
+    }
 
     private boolean isValidPrestoName(String tableName) {
         return qualifiedNameMatcher.matcher(tableName).matches();
     }
 
-    public TableInfo getTableInfo(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-        if (!isValidPrestoName(tableName)) {
-            //triggers a 404.
-           throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
-        }
-
-        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials);
-
-        // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
-        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
-
-        // Otherwise extract dataModel from tableData
-        if (dataModel == null & tableData.getDataModel() != null) {
-            dataModel = tableData.getDataModel();
-        }
-
-        // Fill in the id & comments if the data model is ready
-        if (dataModel != null) {
-            dataModel.setId(getDataModelId(tableName));
-            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
-        }
-        return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
-    }
-
-    private TableData toTableData(String nextPageTemplate, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
+    private TableData toTableData(String nextPageTemplate,
+                                  JsonNode prestoResponse,
+                                  String queryJobId,
+                                  HttpServletRequest request) {
         List<Map<String, Object>> data = new ArrayList<>();
         DataModel dataModel = null;
-        List<PrestoDataTransformer> prestoDataTransformers = new ArrayList<>();
 
         if (prestoResponse.hasNonNull("columns")) {
             final JsonNode columns = prestoResponse.get("columns");
@@ -378,13 +380,12 @@ public class PrestoSearchAdapter {
                 for (JsonNode dataNode : prestoResponse.get("data")) { //for each row
                     Map<String, Object> rowData = new LinkedHashMap<>();
                     int i = 0;
-                    for(Map.Entry<String, ColumnSchema> entry : dataModel.getProperties().entrySet()){
+                    for (Map.Entry<String, ColumnSchema> entry : dataModel.getProperties().entrySet()) {
                         rowData.put(entry.getKey(), getData(entry.getValue(), dataNode.get(i++)));
                     }
                     data.add(rowData);
                 }
             }
-
         } else if (prestoResponse.hasNonNull("error")) {
             ObjectMapper objectMapper = new ObjectMapper();
             try {
@@ -423,6 +424,20 @@ public class PrestoSearchAdapter {
         return tableData;
     }
 
+    // Parses the saved query identified by queryJobId, finds all functions that transform the response in some way,
+    // and applies them to the response represented by tableData.
+    private void applyResponseTransforms(String queryJobId, final TableData tableData) {
+        QueryJob queryJob = queryJobRepository
+                .findById(queryJobId)
+                .orElseThrow(()->new InvalidQueryJobException(queryJobId, "The query corresponding to this search could not be located."));
+        String query = queryJob.getQuery();
+        Stream<SQLFunction> responseTransformingFunctions = parseSQLBiFunctions(query);
+
+        responseTransformingFunctions
+                .filter(sqlFunction->sqlFunction.functionName.equals("ga4gh_type"))
+                .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
+    }
+
     private Pagination generatePagination(String template, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
@@ -438,19 +453,8 @@ public class PrestoSearchAdapter {
         return new Pagination(queryJobId, nextPageUri, prestoNextPageUri);
     }
 
-
-    private DataModel generateDataModel(JsonNode columns) {
-        return DataModel.builder()
-                 .id(null)
-                 .description("Automatically generated schema")
-                 .schema(JSON_SCHEMA_DRAFT7_URI)
-                 .properties(getJsonSchemaProperties(columns))
-                 .build();
-    }
-
-
     private static <T, K, U> Collector<T, ?, Map<K,U>> toSortedMap(Function<? super T, ? extends K> keyMapper,
-                                                                        Function<? super T, ? extends U> valueMapper) {
+                                                                   Function<? super T, ? extends U> valueMapper) {
         return Collectors.toMap(keyMapper,
                          valueMapper,
                          (k,v)->{ throw new UnexpectedQueryResponseException("Duplicate key "+k); },
@@ -458,75 +462,71 @@ public class PrestoSearchAdapter {
     }
 
 
-    private Object getData(ColumnSchema columnSchema, JsonNode prestoDataArray){
-            if(columnSchema.getRawType().equals("map")){
-                LinkedHashMap<String, Object> map = new LinkedHashMap<>();
-                if(prestoDataArray.getNodeType() != JsonNodeType.OBJECT){
-                    throw new UnexpectedQueryResponseException("Expected value for map was not of type object for schema "+columnSchema);
-                }
-
-                ColumnSchema mapEntryColumnSchema = columnSchema.getProperties().get("value");
-                return Streams.stream(prestoDataArray.fields())
-                       .map(mapEntry-> Map.entry(mapEntry.getKey(), getData(mapEntryColumnSchema, mapEntry.getValue())))
-                       .collect(toSortedMap(deepMapEntry->deepMapEntry.getKey(), deepMapEntry->deepMapEntry.getValue()));
-            }else if(columnSchema.getRawType().equals("row")) {
-                if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
-                    throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
-                }
-                int j = 0;
-                Map<String, Object> row = new LinkedHashMap<>();
-                for (Map.Entry<String, ColumnSchema> rowPropertyTypeInfo : columnSchema.getProperties().entrySet()) {
-                    JsonNode rowValue = prestoDataArray.get(j++);
-                    row.put(rowPropertyTypeInfo.getKey(), getData(rowPropertyTypeInfo.getValue(), rowValue));
-                }
-                return row;
-            }else if(columnSchema.getRawType().equals("array")){
-                if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
-                    throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
-                }
-                ColumnSchema itemSchema = columnSchema.getItems();
-                return StreamSupport.stream(prestoDataArray.spliterator(), false)
-                             .map(arrayValue->getData(itemSchema, arrayValue))
-                             .collect(Collectors.toUnmodifiableList());
-            }else if(columnSchema.getRawType() == "json") { //json or primitive.
-                try {
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    return objectMapper.readValue(prestoDataArray.asText(), new TypeReference<Map<String, Object>>() {
-
-                    });
-                } catch (IOException e) {
-                    throw new UnexpectedQueryResponseException("JSON came back badly formatted: "+prestoDataArray.asText());
-                }
-            }else{
-
-                if(prestoDataArray.isTextual()){
-                    //currently only textual types are transformed.
-                    PrestoDataTransformer transformer =  JsonAdapter.getPrestoDataTransformer(columnSchema.getRawType());
-                    if (transformer == null){
-                        return prestoDataArray.asText();
-                    }else{
-                        return transformer.transform(prestoDataArray.asText());
-                    }
-                }else if(prestoDataArray.isBoolean()){
-                    return prestoDataArray.asBoolean();
-                }else if(prestoDataArray.isIntegralNumber()){
-                    return prestoDataArray.asLong();
-                }else if(prestoDataArray.isFloatingPointNumber()) {
-                    return prestoDataArray.asDouble();
-                }else if(prestoDataArray.isNull()) {
-                    return null;
-                }else{
-                    throw new UnexpectedQueryResponseException("Unexpected value type in data for schema "+columnSchema);
-                }
+    private Object getData(ColumnSchema columnSchema, JsonNode prestoDataArray) {
+        if (columnSchema.getRawType().equals("map")) {
+            LinkedHashMap<String, Object> map = new LinkedHashMap<>();
+            if (prestoDataArray.getNodeType() != JsonNodeType.OBJECT) {
+                throw new UnexpectedQueryResponseException("Expected value for map was not of type object for schema "+columnSchema);
             }
 
+            ColumnSchema mapEntryColumnSchema = columnSchema.getProperties().get("value");
+            return Streams.stream(prestoDataArray.fields())
+                   .map(mapEntry-> Map.entry(mapEntry.getKey(), getData(mapEntryColumnSchema, mapEntry.getValue())))
+                   .collect(toSortedMap(deepMapEntry->deepMapEntry.getKey(), deepMapEntry->deepMapEntry.getValue()));
+        } else if (columnSchema.getRawType().equals("row")) {
+            if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
+                throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
+            }
+            int j = 0;
+            Map<String, Object> row = new LinkedHashMap<>();
+            for (Map.Entry<String, ColumnSchema> rowPropertyTypeInfo : columnSchema.getProperties().entrySet()) {
+                JsonNode rowValue = prestoDataArray.get(j++);
+                row.put(rowPropertyTypeInfo.getKey(), getData(rowPropertyTypeInfo.getValue(), rowValue));
+            }
+            return row;
+        } else if (columnSchema.getRawType().equals("array")) {
+            if (prestoDataArray.getNodeType() != JsonNodeType.ARRAY) {
+                throw new UnexpectedQueryResponseException("Expected array of row values for schema " + columnSchema);
+            }
+            ColumnSchema itemSchema = columnSchema.getItems();
+            return StreamSupport.stream(prestoDataArray.spliterator(), false)
+                         .map(arrayValue->getData(itemSchema, arrayValue))
+                         .collect(Collectors.toUnmodifiableList());
+        } else if (columnSchema.getRawType() == "json") { //json or primitive.
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                return objectMapper.readValue(prestoDataArray.asText(), new TypeReference<Map<String, Object>>() {});
+            } catch (IOException e) {
+                throw new UnexpectedQueryResponseException("JSON came back badly formatted: " + prestoDataArray.asText());
+            }
+        } else {
+
+            if (prestoDataArray.isTextual()) {
+                //currently only textual types are transformed.
+                PrestoDataTransformer transformer =  JsonAdapter.getPrestoDataTransformer(columnSchema.getRawType());
+                if (transformer == null) {
+                    return prestoDataArray.asText();
+                } else{
+                    return transformer.transform(prestoDataArray.asText());
+                }
+            } else if (prestoDataArray.isBoolean()) {
+                return prestoDataArray.asBoolean();
+            } else if (prestoDataArray.isIntegralNumber()) {
+                return prestoDataArray.asLong();
+            } else if (prestoDataArray.isFloatingPointNumber()) {
+                return prestoDataArray.asDouble();
+            } else if (prestoDataArray.isNull()) {
+                return null;
+            } else {
+                throw new UnexpectedQueryResponseException("Unexpected value type in data for schema "+columnSchema);
+            }
+        }
     }
 
-
-    private ColumnSchema getColumnSchema(JsonNode prestoTypeDescription){
+    private ColumnSchema getColumnSchema(JsonNode prestoTypeDescription) {
         final String rawType = prestoTypeDescription.get("rawType").asText();
         final String format = JsonAdapter.toFormat(prestoTypeDescription.get("rawType").asText());
-        if(rawType.equalsIgnoreCase("array")) {
+        if (rawType.equalsIgnoreCase("array")) {
             ColumnSchema columnSchema = getColumnSchema(prestoTypeDescription.get("arguments").get(0).get("value"));
             return ColumnSchema.builder()
                     .type("array")
@@ -534,7 +534,7 @@ public class PrestoSearchAdapter {
                     .comment("array["+columnSchema.getType()+"]")
                     .items(columnSchema)
                     .build();
-        }else if(rawType.equalsIgnoreCase("row")) {
+        } else if (rawType.equalsIgnoreCase("row")) {
             JsonNode args = prestoTypeDescription.get("arguments");
 
             Map<String, ColumnSchema> m = StreamSupport.stream(args.spliterator(), false)
@@ -554,7 +554,7 @@ public class PrestoSearchAdapter {
                              .collect(Collectors.toList()), ',')))
                     .properties(m)
                     .build();
-        }else if(rawType.equalsIgnoreCase("map")){
+        } else if (rawType.equalsIgnoreCase("map")) {
 
             ColumnSchema keySchema = getColumnSchema(prestoTypeDescription.get("arguments").get(0).get("value"));
             ColumnSchema valueSchema = getColumnSchema(prestoTypeDescription.get("arguments").get(1).get("value"));
@@ -566,13 +566,13 @@ public class PrestoSearchAdapter {
                     .properties(Map.of("key", keySchema, "value", valueSchema))
                     .build();
 
-        }else if(rawType.equalsIgnoreCase("json")) {
+        } else if (rawType.equalsIgnoreCase("json")) {
             return ColumnSchema.builder()
                                .type("object")
                                .rawType(rawType)
                                .comment("json")
                                .build();
-        }else {
+        } else {
             //must be a primitive.
             String type = JsonAdapter.toJsonType(rawType);
             return ColumnSchema.builder()
@@ -594,7 +594,6 @@ public class PrestoSearchAdapter {
 
     }
 
-
     /**
      * Get a list of the catalogs served by the connected instance of PrestoSQL.
      *
@@ -602,7 +601,7 @@ public class PrestoSearchAdapter {
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
     private Set<String> getPrestoCatalogs(HttpServletRequest request, Map<String, String> extraCredentials) {
-        TableData catalogs = searchAll("select catalog_name FROM system.metadata.catalogs ORDER BY catalog_name", request, extraCredentials);
+        TableData catalogs = searchAll("select catalog_name FROM system.metadata.catalogs ORDER BY catalog_name", request, extraCredentials, null);
         Set<String> catalogSet = new LinkedHashSet<>();
         for (Map<String, Object> row : catalogs.getData()) {
             String catalog = (String) row.get("catalog_name");
@@ -620,7 +619,20 @@ public class PrestoSearchAdapter {
         return catalogSet;
     }
 
-    private void attachCommentsToDataModel(DataModel dataModel, String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
+    // DataModel related methods
+    private DataModel generateDataModel(JsonNode columns) {
+        return DataModel.builder()
+                .id(null)
+                .description("Automatically generated schema")
+                .schema(JSON_SCHEMA_DRAFT7_URI)
+                .properties(getJsonSchemaProperties(columns))
+                .build();
+    }
+
+    private void attachCommentsToDataModel(DataModel dataModel,
+                                           String tableName,
+                                           HttpServletRequest request,
+                                           Map<String, String> extraCredentials) {
         if (dataModel == null) {
             return;
         }
@@ -631,7 +643,7 @@ public class PrestoSearchAdapter {
             return;
         }
 
-        TableData describeData = searchAll("DESCRIBE " + tableName, request, extraCredentials);
+        TableData describeData = searchAll("DESCRIBE " + tableName, request, extraCredentials, null);
 
         for (Map<String, Object> describeRow : describeData.getData()) {
             final String columnName = (String) describeRow.get("Column");
@@ -649,19 +661,51 @@ public class PrestoSearchAdapter {
     }
 
     private DataModel getDataModelFromTablesRegistry(String tableName) {
-        if(tablesRegistryClientConfig.getSkip() != null &&  tablesRegistryClientConfig.getSkip() == true){
+        if (tablesRegistryClientConfig.getSkip() != null &&  tablesRegistryClientConfig.getSkip() == true) {
             return null;
-        }else if(tablesRegistryClient == null){
+        } else if (tablesRegistryClient == null) {
             tablesRegistryClient = tablesRegistryClientConfig.tablesRegistryClient();
         }
 
         ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
                 oAuthClientConfig.getClientId(), tableName);
 
-        if(registryEntry == null || registryEntry.getTableCollections().isEmpty()) {
+        if (registryEntry == null || registryEntry.getTableCollections().isEmpty()) {
             return null;
         }
 
         return registryEntry.getTableCollections().get(0).getTableSchema();
+    }
+
+    private void populateTableSchemaIfAvailable(String queryJobId, TableData tableData) {
+
+        if (!tableData.getData().isEmpty()) {
+            // Retrieve the table schema stored in query_job table - the one fetched from tables-registry
+            DataModel dataModel = null;
+            if (queryJobId != null) {
+                QueryJob queryJob = queryJobRepository
+                        .findById(queryJobId)
+                        .orElseThrow(() -> new InvalidQueryJobException(queryJobId,
+                                "The entry in query_job table corresponding to this search could not be located."));
+
+                try {
+                    if (queryJob.getSchema() != null) {
+                        dataModel = new ObjectMapper().readValue(queryJob.getSchema(), DataModel.class);
+                        log.info("Table schema (from tables-registry) retrieved successfully from 'query_job' postgres table.");
+                    }
+                } catch (IOException ex) {
+                    throw new UncheckedIOException("Exception while reading table schema from 'query_job' table.", ex);
+                }
+            }
+
+            // When table data is populated, use the tables-registry table schema to populate the dataModel, if available
+            if (dataModel != null) {
+                tableData.setDataModel(dataModel);
+            }
+        }
+        // There is no need to populate the dataModel if there is no tableData
+        else {
+            tableData.setDataModel(null);
+        }
     }
 }

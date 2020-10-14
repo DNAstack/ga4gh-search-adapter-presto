@@ -2,7 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto.exception;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoError;
 
-public class PrestoNoSuchColumnException extends PrestoErrorException{
+public class PrestoNoSuchColumnException extends PrestoErrorException {
 
     public PrestoNoSuchColumnException(PrestoError prestoError) {
         super(prestoError);

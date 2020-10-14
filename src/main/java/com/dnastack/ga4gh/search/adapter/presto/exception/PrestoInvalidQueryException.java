@@ -2,7 +2,7 @@ package com.dnastack.ga4gh.search.adapter.presto.exception;
 
 import com.dnastack.ga4gh.search.adapter.presto.PrestoError;
 
-public class PrestoInvalidQueryException extends PrestoErrorException{
+public class PrestoInvalidQueryException extends PrestoErrorException {
 
     public PrestoInvalidQueryException(PrestoError prestoError) {
         super(prestoError);

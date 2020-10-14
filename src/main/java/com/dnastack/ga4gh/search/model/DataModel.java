@@ -40,6 +40,7 @@ public class DataModel {
     public Map<String, Object> getAdditionalProperties() {
         return additionalProperties;
     }
+
     @JsonAnySetter
     public void setAdditionalProperty(String key, Object value) {
         additionalProperties.put(key, value);

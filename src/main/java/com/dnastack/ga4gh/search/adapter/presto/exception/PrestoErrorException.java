@@ -4,7 +4,7 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoError;
 import lombok.Getter;
 
 @Getter
-public class PrestoErrorException extends RuntimeException{
+public class PrestoErrorException extends RuntimeException {
     private final PrestoError prestoError;
 
     public PrestoErrorException(PrestoError prestoError) {
@@ -29,5 +29,4 @@ public class PrestoErrorException extends RuntimeException{
     public String toString() {
         return prestoError.toString();
     }
-
 }

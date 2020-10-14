@@ -3,7 +3,7 @@ package com.dnastack.ga4gh.search.adapter.presto.exception;
 import lombok.Getter;
 
 @Getter
-public class InvalidQueryJobException extends RuntimeException{
+public class InvalidQueryJobException extends RuntimeException {
 
     private String queryJobId;
 
