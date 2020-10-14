@@ -533,7 +533,7 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
 
-    private Table executeSearchQueryOnVariedTypes() throws Exception{
+    private Table executeSearchQueryOnVariedTypes() throws Exception {
         String query = "SELECT ("+
                        "((42428060 IS NULL) OR MOD(42428060, 1337) = 0) "+
                        "AND 'A' = 'A' "+
@@ -563,7 +563,7 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
-    public void searchQueryOnVariedTypesReturnsCorrectData() throws Exception{
+    public void searchQueryOnVariedTypesReturnsCorrectData() throws Exception {
         Table result = executeSearchQueryOnVariedTypes();
         List<Map<String, Object>> expectedData;
         try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesData.json")) {
@@ -575,7 +575,7 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
-    public void searchQueryOnVariedTypesReturnsCorrectDataModel() throws Exception{
+    public void searchQueryOnVariedTypesReturnsCorrectDataModel() throws Exception {
 
         Table result = executeSearchQueryOnVariedTypes();
         DataModel expectedDataModel;

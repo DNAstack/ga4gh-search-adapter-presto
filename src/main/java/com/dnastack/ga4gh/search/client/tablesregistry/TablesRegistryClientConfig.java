@@ -61,7 +61,6 @@ public class TablesRegistryClientConfig {
         };
     }
 
-    //@Bean
     public TablesRegistryClient tablesRegistryClient() {
         return Feign.builder()
                     .client(new OkHttpClient())

@@ -33,7 +33,7 @@ public class SearchController {
 
         try {
             tableData = prestoSearchAdapter
-                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials));
+                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials), null);
         } catch (Exception ex) {
             throw new TableApiErrorException(ex, TableData::errorInstance);
         }

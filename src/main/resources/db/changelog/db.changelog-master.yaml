@@ -18,3 +18,8 @@ databaseChangeLog:
               nullable: false
             name: query
             type: VARCHAR
+        - column:
+            constraints:
+              nullable: true
+            name: schema
+            type: VARCHAR
