@@ -37,7 +37,7 @@ public class TablesRegistryClientConfig {
     @Autowired (required = false)
     private OAuthClient oAuthClient;
 
-    @Autowired (required = false)
+    @Autowired
     private OAuthClientConfig oAuthClientConfig;
 
     private ObjectMapper mapper = new ObjectMapper()

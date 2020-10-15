@@ -77,7 +77,7 @@ public class PrestoSearchAdapter {
     @Autowired (required = false)
     private TablesRegistryClient tablesRegistryClient;
 
-    @Autowired (required = false)
+    @Autowired
     private OAuthClientConfig oAuthClientConfig;
 
     private boolean hasMore(TableData tableData) {
