@@ -2,7 +2,6 @@ package com.dnastack.ga4gh.search.client.tablesregistry;
 
 import com.dnastack.ga4gh.search.client.common.SimpleLogger;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.AccessToken;
-import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.OAuthRequest;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,7 +9,6 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import feign.Feign;
 import feign.Logger;
 import feign.RequestInterceptor;
-import feign.form.FormEncoder;
 import feign.jackson.JacksonDecoder;
 import feign.jackson.JacksonEncoder;
 import feign.okhttp.OkHttpClient;
@@ -39,7 +37,7 @@ public class TablesRegistryClientConfig {
     @Autowired (required = false)
     private OAuthClient oAuthClient;
 
-    @Autowired
+    @Autowired (required = false)
     private OAuthClientConfig oAuthClientConfig;
 
     private ObjectMapper mapper = new ObjectMapper()

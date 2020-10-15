@@ -13,12 +13,14 @@ import feign.jackson.JacksonEncoder;
 import feign.okhttp.OkHttpClient;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@Slf4j
 @Getter
 @Setter
 @Configuration
@@ -54,6 +56,7 @@ public class OAuthClientConfig {
     @Bean
     @ConditionalOnProperty(name = "app.tables-registry.auth.authentication-uri")
     public OAuthClient oAuthClient() {
+        log.info("app.tables-registry.auth.authentication-uri: " + getAuthenticationUri());
         return Feign.builder()
                 .client(new OkHttpClient())
                 .encoder(new FormEncoder(new JacksonEncoder(mapper)))

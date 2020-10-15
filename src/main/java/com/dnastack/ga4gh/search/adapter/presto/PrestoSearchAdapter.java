@@ -3,7 +3,6 @@ package com.dnastack.ga4gh.search.adapter.presto;
 import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
-import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.repository.QueryJob;
