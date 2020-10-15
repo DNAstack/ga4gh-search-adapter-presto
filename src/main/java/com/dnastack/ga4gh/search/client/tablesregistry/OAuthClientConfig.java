@@ -14,6 +14,7 @@ import feign.okhttp.OkHttpClient;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,6 +52,7 @@ public class OAuthClientConfig {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Bean
+    @ConditionalOnProperty(name = "app.tables-registry.auth.authentication-uri")
     public OAuthClient oAuthClient() {
         return Feign.builder()
                 .client(new OkHttpClient())

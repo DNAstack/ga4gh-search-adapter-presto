@@ -21,13 +21,15 @@ app:
     documentation-url:
     contact-url:
     version:
-  tables-registry:
-    url: http://localhost:8080
-    auth:
-      authentication-uri: http://localhost:8081/oauth/token
-      client-id: search-presto-public-client-credentials-dev
-      client-secret: search-presto-public-client-credentials-dev
-      audience: http://localhost:8080
+  # Un-comment the following section of tables-registry if you would like to enable the flow of fetching the table schema from tables-registry
+  # Get the staging secret corresponding to client-id from kubernetes or create your own if pointing to local wallet
+  # tables-registry:
+    # url: https://ga4gh-tables-registry.staging.dnastack.com
+    # auth:
+      # authentication-uri: https://wallet.staging.dnastack.com/oauth/token
+      # client-id: search-presto-public-client-credentials
+      # client-secret: <kubernetes_secret>
+      # audience: https://ga4gh-tables-registry.staging.dnastack.com
 
 presto:
   datasource:

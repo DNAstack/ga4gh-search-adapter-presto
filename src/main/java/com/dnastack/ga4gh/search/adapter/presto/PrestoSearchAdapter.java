@@ -75,12 +75,10 @@ public class PrestoSearchAdapter {
     @Autowired
     private ApplicationConfig applicationConfig;
 
-    @Autowired
-    private TablesRegistryClientConfig tablesRegistryClientConfig;
-
+    @Autowired (required = false)
     private TablesRegistryClient tablesRegistryClient;
 
-    @Autowired
+    @Autowired (required = false)
     private OAuthClientConfig oAuthClientConfig;
 
     private boolean hasMore(TableData tableData) {
@@ -661,10 +659,8 @@ public class PrestoSearchAdapter {
     }
 
     private DataModel getDataModelFromTablesRegistry(String tableName) {
-        if (tablesRegistryClientConfig.getSkip() != null &&  tablesRegistryClientConfig.getSkip() == true) {
+        if (tablesRegistryClient == null) {
             return null;
-        } else if (tablesRegistryClient == null) {
-            tablesRegistryClient = tablesRegistryClientConfig.tablesRegistryClient();
         }
 
         ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
