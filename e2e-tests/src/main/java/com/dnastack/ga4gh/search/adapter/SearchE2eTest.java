@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.oauth2.GoogleCredentials;
-import io.opencensus.resource.Resource;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
@@ -27,7 +26,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -457,7 +455,6 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(result.getDataModel().getProperties(), not(nullValue()));
         assertThat(result.getDataModel().getProperties().keySet(), contains("bf"));
         assertThat(result.getDataModel().getProperties().get("bf").getRef(), is("http://path/to/whatever.com"));
-
     }
 
     private void assertDatesAndTimesHaveCorrectValuesForZone(String zone, Map<String, String> expectedValues) throws IOException {
@@ -566,7 +563,7 @@ public class SearchE2eTest extends BaseE2eTest {
     public void searchQueryOnVariedTypesReturnsCorrectData() throws Exception {
         Table result = executeSearchQueryOnVariedTypes();
         List<Map<String, Object>> expectedData;
-        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesData.json")) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesData.json")) {
             ObjectMapper objectMapper = new ObjectMapper();
             expectedData = objectMapper.readValue(is, new TypeReference<List<Map<String, Object>>>(){});
         }
@@ -579,12 +576,10 @@ public class SearchE2eTest extends BaseE2eTest {
 
         Table result = executeSearchQueryOnVariedTypes();
         DataModel expectedDataModel;
-        try(InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesDataModel.json")) {
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("variedTypesDataModel.json")) {
             ObjectMapper objectMapper = new ObjectMapper();
             expectedDataModel = objectMapper.readValue(is, DataModel.class);
         }
-
-
 
         DataModel actualDataModel = result.getDataModel();
         Assertions.assertThat(actualDataModel).usingRecursiveComparison().isEqualTo(expectedDataModel);
@@ -729,7 +724,6 @@ public class SearchE2eTest extends BaseE2eTest {
         assertThat(errors.get(0).getTitle(), not(nullValue()));
         assertThat(errors.get(0).getDetails(), not(nullValue()));
     }
-
 
     /**
      * Retrieves all rows of the given table by following pagination links page by page.

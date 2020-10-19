@@ -1,16 +1,12 @@
 package com.dnastack.ga4gh.search.adapter;
 
-import io.restassured.RestAssured;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
 import static java.util.Collections.emptyList;
-import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assume.assumeThat;
 
 public class CorsE2eTest extends BaseE2eTest {
 

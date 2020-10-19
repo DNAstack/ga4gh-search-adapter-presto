@@ -1,7 +1,6 @@
 package com.dnastack.ga4gh.search.adapter;
 
 import io.restassured.RestAssured;
-import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.stream.Stream;

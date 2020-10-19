@@ -56,7 +56,6 @@ public class OAuthClientConfig {
     @Bean
     @ConditionalOnProperty(name = "app.tables-registry.auth.authentication-uri")
     public OAuthClient oAuthClient() {
-        log.info("app.tables-registry.auth.authentication-uri: " + getAuthenticationUri());
         return Feign.builder()
                 .client(new OkHttpClient())
                 .encoder(new FormEncoder(new JacksonEncoder(mapper)))
