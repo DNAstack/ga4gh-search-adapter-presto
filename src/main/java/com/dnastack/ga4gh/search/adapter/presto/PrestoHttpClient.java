@@ -186,8 +186,8 @@ public class PrestoHttpClient implements PrestoClient {
             String prestoState = extractState(jsonBody);
 
             if (isRunning(prestoState) || prestoState.equalsIgnoreCase("finished")) {
-                log.debug("PrestoState: {}", prestoState);
-                log.debug("Presto Results: {}", jsonBody.toString());
+                log.trace("PrestoState: {}", prestoState);
+                log.trace("Presto Results: {}", jsonBody.toString());
                 assert (jsonBody.hasNonNull("columns"));
                 return jsonBody;
             } else {
