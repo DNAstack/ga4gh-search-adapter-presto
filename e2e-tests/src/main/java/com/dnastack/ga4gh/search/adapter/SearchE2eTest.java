@@ -99,11 +99,10 @@ public class SearchE2eTest extends BaseE2eTest {
         "INSERT INTO %s (id, data) VALUES('foo', JSON '{\"name\": \"Foo\", \"age\": 25}')";
 
     private static final String TEST_DATE = "2020-05-27";
-    private static final String TEST_TIME_LOS_ANGELES = "12:22:27.000 America/Los_Angeles";
-    private static final String TEST_TIME_UTC = "12:22:27.000 UTC";
-
-    private static final String TEST_DATE_TIME_LOS_ANGELES = "2020-05-27 12:22:27.000 America/Los_Angeles";
-    private static final String TEST_DATE_TIME_UTC = "2020-05-27 12:22:27.000 UTC";
+    private static final String TEST_TIME_LOS_ANGELES = "12:22:27.000-08:00";
+    private static final String TEST_TIME_UTC = "12:22:27.000+00:00";
+    private static final String TEST_DATE_TIME_LOS_ANGELES = "2020-05-27 12:22:27.000-08:00";
+    private static final String TEST_DATE_TIME_UTC = "2020-05-27 12:22:27.000+00:00";
 
     private static final String CREATE_DATETIME_TEST_TABLE_TEMPLATE = "CREATE TABLE %s("
         + "zone varchar(255),"
