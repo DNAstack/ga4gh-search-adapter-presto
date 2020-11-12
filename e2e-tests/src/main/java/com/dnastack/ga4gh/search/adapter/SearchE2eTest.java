@@ -53,45 +53,49 @@ public class SearchE2eTest extends BaseE2eTest {
         "thetimestamp", "date-time",
         "thetimestampwithtimezone", "date-time",
         "thetimestampwithouttimezone", "date-time",
-        "thetimewithouttimezone", "time");
+        "thetimewithouttimezone", "time",
+        "thetimewithtimezone", "time");
     //"thetimewithtimezone", "time");   //Blocked by https://github.com/prestosql/presto/issues/4715
 
     //These expected values assume the remote server is UTC.
-    private static final Map<String, Map<String, String>> EXPECTED_VALUES = Map.of(
-        "LosAngeles",
-        Map.of("thedate",
-            "2020-05-27",
-            "thetime",
-            "20:22:27.000",
-            "thetimestamp",
-            "2020-05-27T19:22:27.000",
-            "thetimestampwithtimezone",
-            "2020-05-27T12:22:27.000-07:00",
-            "thetimestampwithouttimezone",
-            "2020-05-27T19:22:27.000",
-            "thetimewithouttimezone",
-            "20:22:27.000"),
+    private static final Map<String, Map<String, String>> EXPECTED_VALUES = Map.of("LosAngeles",
+                                                                                   Map.of("thedate",
+                                                                                          "2020-05-27",
+                                                                                          "thetime",
+                                                                                          "12:22:27.000",
+                                                                                          "thetimestamp",
+                                                                                          "2020-05-27T12:22:27.000",
+                                                                                          "thetimestampwithtimezone",
+                                                                                          "2020-05-27T12:22:27.000-08:00",
+                                                                                          "thetimestampwithouttimezone",
+                                                                                          "2020-05-27T12:22:27.000",
+                                                                                          "thetimewithouttimezone",
+                                                                                          "12:22:27.000",
+                                                                                          "thetimewithtimezone",
+                                                                                          "12:22:27.000-08:00"),
 
-        "UTC",
-        Map.of("thedate",
-            "2020-05-27",
-            "thetime",
-            "12:22:27.000",
-            "thetimestamp",
-            "2020-05-27T12:22:27.000",
-            "thetimestampwithtimezone",
-            "2020-05-27T12:22:27.000Z",
-            "thetimestampwithouttimezone",
-            "2020-05-27T12:22:27.000",
-            "thetimewithouttimezone",
-            "12:22:27.000"));
+                                                                                   "UTC",
+                                                                                   Map.of("thedate",
+                                                                                          "2020-05-27",
+                                                                                          "thetime",
+                                                                                          "12:22:27.000",
+                                                                                          "thetimestamp",
+                                                                                          "2020-05-27T12:22:27.000",
+                                                                                          "thetimestampwithtimezone",
+                                                                                          "2020-05-27T12:22:27.000Z",
+                                                                                          "thetimestampwithouttimezone",
+                                                                                          "2020-05-27T12:22:27.000",
+                                                                                          "thetimewithouttimezone",
+                                                                                          "12:22:27.000",
+                                                                                          "thetimewithtimezone",
+                                                                                          "12:22:27.000Z"));
 
     //"thetimewithtimezone", "12:22:27-07"); //Blocked by https://github.com/prestosql/presto/issues/4715
 
 
     private static final String INSERT_DATETIME_TEST_TABLE_ENTRY_TEMPLATE =
-        "INSERT INTO %s(zone, thedate, thetime, thetimestamp, thetimestampwithtimezone, thetimestampwithouttimezone, thetimewithouttimezone)"
-            + " VALUES('%s', date '%s', time '%s', timestamp '%s', timestamp '%s', timestamp '%s', time '%s')";
+        "INSERT INTO %s(zone, thedate, thetime, thetimestamp, thetimestampwithtimezone, thetimestampwithouttimezone, thetimewithouttimezone, thetimewithtimezone)"
+            + " VALUES('%s', date '%s', time '%s', timestamp '%s', timestamp '%s', timestamp '%s', time '%s', time '%s')";
 
     private static final String INSERT_PAGINATION_TEST_TABLE_ENTRY_TEMPLATE = "INSERT INTO %s(bogusfield) VALUES('%s')";
 
@@ -111,7 +115,8 @@ public class SearchE2eTest extends BaseE2eTest {
         + "thetimestamp timestamp,"
         + "thetimestampwithtimezone timestamp with time zone,"
         + "thetimestampwithouttimezone timestamp without time zone,"
-        + "thetimewithouttimezone time without time zone)";
+        + "thetimewithouttimezone time without time zone,"
+        + "thetimewithtimezone time with time zone)";
 
     private static final String CREATE_PAGINATION_TEST_TABLE_TEMPLATE = "CREATE TABLE %s("
         + "id integer,"
@@ -241,6 +246,7 @@ public class SearchE2eTest extends BaseE2eTest {
             TEST_DATE_TIME_LOS_ANGELES,
             TEST_DATE_TIME_LOS_ANGELES,
             TEST_DATE_TIME_LOS_ANGELES,
+            TEST_TIME_LOS_ANGELES,
             TEST_TIME_LOS_ANGELES
             // TEST_DATE_TIME_LOS_ANGELES //Blocked by https://github.com/prestosql/presto/issues/4715
         ));
@@ -253,6 +259,7 @@ public class SearchE2eTest extends BaseE2eTest {
             TEST_DATE_TIME_UTC,
             TEST_DATE_TIME_UTC,
             TEST_DATE_TIME_UTC,
+            TEST_TIME_UTC,
             TEST_TIME_UTC
             //TEST_DATE_TIME_UTC // Blocked by https://github.com/prestosql/presto/issues/4715
         ));
@@ -479,7 +486,7 @@ public class SearchE2eTest extends BaseE2eTest {
             String expectedColumnFormat = entry.getValue();
             assertThat("Expected column with format " + expectedColumnFormat + " for column " + columnName + " (" + zone + " time zone)", properties.get(columnName).getFormat(), is(expectedColumnFormat));
             assertThat("Expected column with type string for column " + columnName + " (" + zone + " time zone)", properties.get(columnName).getType(), is("string"));
-            assertThat("date/time/datetime column " + columnName + " had an unexpected value ", row.get(columnName), is(expectedValues.get(columnName)));
+            assertThat("date/time/datetime column " + columnName + " had an unexpected value for zone "+zone, row.get(columnName), is(expectedValues.get(columnName)));
         });
     }
 
