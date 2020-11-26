@@ -4,6 +4,7 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
+@Slf4j
 public class SearchController {
 
     @Autowired
@@ -57,6 +59,24 @@ public class SearchController {
             throw new TableApiErrorException(ex, TableData::errorInstance);
         }
 
+        if(log.isDebugEnabled()) {
+            String tableDataLength = "NULL";
+            if (tableData.getData() != null) {
+                tableDataLength = String.valueOf(tableData.getData().size());
+            }
+
+            String nextURL = "NULL";
+            String prestoNextURL = "NULL";
+            if (tableData.getPagination() != null) {
+                nextURL = (tableData.getPagination().getNextPageUrl() == null)
+                          ? "null"
+                          : tableData.getPagination().getNextPageUrl().toString();
+                prestoNextURL = (tableData.getPagination().getPrestoNextPageUrl() == null)
+                                ? "null"
+                                : tableData.getPagination().getPrestoNextPageUrl().toString();
+            }
+            log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL);
+        }
         return tableData;
     }
 
