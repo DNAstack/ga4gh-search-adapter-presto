@@ -230,7 +230,12 @@ public class PrestoHttpClient implements PrestoClient {
             Request r = request.build();
             log.info(">>> {} {} (No Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials
                 .size());
-            return new OkHttpClient().newCall(r).execute();
+            Response response = new OkHttpClient().newCall(r).execute();
+            log.info("GET "+r.url()+" returned "+response.code());
+            if(!response.isSuccessful()){
+                log.debug("GET "+r.url()+" gave unsuccessful response "+response.code()+": "+
+                          ((response.body()==null) ? "null" : response.body().string()));
+            }
         }
 
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());

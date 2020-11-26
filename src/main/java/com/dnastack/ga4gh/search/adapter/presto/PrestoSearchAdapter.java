@@ -204,6 +204,7 @@ public class PrestoSearchAdapter {
                         DataModel dataModel) {
         TableData tableData = search(statement, request, extraCredentials, dataModel);
         while (hasMore(tableData)) {
+            log.debug("searchAll: Autoloading next page of data");
             TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
             tableData.append(nextPage);
         }
