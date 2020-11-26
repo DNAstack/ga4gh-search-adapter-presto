@@ -232,10 +232,11 @@ public class PrestoHttpClient implements PrestoClient {
                 .size());
             Response response = new OkHttpClient().newCall(r).execute();
             log.info("GET "+r.url()+" returned "+response.code());
-            if(!response.isSuccessful()){
+            if(response !=null && !response.isSuccessful()){
                 log.debug("GET "+r.url()+" gave unsuccessful response "+response.code()+": "+
                           ((response.body()==null) ? "null" : response.body().string()));
             }
+            return response;
         }
 
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
