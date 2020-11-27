@@ -4,6 +4,8 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.SearchRequest;
 import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 @RestController
 @Slf4j
 public class SearchController {
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private PrestoSearchAdapter prestoSearchAdapter;
@@ -75,7 +79,14 @@ public class SearchController {
                                 ? "null"
                                 : tableData.getPagination().getPrestoNextPageUrl().toString();
             }
-            log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL);
+
+            try {
+                String json = objectMapper.writeValueAsString(tableData);
+                log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL+" json: "+json);
+            } catch (JsonProcessingException e) {
+                log.error("Error producing debug log output ", e);
+            }
+
         }
         return tableData;
     }
