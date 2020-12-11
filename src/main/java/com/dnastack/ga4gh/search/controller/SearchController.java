@@ -80,8 +80,17 @@ public class SearchController {
                                 : tableData.getPagination().getPrestoNextPageUrl().toString();
             }
 
-            log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL);
+            if(log.isTraceEnabled()) {
+                try {
 
+                    String json = objectMapper.writeValueAsString(tableData);
+                    log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL + " json: " + json);
+                } catch (JsonProcessingException e) {
+                    log.error("Error producing debug log output ", e);
+                }
+            }else{
+                log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL);
+            }
         }
         return tableData;
     }
