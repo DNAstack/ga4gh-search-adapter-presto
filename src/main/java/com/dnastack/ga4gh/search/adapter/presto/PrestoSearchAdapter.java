@@ -224,7 +224,6 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
-        log.debug("getNextSearchPage");
         JsonNode response = client.next(page, extraCredentials);
         TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId, request);
         populateTableSchemaIfAvailable(queryJobId, tableData);

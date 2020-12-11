@@ -80,12 +80,7 @@ public class SearchController {
                                 : tableData.getPagination().getPrestoNextPageUrl().toString();
             }
 
-            try {
-                String json = objectMapper.writeValueAsString(tableData);
-                log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL+" json: "+json);
-            } catch (JsonProcessingException e) {
-                log.error("Error producing debug log output ", e);
-            }
+            log.debug("Returning " + tableDataLength + " rows with nextURL=" + nextURL + " and prestoNextURL=" + prestoNextURL);
 
         }
         return tableData;
