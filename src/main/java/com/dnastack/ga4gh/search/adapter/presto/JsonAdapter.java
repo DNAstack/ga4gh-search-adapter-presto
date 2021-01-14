@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,6 +15,9 @@ public class JsonAdapter {
     static final List<String> booleanAliases = List.of("bool");
 
     static final ObjectMapper jsonStringMapper = new ObjectMapper();
+    static{
+        jsonStringMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+    }
 
     static boolean isArray(String prestoType) {
         return prestoType.contains("[]") || prestoType.contains("array");

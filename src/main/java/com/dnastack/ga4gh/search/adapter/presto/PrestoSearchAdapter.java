@@ -14,6 +14,7 @@ import com.dnastack.ga4gh.search.model.Pagination;
 import com.dnastack.ga4gh.search.model.TableData;
 import com.dnastack.ga4gh.search.model.TableInfo;
 import com.dnastack.ga4gh.search.model.TablesList;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -492,6 +493,7 @@ public class PrestoSearchAdapter {
         } else if (columnSchema.getRawType() == "json") { //json or primitive.
             try {
                 ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
                 return objectMapper.readValue(prestoDataArray.asText(), new TypeReference<Map<String, Object>>() {});
             } catch (IOException e) {
                 throw new UnexpectedQueryResponseException("JSON came back badly formatted: " + prestoDataArray.asText());
