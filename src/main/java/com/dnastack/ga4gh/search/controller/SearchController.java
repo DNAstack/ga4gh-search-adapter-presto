@@ -30,7 +30,7 @@ public class SearchController {
     @Autowired
     private PrestoSearchAdapter prestoSearchAdapter;
 
-    @PreAuthorize("hasAuthority('SCOPE_read:data')")
+    @PreAuthorize("hasAuthority('SCOPE_search:query')")
     @RequestMapping(value = "/search", method = RequestMethod.POST)
     public TableData search(@RequestBody SearchRequest searchRequest,
                             HttpServletRequest request,
@@ -47,7 +47,7 @@ public class SearchController {
         return tableData;
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_read:data')")
+    @PreAuthorize("hasAuthority('SCOPE_search:query')")
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
     public TableData getNextPaginatedResponse(@RequestParam("queryJobId") String queryJobId,
                                               HttpServletRequest request,
