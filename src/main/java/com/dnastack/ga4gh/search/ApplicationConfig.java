@@ -128,7 +128,7 @@ public class ApplicationConfig {
         }
 
         @Bean
-        public JwtDecoder jwtDecoderDefault(AuthConfig authConfig) {
+        public JwtDecoder jwtDecoder(AuthConfig authConfig) {
             List<AuthConfig.IssuerConfig> issuers = authConfig.getTokenIssuers();
 
             if (issuers == null || issuers.isEmpty()) {
@@ -186,7 +186,7 @@ public class ApplicationConfig {
         }
 
         @Bean
-        public JwtDecoder jwtDecoderWallet(List<IssuerInfo> allowedIssuers, PermissionChecker permissionChecker) {
+        public JwtDecoder jwtDecoder(List<IssuerInfo> allowedIssuers, PermissionChecker permissionChecker) {
             return (jwtToken) -> {
                 permissionChecker.checkPermissions(jwtToken);
                 final JwtTokenParser jwtTokenParser = JwtTokenParserFactory.create(allowedIssuers);
