@@ -14,6 +14,7 @@ cors:
   urls: http://localhost:8089
 
 app:
+  url: http://localhost:${server.port}
   service-info:
     id:
     name: "GA4GH Discovery Search API"
@@ -74,10 +75,34 @@ spring:
 app:
   # Sample Auth configuration - works with local Wallet, Gatekeeper, Presto (see README.md)
   auth:
+    authorization-type: bearer
+    access-evaluator: scope
+
     token-issuers:
       - issuer-uri: http://localhost:8081
         jwk-set-uri: http://localhost:8081/oauth/jwks
         audiences: http://search-presto.local
+
+    presto-oauth-client:
+      token-uri: http://localhost:8081/oauth/token
+      client-id: ga4gh-search-adapter-presto
+      client-secret: dev-secret-never-use-in-prod
+      audience: http://presto.local
+---
+
+spring:
+  profiles: wallet-auth
+
+app:
+  auth:
+    authorization-type: bearer
+    access-evaluator: wallet
+
+    token-issuers:
+      - issuer-uri: http://localhost:8081
+        jwk-set-uri: http://localhost:8081/oauth/jwks
+        audiences: ["http://localhost:${server.port}", "http://search-presto.local"]
+
     presto-oauth-client:
       token-uri: http://localhost:8081/oauth/token
       client-id: ga4gh-search-adapter-presto
@@ -97,3 +122,14 @@ management:
   health:
     db:
       enabled=false:
+
+app:
+  auth:
+    authorization-type: none
+---
+
+spring:
+  profiles: basic-auth
+app:
+  auth:
+    authorization-type: basic
