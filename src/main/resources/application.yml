@@ -130,7 +130,7 @@ app:
 
 spring:
   profiles: basic-auth
-  
+
 app:
   auth:
     authorization-type: basic
