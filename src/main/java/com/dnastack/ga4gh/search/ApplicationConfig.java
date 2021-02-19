@@ -139,7 +139,7 @@ public class ApplicationConfig {
         }
     }
 
-    @ConditionalOnClass(PermissionChecker.class)
+    @ConditionalOnClass(name = {"com.dnastack.auth.PermissionChecker", "com.dnastack.auth.model.IssuerInfo"})
     @ConditionalOnExpression("'${app.auth.authorization-type}' == 'bearer' && '${app.auth.access-evaluator}' == 'wallet'")
     @Configuration
     protected static class WalletJwtSecurityConfig extends WebSecurityConfigurerAdapter {

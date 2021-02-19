@@ -25,7 +25,6 @@ public class AccessEvaluator {
     @Autowired(required = false)
     private AccessEvaluatorMethod accessEvaluatorMethod;
 
-
     /**
      * Usage of this method:
      * @PreAuthorize("@accessEvaluator.canAccessResource('/api/endpoint', 'app:feature:read', 'openid')")
@@ -48,7 +47,7 @@ public class AccessEvaluator {
         public abstract boolean checkAccessResource(String requiredResource, Set<String> requiredActions, Set<String> requiredScopes);
     }
 
-    @ConditionalOnClass(PermissionChecker.class)
+    @ConditionalOnClass(name = "com.dnastack.auth.PermissionChecker")
     private static class WalletAccessEvaluatorMethod extends AccessEvaluatorMethod {
         private final String appUrl;
         private final PermissionChecker permissionChecker;
@@ -86,7 +85,7 @@ public class AccessEvaluator {
     }
 
     @Bean
-    @ConditionalOnClass(PermissionChecker.class)
+    @ConditionalOnClass(name = "com.dnastack.auth.PermissionChecker")
     @ConditionalOnExpression("'${app.auth.access-evaluator}' == 'wallet'")
     public AccessEvaluatorMethod walletAccessEvaluatorMethod(PermissionChecker permissionChecker) {
         return new WalletAccessEvaluatorMethod(appUrl, permissionChecker);
