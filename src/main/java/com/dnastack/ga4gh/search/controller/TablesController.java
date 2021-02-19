@@ -46,6 +46,7 @@ public class TablesController {
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
     }
 
+    // This endpoint is in addition to GET /tables to allow random-access to pages in the GET /tables result
     @PreAuthorize("hasAuthority('SCOPE_search:info')")
     @RequestMapping(value = "/tables/catalog/{catalogName}", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTablesByCatalog(@PathVariable("catalogName") String catalogName,

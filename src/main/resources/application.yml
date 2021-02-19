@@ -77,6 +77,8 @@ app:
   auth:
     authorization-type: bearer
     access-evaluator: scope
+    global-method-security:
+      enabled: true
 
     token-issuers:
       - issuer-uri: http://localhost:8081
@@ -97,6 +99,8 @@ app:
   auth:
     authorization-type: bearer
     access-evaluator: wallet
+    global-method-security:
+      enabled: true
 
     token-issuers:
       - issuer-uri: http://localhost:8081
@@ -126,6 +130,8 @@ management:
 app:
   auth:
     authorization-type: none
+    global-method-security:
+      enabled: false
 ---
 
 spring:
@@ -134,3 +140,5 @@ spring:
 app:
   auth:
     authorization-type: basic
+    global-method-security:
+      enabled: false
