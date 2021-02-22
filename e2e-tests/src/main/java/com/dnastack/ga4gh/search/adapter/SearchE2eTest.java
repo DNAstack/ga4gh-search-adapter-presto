@@ -693,11 +693,10 @@ public class SearchE2eTest extends BaseE2eTest {
     }
 
     @Test
-    public void getTables_should_require_readDataModel_or_readData_scope() throws Exception {
+    public void getTables_should_require_searchInfo_scope() throws Exception {
         assumeThat(walletClientId, notNullValue());
         assumeThat(walletClientSecret, notNullValue());
 
-        //@formatter:off
         givenAuthenticatedRequest("junk_scope")
             .when()
             .get("/tables")
@@ -705,23 +704,44 @@ public class SearchE2eTest extends BaseE2eTest {
             .log().ifValidationFails()
             .statusCode(403)
             .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
-        //@formatter:on
     }
 
     @Test
-    public void getTableData_should_require_readData_scope() throws Exception {
+    public void getTableData_should_require_searchData_scope() throws Exception {
         assumeThat(walletClientId, notNullValue());
         assumeThat(walletClientSecret, notNullValue());
 
-        //@formatter:off
-        givenAuthenticatedRequest("read:data_model") // but not read:data
+        givenAuthenticatedRequest("junk_scope")
             .when()
             .get("/table/{tableName}/data", prestoPaginationTestTable)
             .then()
             .log().ifValidationFails()
             .statusCode(403)
             .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
-        //@formatter:on
+    }
+
+    @Test
+    public void searchQuery_should_require_searchDataAndSearchQuery_scopes() throws Exception {
+        assumeThat(walletClientId, notNullValue());
+        assumeThat(walletClientSecret, notNullValue());
+
+        SearchRequest testSearchRequest = new SearchRequest("SELECT * FROM E2ETEST LIMIT 10");
+        givenAuthenticatedRequest("search:data") // but not search:query
+                .when()
+                .body(testSearchRequest)
+                .post("/search")
+                .then()
+                .log().ifValidationFails()
+                .statusCode(403)
+                .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
+        givenAuthenticatedRequest("search:query") // but not search:data
+                .when()
+                .body(testSearchRequest)
+                .post("/search")
+                .then()
+                .log().ifValidationFails()
+                .statusCode(403)
+                .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
     }
 
     static void runBasicAssertionOnTableErrorList(List<TableError> errors) {
