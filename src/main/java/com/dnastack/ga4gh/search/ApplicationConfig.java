@@ -48,27 +48,31 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class ApplicationConfig {
 
-    @Value("${presto.datasource.url}")
-    private String prestoDatasourceUrl;
+    private final String prestoDatasourceUrl;
 
-    @Value("${presto.hidden-catalogs}")
     @Getter
-    private Set<String> hiddenCatalogs;
+    private final Set<String> hiddenCatalogs;
 
     /**
      * Other settings
      */
-    @Value("${cors.urls}")
-    private String corsUrls;
-
+    private final String corsUrls;
     private final Monitor monitor;
-
     private final Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter;
 
     @Autowired
-    public ApplicationConfig(Monitor monitor, Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter) {
+    public ApplicationConfig(
+            Monitor monitor,
+            Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter,
+            @Value("${cors.urls}") String corsUrls,
+            @Value("${presto.hidden-catalogs}") Set<String> hiddenCatalogs,
+            @Value("${presto.datasource.url}") String prestoDatasourceUrl
+    ) {
         this.monitor = monitor;
         this.jwtScopesConverter = jwtScopesConverter;
+        this.corsUrls = corsUrls;
+        this.hiddenCatalogs = hiddenCatalogs;
+        this.prestoDatasourceUrl = prestoDatasourceUrl;
     }
 
     @Bean
