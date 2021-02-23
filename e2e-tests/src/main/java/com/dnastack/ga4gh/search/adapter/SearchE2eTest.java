@@ -735,14 +735,17 @@ public class SearchE2eTest extends BaseE2eTest {
         SearchRequest testSearchRequest = new SearchRequest("SELECT * FROM E2ETEST LIMIT 10");
         givenAuthenticatedRequest("search:data") // but not search:query
                 .when()
+                .contentType(ContentType.JSON)
                 .body(testSearchRequest)
                 .post("/search")
                 .then()
                 .log().ifValidationFails()
                 .statusCode(403)
                 .header("WWW-Authenticate", containsString("error=\"insufficient_scope\""));
+
         givenAuthenticatedRequest("search:query") // but not search:data
                 .when()
+                .contentType(ContentType.JSON)
                 .body(testSearchRequest)
                 .post("/search")
                 .then()
