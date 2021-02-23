@@ -141,6 +141,9 @@ public class SearchE2eTest extends BaseE2eTest {
     private static String walletClientSecret;
     private static String searchAdapterAudience;
 
+    private static boolean globalMethodSecurityEnabled;
+    private static boolean scopeCheckingEnabled;
+
 
     /**
      * Lazily initialized if Google credentials are needed by the test.
@@ -172,6 +175,10 @@ public class SearchE2eTest extends BaseE2eTest {
         prestoTestPass = optionalEnv("E2E_PRESTO_PASSWORD", null);
         prestoAudience = optionalEnv("E2E_PRESTO_AUDIENCE", null);
         prestoScopes = optionalEnv("E2E_PRESTO_SCOPES", "full_access");
+
+        globalMethodSecurityEnabled = Boolean.parseBoolean(optionalEnv("E2E_GLOBAL_METHOD_SECURITY_ENABLED", "false"));
+        scopeCheckingEnabled = Boolean.parseBoolean(optionalEnv("E2E_SCOPE_CHECKING_ENABLED", "false"));
+
         log.info("Setting up test tables");
         setupTestTables();
         log.info("Done setting up test tables");
@@ -694,8 +701,11 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTables_should_require_searchInfo_scope() throws Exception {
-        assumeThat(walletClientId, notNullValue());
-        assumeThat(walletClientSecret, notNullValue());
+        assumeThat(globalMethodSecurityEnabled, is(true));
+        assumeThat(scopeCheckingEnabled, is(true));
+
+        assertThat(walletClientId, notNullValue());
+        assertThat(walletClientSecret, notNullValue());
 
         givenAuthenticatedRequest("junk_scope")
             .when()
@@ -708,8 +718,11 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void getTableData_should_require_searchData_scope() throws Exception {
-        assumeThat(walletClientId, notNullValue());
-        assumeThat(walletClientSecret, notNullValue());
+        assumeThat(globalMethodSecurityEnabled, is(true));
+        assumeThat(scopeCheckingEnabled, is(true));
+
+        assertThat(walletClientId, notNullValue());
+        assertThat(walletClientSecret, notNullValue());
 
         givenAuthenticatedRequest("junk_scope")
             .when()
@@ -722,8 +735,11 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @Test
     public void searchQuery_should_require_searchDataAndSearchQuery_scopes() throws Exception {
-        assumeThat(walletClientId, notNullValue());
-        assumeThat(walletClientSecret, notNullValue());
+        assumeThat(globalMethodSecurityEnabled, is(true));
+        assumeThat(scopeCheckingEnabled, is(true));
+
+        assertThat(walletClientId, notNullValue());
+        assertThat(walletClientSecret, notNullValue());
 
         SearchRequest testSearchRequest = new SearchRequest("SELECT * FROM E2ETEST LIMIT 10");
         givenAuthenticatedRequest("search:data") // but not search:query
