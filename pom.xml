@@ -53,6 +53,7 @@
     <version.bouncy.castle>1.64</version.bouncy.castle>
     <feign.version>10.2.0</feign.version>
     <feign-form.version>3.8.0</feign-form.version>
+    <wallet-token-validator.version>1.0-37-gaac7e3b</wallet-token-validator.version>
   </properties>
 
   <dependencies>
@@ -177,6 +178,14 @@
       <artifactId>feign-jackson</artifactId>
       <version>${feign.version}</version>
     </dependency>
+
+    <!--Supporting-->
+    <dependency>
+      <groupId>com.dnastack</groupId>
+      <artifactId>java-wallet-token-validator</artifactId>
+      <version>${wallet-token-validator.version}</version>
+    </dependency>
+
   </dependencies>
 
   <build>

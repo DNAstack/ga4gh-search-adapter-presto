@@ -29,7 +29,7 @@ public class TablesController {
     @Autowired
     private PrestoSearchAdapter prestoSearchAdapter;
 
-    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
+    @PreAuthorize("hasAuthority('SCOPE_search:info')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTables(HttpServletRequest request,
                                                 @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
@@ -46,7 +46,8 @@ public class TablesController {
         return ResponseEntity.ok().headers(getExtraAuthHeaders(tablesList)).body(tablesList);
     }
 
-    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
+    // This endpoint is in addition to GET /tables to allow random-access to pages in the GET /tables result
+    @PreAuthorize("hasAuthority('SCOPE_search:info')")
     @RequestMapping(value = "/tables/catalog/{catalogName}", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTablesByCatalog(@PathVariable("catalogName") String catalogName,
                                                          HttpServletRequest request,
@@ -65,7 +66,7 @@ public class TablesController {
 
     }
 
-    @PreAuthorize("hasAnyAuthority('SCOPE_read:data', 'SCOPE_read:data_model')")
+    @PreAuthorize("hasAuthority('SCOPE_search:info')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public TableInfo getTableInfo(@PathVariable("table_name") String tableName,
                                   HttpServletRequest request,
@@ -83,7 +84,7 @@ public class TablesController {
         return tableInfo;
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_read:data')")
+    @PreAuthorize("hasAuthority('SCOPE_search:data')")
     @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
     public TableData getTableData(@PathVariable("table_name") String tableName,
                                   HttpServletRequest request,
