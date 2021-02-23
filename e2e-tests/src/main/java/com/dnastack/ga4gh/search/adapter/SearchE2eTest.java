@@ -704,9 +704,6 @@ public class SearchE2eTest extends BaseE2eTest {
         assumeThat(globalMethodSecurityEnabled, is(true));
         assumeThat(scopeCheckingEnabled, is(true));
 
-        assertThat(walletClientId, notNullValue());
-        assertThat(walletClientSecret, notNullValue());
-
         givenAuthenticatedRequest("junk_scope")
             .when()
             .get("/tables")
@@ -721,9 +718,6 @@ public class SearchE2eTest extends BaseE2eTest {
         assumeThat(globalMethodSecurityEnabled, is(true));
         assumeThat(scopeCheckingEnabled, is(true));
 
-        assertThat(walletClientId, notNullValue());
-        assertThat(walletClientSecret, notNullValue());
-
         givenAuthenticatedRequest("junk_scope")
             .when()
             .get("/table/{tableName}/data", prestoPaginationTestTable)
@@ -737,9 +731,6 @@ public class SearchE2eTest extends BaseE2eTest {
     public void searchQuery_should_require_searchDataAndSearchQuery_scopes() throws Exception {
         assumeThat(globalMethodSecurityEnabled, is(true));
         assumeThat(scopeCheckingEnabled, is(true));
-
-        assertThat(walletClientId, notNullValue());
-        assertThat(walletClientSecret, notNullValue());
 
         SearchRequest testSearchRequest = new SearchRequest("SELECT * FROM E2ETEST LIMIT 10");
         givenAuthenticatedRequest("search:data") // but not search:query
