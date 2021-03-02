@@ -1001,7 +1001,7 @@ public class SearchE2eTest extends BaseE2eTest {
             .formParam("grant_type", "client_credentials")
             .formParam("client_id", walletClientId)
             .formParam("client_secret", walletClientSecret)
-            .formParam("audience", audience);
+            .formParam("resource", audience + "/");
         if (scopes.length > 0) {
             requestSpecification.formParam("scope", String.join(" ", scopes));
         }
