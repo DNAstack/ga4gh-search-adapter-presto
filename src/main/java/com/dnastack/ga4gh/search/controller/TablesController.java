@@ -29,7 +29,7 @@ public class TablesController {
     @Autowired
     private PrestoSearchAdapter prestoSearchAdapter;
 
-    @PreAuthorize("hasAuthority('SCOPE_search:info')")
+    @PreAuthorize("hasAuthority('SCOPE_search:info') && @accessEvaluator.canAccessResource('/tables', 'search:info', 'search:info')")
     @RequestMapping(value = "/tables", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTables(HttpServletRequest request,
                                                 @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
@@ -47,7 +47,7 @@ public class TablesController {
     }
 
     // This endpoint is in addition to GET /tables to allow random-access to pages in the GET /tables result
-    @PreAuthorize("hasAuthority('SCOPE_search:info')")
+    @PreAuthorize("hasAuthority('SCOPE_search:info') && @accessEvaluator.canAccessResource('/tables/catalog/' + #catalogName, 'search:info', 'search:info')")
     @RequestMapping(value = "/tables/catalog/{catalogName}", method = RequestMethod.GET)
     public ResponseEntity<TablesList> getTablesByCatalog(@PathVariable("catalogName") String catalogName,
                                                          HttpServletRequest request,
@@ -66,7 +66,7 @@ public class TablesController {
 
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_search:info')")
+    @PreAuthorize("hasAuthority('SCOPE_search:info') && @accessEvaluator.canAccessResource('/table/' + #table_name + '/info', 'search:info', 'search:info')")
     @RequestMapping(value = "/table/{table_name}/info", method = RequestMethod.GET)
     public TableInfo getTableInfo(@PathVariable("table_name") String tableName,
                                   HttpServletRequest request,
@@ -84,7 +84,7 @@ public class TablesController {
         return tableInfo;
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_search:data')")
+    @PreAuthorize("hasAuthority('SCOPE_search:data') && @accessEvaluator.canAccessResource('/table/' + #table_name + '/data', 'search:data', 'search:data')")
     @RequestMapping(value = "/table/{table_name}/data", method = RequestMethod.GET)
     public TableData getTableData(@PathVariable("table_name") String tableName,
                                   HttpServletRequest request,

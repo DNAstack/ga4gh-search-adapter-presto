@@ -83,7 +83,7 @@ app:
     token-issuers:
       - issuer-uri: http://localhost:8081
         jwk-set-uri: http://localhost:8081/oauth/jwks
-        audiences: http://search-presto.local
+        audiences: ["http://localhost:${server.port}", "http://search-presto.local"]
 
     presto-oauth-client:
       token-uri: http://localhost:8081/oauth/token
