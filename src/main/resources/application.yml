@@ -67,6 +67,12 @@ spring:
     password: ga4ghsearchadapterpresto
     driver-class-name: org.postgresql.Driver
 
+management:
+  metrics:
+    export:
+      logging-monitor:
+        enabled: true
+      environment: local
 ---
 
 spring:
