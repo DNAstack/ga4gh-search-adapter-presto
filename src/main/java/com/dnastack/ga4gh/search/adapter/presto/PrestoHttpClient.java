@@ -1,5 +1,7 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import brave.Span;
+import brave.Tracer;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoIOException;
 import com.dnastack.ga4gh.search.adapter.presto.exception.PrestoUnexpectedHttpResponseException;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
@@ -16,6 +18,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.springframework.cloud.sleuth.annotation.NewSpan;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -38,26 +41,35 @@ public class PrestoHttpClient implements PrestoClient {
     private final String prestoServer;
     private final String prestoSearchEndpoint;
     private final ServiceAccountAuthenticator authenticator;
+    private final OkHttpClient httpClient;
+    private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public PrestoHttpClient(String prestoServerUrl, ServiceAccountAuthenticator accountAuthenticator) {
+    public PrestoHttpClient(Tracer tracer,OkHttpClient httpClient,String prestoServerUrl, ServiceAccountAuthenticator accountAuthenticator) {
         this.prestoServer = prestoServerUrl;
         this.prestoSearchEndpoint = prestoServerUrl + "/v1/statement";
         this.authenticator = accountAuthenticator;
+        this.tracer = tracer;
+        this.httpClient = httpClient;
     }
 
     public JsonNode query(String statement, Map<String, String> extraCredentials) {
-        log.debug("Posting to "+prestoSearchEndpoint);
-        try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
-            log.debug("Got response, now polling for query results");
-            JsonNode jn = getQueryResults(response);
-            return jn;
-        } catch (final AuthRequiredException e) {
-            log.debug("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
-            throw e;
-        } catch (final IOException e) {
-            throw new PrestoIOException("Unable to initiate search (I/O error).", e);
+        Span span = tracer.nextSpan().name("prestoQuery");
+        try (Tracer.SpanInScope ws = tracer.withSpanInScope(span.start())) {
+                log.debug("Posting to " + prestoSearchEndpoint);
+            try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
+                log.debug("Got response, now polling for query results");
+                JsonNode jn = getQueryResults(response);
+                return jn;
+            } catch (final AuthRequiredException e) {
+                log.debug("Passing back auth challenge from backend: " + e.getAuthorizationRequest());
+                throw e;
+            } catch (final IOException e) {
+                throw new PrestoIOException("Unable to initiate search (I/O error).", e);
+            }
+        } finally {
+            span.finish();
         }
 
     }
@@ -74,13 +86,18 @@ public class PrestoHttpClient implements PrestoClient {
 //    }
 
     public JsonNode next(String page, Map<String, String> extraCredentials) {
-        //TODO: better url construction
-        String url = page.startsWith("/") ? this.prestoServer + page : this.prestoServer + "/" + page;
+        Span span = tracer.nextSpan().name("prestoNext");
+        try (Tracer.SpanInScope ws = tracer.withSpanInScope(span.start())) {
+            //TODO: better url construction
+            String url = page.startsWith("/") ? this.prestoServer + page : this.prestoServer + "/" + page;
 
-        try (Response response = get(url, extraCredentials)) {
-            return getQueryResults(response);
-        } catch (IOException ie) {
-            throw new PrestoIOException("Unable to fetch more search or listing results (I/O error).", ie);
+            try (Response response = get(url, extraCredentials)) {
+                return getQueryResults(response);
+            } catch (IOException ie) {
+                throw new PrestoIOException("Unable to fetch more search or listing results (I/O error).", ie);
+            }
+        } finally {
+            span.finish();
         }
     }
 
@@ -208,6 +225,8 @@ public class PrestoHttpClient implements PrestoClient {
         } catch (IOException iex) {
             // should never happen: no I/O is performed by objectMapper.readTree
             throw new AssertionError("IOException when parsing http body string response.");
+        } finally {
+            httpResponse.close();
         }
 
     }
@@ -226,11 +245,12 @@ public class PrestoHttpClient implements PrestoClient {
     private Response execute(final Request.Builder request, Map<String, String> extraCredentials) throws IOException {
         request.header("X-Presto-User", getUserNameForRequest());
         extraCredentials.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
+
         if (!authenticator.requiresAuthentication()) {
             Request r = request.build();
             log.info(">>> {} {} (No Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials
                 .size());
-            Response response = new OkHttpClient().newCall(r).execute();
+            Response response = httpClient.newCall(r).execute();
             log.info("GET "+r.url()+" returned "+response.code());
             if(response !=null && !response.isSuccessful()){
                 log.debug("GET "+r.url()+" gave unsuccessful response "+response.code()+": "+
@@ -243,19 +263,20 @@ public class PrestoHttpClient implements PrestoClient {
         Request r = request.build();
         log.debug(">>> {} {} (With Authorization header, {} extra credentials)", r.method(), r.url(), extraCredentials
             .size());
-        Response firstTry = new OkHttpClient().newCall(r).execute();
+
+        Response firstTry = httpClient.newCall(r).execute();
         if (firstTry.code() != 401 && firstTry.code() != 403) {
             return firstTry;
         }
+
         log.debug("Got {}. Will refresh access token and retry.", firstTry.code());
         firstTry.close();
-
         authenticator.refreshAccessToken();
         request.header("Authorization", "Bearer " + authenticator.getAccessToken());
         r = request.build();
         log.debug(">>> {} {} (With refreshed Authorization header, {} extra credentials)", r.method(), r
             .url(), extraCredentials.size());
-        return new OkHttpClient().newCall(r).execute();
+        return httpClient.newCall(r).execute();
     }
 
     /**

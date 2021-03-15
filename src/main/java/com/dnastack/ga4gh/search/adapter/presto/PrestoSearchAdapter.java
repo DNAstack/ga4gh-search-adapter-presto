@@ -217,6 +217,7 @@ public class PrestoSearchAdapter {
                             Map<String, String> extraCredentials,
                             DataModel dataModel) {
 
+        log.info("Received query: " + query + ".");
         String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
         JsonNode response = client.query(rewrittenQuery, extraCredentials);
         QueryJob queryJob = createQueryJob(query, dataModel);

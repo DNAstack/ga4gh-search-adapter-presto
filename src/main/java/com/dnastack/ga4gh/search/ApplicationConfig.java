@@ -1,5 +1,6 @@
 package com.dnastack.ga4gh.search;
 
+import brave.Tracer;
 import com.dnastack.auth.JwtTokenParser;
 import com.dnastack.auth.JwtTokenParserFactory;
 import com.dnastack.auth.PermissionChecker;
@@ -26,6 +27,7 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwsHeader;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -52,6 +54,7 @@ public class ApplicationConfig {
 
     @Getter
     private final Set<String> hiddenCatalogs;
+
 
     /**
      * Other settings
@@ -86,8 +89,13 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public PrestoClient getPrestoClient(ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoTelemetryClient(new PrestoHttpClient(prestoDatasourceUrl, accountAuthenticator));
+    public OkHttpClient httpClient(){
+        return new OkHttpClient();
+    }
+
+    @Bean
+    public PrestoClient getPrestoClient(OkHttpClient httpClient,Tracer tracer, ServiceAccountAuthenticator accountAuthenticator) {
+        return new PrestoTelemetryClient(new PrestoHttpClient(tracer,httpClient,prestoDatasourceUrl, accountAuthenticator));
     }
 
     @Bean
