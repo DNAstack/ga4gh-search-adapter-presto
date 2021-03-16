@@ -52,6 +52,25 @@ logging:
     # Reduced the log messages produced by p6spy by default.
     p6spy: WARN
 
+auditing:
+  enabled: false
+  access-log-enabled: true
+  service-client-id: ga4gh-search-adapter-presto
+  publisher:
+    events-uri: ${auditing.oauth-client.audience}/events
+    retry-after: 5
+    give-up-after: 5
+  oauth-client:
+    client-id: ga4gh-search-adapter-presto
+    client-secret: dev-secret-never-use-in-prod
+    scopes: audit:create
+    audience: http://localhost:8888
+    resource: ${auditing.publisher.events-uri}
+    actions: ["audit:create"]
+    token-uri: http://localhost:8081/oauth/token
+    token-issuers-uris: ["http://localhost:8081"]
+  json-printer-style: dense_print
+
 spring:
   application:
     name: search-adapter
@@ -158,3 +177,10 @@ app:
     authorization-type: basic
     global-method-security:
       enabled: false
+---
+
+spring:
+  profiles: audit
+
+auditing:
+  enabled: true
