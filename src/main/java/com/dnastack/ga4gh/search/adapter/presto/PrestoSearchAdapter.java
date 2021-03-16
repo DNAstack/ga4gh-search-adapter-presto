@@ -1,5 +1,10 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import com.dnastack.audit.logger.AuditEventLogger;
+import com.dnastack.audit.model.AuditEventBody;
+import com.dnastack.audit.model.AuditedAction;
+import com.dnastack.audit.model.AuditedOutcome;
+import com.dnastack.audit.model.AuditedResource;
 import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
@@ -80,6 +85,9 @@ public class PrestoSearchAdapter {
 
     @Autowired
     private OAuthClientConfig oAuthClientConfig;
+
+    @Autowired
+    private AuditEventLogger auditEventLogger;
 
     private boolean hasMore(TableData tableData) {
         if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
@@ -218,6 +226,9 @@ public class PrestoSearchAdapter {
                             DataModel dataModel) {
 
         String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
+        logAuditEvent("search", "query", Map.of(
+            "query", rewrittenQuery
+        ));
         JsonNode response = client.query(rewrittenQuery, extraCredentials);
         QueryJob queryJob = createQueryJob(query, dataModel);
         TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJob.getId(), request);
@@ -225,6 +236,9 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
+        logAuditEvent("search", "next-page", Map.of(
+            "page", page
+        ));
         JsonNode response = client.next(page, extraCredentials);
         TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId, request);
         populateTableSchemaIfAvailable(queryJobId, tableData);
@@ -287,6 +301,7 @@ public class PrestoSearchAdapter {
     }
 
     public TablesList getTables(HttpServletRequest request, Map<String, String> extraCredentials) {
+        logAuditEvent("table", "read", null);
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
         if (catalogs == null || catalogs.isEmpty()) {
             return new TablesList(List.of(), null, null);
@@ -299,6 +314,9 @@ public class PrestoSearchAdapter {
     }
 
     public TablesList getTablesInCatalog(String catalog, HttpServletRequest request, Map<String, String> extraCredentials) {
+        logAuditEvent("table", "in-catalog", Map.of(
+            "catalog", catalog
+        ));
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
         if (catalogs != null) {
             Iterator<String> catalogIt = catalogs.iterator();
@@ -316,7 +334,9 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-
+        logAuditEvent("table", "data", Map.of(
+            "table", tableName
+        ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromTablesRegistry(tableName);
         TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
@@ -340,6 +360,9 @@ public class PrestoSearchAdapter {
     public TableInfo getTableInfo(String tableName,
                                   HttpServletRequest request,
                                   Map<String, String> extraCredentials) {
+        logAuditEvent("table", "info", Map.of(
+            "table", tableName
+        ));
         if (!isValidPrestoName(tableName)) {
             //triggers a 404.
             throw new PrestoBadlyQualifiedNameException("Invalid tablename "+tableName+" -- expected name in format <catalog>.<schema>.<tableName>");
@@ -701,5 +724,14 @@ public class PrestoSearchAdapter {
         else {
             tableData.setDataModel(null);
         }
+    }
+
+    private void logAuditEvent(String action, String outcome, Map<String, Object> extraArguments) {
+        auditEventLogger.log(
+            AuditEventBody.AuditEventBodyBuilder.builder()
+                .action(new AuditedAction(action))
+                .outcome(new AuditedOutcome(outcome))
+                .resource(new AuditedResource(ServletUriComponentsBuilder.fromCurrentRequest().toUriString()))
+                .extraArguments(extraArguments));
     }
 }
