@@ -54,6 +54,7 @@
     <feign.version>10.2.0</feign.version>
     <feign-form.version>3.8.0</feign-form.version>
     <wallet-token-validator.version>1.0-37-gaac7e3b</wallet-token-validator.version>
+    <audit-event-logger.version>1.0-27-g3e5b109</audit-event-logger.version>
   </properties>
 
   <dependencies>
@@ -194,6 +195,13 @@
       <groupId>com.dnastack</groupId>
       <artifactId>java-wallet-token-validator</artifactId>
       <version>${wallet-token-validator.version}</version>
+    </dependency>
+
+    <!-- Audit Event Logger -->
+    <dependency>
+      <groupId>com.dnastack</groupId>
+      <artifactId>spring-boot-audit-event-logger</artifactId>
+      <version>${audit-event-logger.version}</version>
     </dependency>
 
   </dependencies>
