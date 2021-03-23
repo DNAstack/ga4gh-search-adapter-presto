@@ -20,6 +20,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Optional;
+
 @Slf4j
 @Getter
 @Setter
@@ -50,18 +52,27 @@ public class OAuthClientConfig {
     Encoder encoder;
 
     private ObjectMapper mapper = new ObjectMapper()
-            .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Bean
     @ConditionalOnProperty(name = "app.tables-registry.auth.authentication-uri")
     public OAuthClient oAuthClient() {
-        return Feign.builder()
-                .client(new OkHttpClient())
-                .encoder(new FormEncoder(new JacksonEncoder(mapper)))
-                .decoder(new JacksonDecoder(mapper))
-                .logger(simpleLogger)
-                .logLevel(Logger.Level.BASIC)
-                .target(OAuthClient.class, getAuthenticationUri());
+        return Optional
+            .ofNullable(authenticationUri)
+            .flatMap(authenticationUri -> Optional.of(
+                Feign.builder()
+                    .client(new OkHttpClient())
+                    .encoder(new FormEncoder(new JacksonEncoder(mapper)))
+                    .decoder(new JacksonDecoder(mapper))
+                    .logger(simpleLogger)
+                    .logLevel(Logger.Level.BASIC)
+                    .target(OAuthClient.class, authenticationUri)
+                )
+            )
+            .orElse(client -> {
+                log.warn("The client for token exchange is not defined.");
+                return null;
+            });
     }
 }

@@ -316,7 +316,7 @@ public class SearchE2eTest extends BaseE2eTest {
                 log.info("Successfully removed json test table " + prestoJsonTestTable);
                 prestoJsonTestTable = null;
             } catch (SQLException se) {
-                log.error("Error setting up test tables.  SQL State: %s\n%s", se.getSQLState(), se.getMessage());
+                log.error("Error setting up test tables.  SQL State: {}\n{}", se.getSQLState(), se.getMessage());
                 throw new RuntimeException("Unable to setup test tables: ", se);
             }
         }

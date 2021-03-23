@@ -63,6 +63,11 @@ public class TablesRegistryClientConfig {
     @Bean
     @ConditionalOnProperty(name = "app.tables-registry.url")
     public TablesRegistryClient tablesRegistryClient() {
+        // TODO Refactor with OAuthClientFactory
+        if (url == null) {
+            log.warn("The client for Table Registry is not defined.");
+            return null;
+        }
         return Feign.builder()
                     .client(new OkHttpClient())
                     .encoder(new JacksonEncoder(mapper))
@@ -70,7 +75,7 @@ public class TablesRegistryClientConfig {
                     .logger(simpleLogger)
                     .logLevel(Logger.Level.BASIC)
                     .requestInterceptor(getRequestInterceptor())
-                    .target(TablesRegistryClient.class, getUrl());
+                    .target(TablesRegistryClient.class, url);
 
     }
 }

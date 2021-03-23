@@ -236,6 +236,12 @@
     </repository>
 
     <repository>
+      <id>github</id>
+      <name>GitHub OWNER Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/DNAstack/dnastack-packages</url>
+    </repository>
+
+    <repository>
       <id>dnastack-releases</id>
       <layout>default</layout>
       <url>https://nexus.dnastack.com/content/repositories/releases</url>

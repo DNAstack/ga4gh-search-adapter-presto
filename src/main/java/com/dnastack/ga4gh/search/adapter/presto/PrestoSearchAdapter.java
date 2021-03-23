@@ -32,16 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -441,12 +432,26 @@ public class PrestoSearchAdapter {
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
-            prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(prestoResponse.get("nextUri").asText()).build().toUri();
+            final var rawPrestoResponseUri = prestoResponse.get("nextUri").asText();
+            final var localForwardedPath = String.format(template, URI.create(rawPrestoResponseUri).getPath());
+
+            final var forwardedPath = Optional.ofNullable(request.getHeader("X-Forwarded-Prefix"))
+                .flatMap(prefix -> {
+                    if (prefix.endsWith("/")) {
+                        prefix = prefix.substring(0, prefix.length() - 1);
+                    }
+
+                    return Optional.of(prefix + localForwardedPath);
+                })
+                .orElse(localForwardedPath);
+
+            prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(rawPrestoResponseUri).build().toUri();
             nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
-                .path(String
-                    .format(template, URI.create(prestoResponse.get("nextUri").asText()).getPath()))
-                .build().toUri();
-            log.debug("Generating pagination as "+nextPageUri);
+                .build()
+                .toUri()
+                .resolve(forwardedPath)
+            ;
+            log.debug("Generating pagination as " + nextPageUri);
         }
 
         return new Pagination(queryJobId, nextPageUri, prestoNextPageUri);
