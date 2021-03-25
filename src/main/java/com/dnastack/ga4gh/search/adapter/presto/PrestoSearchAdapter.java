@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.google.common.collect.Streams;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -428,6 +429,7 @@ public class PrestoSearchAdapter {
                 .forEach(sqlFunction-> applyGa4ghTypeSqlFunction(sqlFunction, tableData));
     }
 
+    @SneakyThrows
     private Pagination generatePagination(String template, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
         // This is temporary to debug the x-forwarded headers issue.
         // FIXME Remove this after the investigation.
@@ -457,16 +459,25 @@ public class PrestoSearchAdapter {
                 .orElse(localForwardedPath);
 
             prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(rawPrestoResponseUri).build().toUri();
-            nextPageUri = ServletUriComponentsBuilder.fromRequest(request)
+            nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
+                .path(forwardedPath)
                 .build()
                 .toUri()
-                .resolve(forwardedPath)
             ;
             log.debug("Generating pagination as " + nextPageUri);
 
+            // For some reason, ServletUriComponentsBuilder does not
+            final var forwardedProtocol = request.getHeader("X-Forwarded-Proto");
             final var forwardedHost = request.getHeader("X-Forwarded-Host");
-            if (!nextPageUri.toString().contains(forwardedHost)) {
-                log.warn("The forwarded host, {}, is not used to create the next page URI, {}.", forwardedHost, nextPageUri);
+            final var forwardedPort = request.getHeader("X-Forwarded-Port");
+            if (forwardedHost != null && forwardedPort != null && forwardedProtocol != null) {
+                final URI forwardedUri = ServletUriComponentsBuilder.fromUri(new URI(forwardedProtocol, null, forwardedHost, Integer.parseInt(forwardedPort), forwardedPath, null, null))
+                    .build()
+                    .toUri();
+                if (!nextPageUri.toString().equals(forwardedUri.toString())) {
+                    log.warn("As the expected forwarded URI, {}, is different from the generated next page URI, {}, the next page URL is referred to the expected one.", forwardedUri, nextPageUri);
+                    nextPageUri = forwardedUri;
+                }
             }
         }
 
