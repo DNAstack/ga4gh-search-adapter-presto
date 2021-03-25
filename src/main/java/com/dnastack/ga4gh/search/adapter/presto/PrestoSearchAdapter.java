@@ -429,6 +429,15 @@ public class PrestoSearchAdapter {
     }
 
     private Pagination generatePagination(String template, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
+        // This is temporary to debug the x-forwarded headers issue.
+        // FIXME Remove this after the investigation.
+        request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
+            if (headerName.startsWith("X-Forwarded-")) {
+                log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
+            }
+        });
+
+
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
