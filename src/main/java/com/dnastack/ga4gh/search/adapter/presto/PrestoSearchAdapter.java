@@ -432,7 +432,9 @@ public class PrestoSearchAdapter {
         // This is temporary to debug the x-forwarded headers issue.
         // FIXME Remove this after the investigation.
         request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
-            if (headerName.startsWith("X-Forwarded-")) {
+            if (!List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
+                log.info("generatePagination: Request Header: {} => [obscured]", headerName);
+            } else {
                 log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
             }
         });
