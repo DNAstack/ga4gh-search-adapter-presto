@@ -466,12 +466,17 @@ public class PrestoSearchAdapter {
             ;
             log.debug("Generating pagination as " + nextPageUri);
 
-            // For some reason, ServletUriComponentsBuilder does not
+            // In case that, for some reason, ServletUriComponentsBuilder does not use the X-Forwarded headers, this
+            // blocks will reconstruct the URL until we can figure out what happens.
             final var forwardedProtocol = request.getHeader("X-Forwarded-Proto");
             final var forwardedHost = request.getHeader("X-Forwarded-Host");
             final var forwardedPort = request.getHeader("X-Forwarded-Port");
             if (forwardedHost != null && forwardedPort != null && forwardedProtocol != null) {
-                final URI forwardedUri = ServletUriComponentsBuilder.fromUri(new URI(forwardedProtocol, null, forwardedHost, Integer.parseInt(forwardedPort), forwardedPath, null, null))
+                final URI forwardedUri = ServletUriComponentsBuilder.fromContextPath(request)
+                    .host(forwardedHost)
+                    .port(Integer.parseInt(forwardedPort))
+                    .scheme(forwardedProtocol)
+                    .path(forwardedPath)
                     .build()
                     .toUri();
                 if (!nextPageUri.toString().equals(forwardedUri.toString())) {
