@@ -432,7 +432,7 @@ public class PrestoSearchAdapter {
         // This is temporary to debug the x-forwarded headers issue.
         // FIXME Remove this after the investigation.
         request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
-            if (!List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
+            if (List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
                 log.info("generatePagination: Request Header: {} => [obscured]", headerName);
             } else {
                 log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
@@ -463,6 +463,11 @@ public class PrestoSearchAdapter {
                 .resolve(forwardedPath)
             ;
             log.debug("Generating pagination as " + nextPageUri);
+
+            final var forwardedHost = request.getHeader("X-Forwarded-Host");
+            if (!nextPageUri.toString().contains(forwardedHost)) {
+                log.warn("The forwarded host, {}, is not used to create the next page URI, {}.", forwardedHost, nextPageUri);
+            }
         }
 
         return new Pagination(queryJobId, nextPageUri, prestoNextPageUri);
