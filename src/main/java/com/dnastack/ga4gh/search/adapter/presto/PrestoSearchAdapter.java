@@ -472,13 +472,14 @@ public class PrestoSearchAdapter {
             final var forwardedHost = request.getHeader("X-Forwarded-Host");
             final var forwardedPort = request.getHeader("X-Forwarded-Port");
             if (forwardedHost != null && forwardedPort != null && forwardedProtocol != null) {
-                final URI forwardedUri = ServletUriComponentsBuilder.fromContextPath(request)
+                final var forwardedUriBuilder = ServletUriComponentsBuilder.fromContextPath(request)
                     .host(forwardedHost)
-                    .port(Integer.parseInt(forwardedPort))
                     .scheme(forwardedProtocol)
-                    .path(forwardedPath)
-                    .build()
-                    .toUri();
+                    .path(forwardedPath);
+                if ((forwardedProtocol.equals("https") && !forwardedPort.equals("443")) || (forwardedProtocol.equals("http") && !forwardedPort.equals("80"))) {
+                    forwardedUriBuilder.port(Integer.parseInt(forwardedPort));
+                }
+                final URI forwardedUri = forwardedUriBuilder.build().toUri();
                 if (!nextPageUri.toString().equals(forwardedUri.toString())) {
                     log.warn("As the expected forwarded URI, {}, is different from the generated next page URI, {}, the next page URL is referred to the expected one.", forwardedUri, nextPageUri);
                     nextPageUri = forwardedUri;
