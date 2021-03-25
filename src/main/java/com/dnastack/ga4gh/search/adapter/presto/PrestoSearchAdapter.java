@@ -431,17 +431,6 @@ public class PrestoSearchAdapter {
 
     @SneakyThrows
     private Pagination generatePagination(String template, JsonNode prestoResponse, String queryJobId, HttpServletRequest request) {
-        // This is temporary to debug the x-forwarded headers issue.
-        // FIXME Remove this after the investigation.
-        request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
-            if (List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
-                log.info("generatePagination: Request Header: {} => [obscured]", headerName);
-            } else {
-                log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
-            }
-        });
-
-
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
@@ -481,7 +470,17 @@ public class PrestoSearchAdapter {
                 }
                 final URI forwardedUri = forwardedUriBuilder.build().toUri();
                 if (!nextPageUri.toString().equals(forwardedUri.toString())) {
-                    log.warn("As the expected forwarded URI, {}, is different from the generated next page URI, {}, the next page URL is referred to the expected one.", forwardedUri, nextPageUri);
+                    // This is temporary to debug the x-forwarded headers issue.
+                    // FIXME Remove this after the investigation.
+                    request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
+                        if (List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
+                            log.info("generatePagination: Request Header: {} => [obscured]", headerName);
+                        } else {
+                            log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
+                        }
+                    });
+
+                    log.warn("As the expected forwarded URI, {}, is different from the generated next page URI, {}, the next page URL is now being referred to the expected one.", forwardedUri, nextPageUri);
                     nextPageUri = forwardedUri;
                 }
             }
