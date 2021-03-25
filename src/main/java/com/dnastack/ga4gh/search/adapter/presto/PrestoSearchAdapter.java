@@ -457,7 +457,7 @@ public class PrestoSearchAdapter {
                 .orElse(localForwardedPath);
 
             prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(rawPrestoResponseUri).build().toUri();
-            nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
+            nextPageUri = ServletUriComponentsBuilder.fromRequest(request)
                 .build()
                 .toUri()
                 .resolve(forwardedPath)
