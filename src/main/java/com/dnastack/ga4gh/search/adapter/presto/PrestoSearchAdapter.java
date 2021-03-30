@@ -386,7 +386,6 @@ public class PrestoSearchAdapter {
                                   HttpServletRequest request) {
         List<Map<String, Object>> data = new ArrayList<>();
         DataModel dataModel = null;
-
         if (prestoResponse.hasNonNull("columns")) {
             final JsonNode columns = prestoResponse.get("columns");
             dataModel = generateDataModel(columns);
@@ -476,13 +475,14 @@ public class PrestoSearchAdapter {
                 .build()
                 .toUri()
             ;
-            log.debug("Generating pagination as " + nextPageUri);
+            log.info("Generating pagination as " + nextPageUri);
 
             // In case that, for some reason, ServletUriComponentsBuilder does not use the X-Forwarded headers, this
             // blocks will reconstruct the URL until we can figure out what happens.
             final var forwardedProtocol = request.getHeader("X-Forwarded-Proto");
             final var forwardedHost = request.getHeader("X-Forwarded-Host");
             final var forwardedPort = request.getHeader("X-Forwarded-Port");
+            log.info("Forwarded headers: protocol={}, host={}, port={}", forwardedProtocol, forwardedHost, forwardedPort);
             if (forwardedHost != null && forwardedPort != null && forwardedProtocol != null) {
                 final var forwardedUriBuilder = ServletUriComponentsBuilder.fromContextPath(request)
                     .host(forwardedHost)
@@ -492,6 +492,7 @@ public class PrestoSearchAdapter {
                     forwardedUriBuilder.port(Integer.parseInt(forwardedPort));
                 }
                 final URI forwardedUri = forwardedUriBuilder.build().toUri();
+                log.info("Forwarded URI: {}", forwardedUri);
                 if (!nextPageUri.toString().equals(forwardedUri.toString())) {
                     // This is temporary to debug the x-forwarded headers issue.
                     // FIXME Remove this after the investigation.
