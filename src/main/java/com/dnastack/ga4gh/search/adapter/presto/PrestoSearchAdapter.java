@@ -370,7 +370,6 @@ public class PrestoSearchAdapter {
         if (dataModel == null && tableData.getDataModel() != null) {
             dataModel = tableData.getDataModel();
             dataModel.setId(getDataModelId(tableName));
-            attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
         }
 
         return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
