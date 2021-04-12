@@ -4,8 +4,10 @@ import com.dnastack.ga4gh.search.adapter.presto.PrestoSearchAdapter;
 import com.dnastack.ga4gh.search.adapter.presto.exception.TableApiErrorException;
 import com.dnastack.ga4gh.search.model.TableData;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import com.dnastack.ga4gh.search.model.TableInfo;
@@ -37,7 +39,7 @@ public class TablesController {
 
         try {
             tablesList = prestoSearchAdapter
-                .getTables(request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+                .getTables(request, SearchController.parseCredentialsHeader(clientSuppliedCredentials), null);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new TableApiErrorException(ex, TablesList::errorInstance);
@@ -56,7 +58,7 @@ public class TablesController {
 
         try {
             tablesList = prestoSearchAdapter
-                .getTablesInCatalog(catalogName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+                .getTablesInCatalog(catalogName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials), null);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new TableApiErrorException(ex, TablesList::errorInstance);
@@ -76,7 +78,7 @@ public class TablesController {
 
         try {
             tableInfo = prestoSearchAdapter
-                .getTableInfo(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+                .getTableInfo(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials), null);
         } catch (Exception ex) {
             throw new TableApiErrorException(ex, TableInfo::errorInstance);
         }
@@ -91,10 +93,9 @@ public class TablesController {
                                   @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
 
         TableData tableData = null;
-
         try {
             tableData = prestoSearchAdapter
-                .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials));
+                .getTableData(tableName, request, SearchController.parseCredentialsHeader(clientSuppliedCredentials), null);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new TableApiErrorException(ex, TableData::errorInstance);

@@ -53,11 +53,11 @@ public class PrestoHttpClient implements PrestoClient {
         this.httpClient = httpClient;
     }
 
-    public JsonNode query(String statement, Map<String, String> extraCredentials) {
+    public JsonNode query(String statement, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         Span span = tracer.nextSpan().name("prestoQuery");
         try (Tracer.SpanInScope ws = tracer.withSpanInScope(span.start())) {
                 log.debug("Posting to " + prestoSearchEndpoint);
-            try (Response response = post(prestoSearchEndpoint, statement, extraCredentials)) {
+            try (Response response = post(prestoSearchEndpoint, statement, extraCredentials, primaryAuthentication)) {
                 log.debug("Got response, now polling for query results");
                 JsonNode jn = getQueryResults(response);
                 return jn;
@@ -84,13 +84,13 @@ public class PrestoHttpClient implements PrestoClient {
 //        }).subscribeOn(Schedulers.io());
 //    }
 
-    public JsonNode next(String page, Map<String, String> extraCredentials) {
+    public JsonNode next(String page, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         Span span = tracer.nextSpan().name("prestoNext");
         try (Tracer.SpanInScope ws = tracer.withSpanInScope(span.start())) {
             //TODO: better url construction
             String url = page.startsWith("/") ? this.prestoServer + page : this.prestoServer + "/" + page;
 
-            try (Response response = get(url, extraCredentials)) {
+            try (Response response = get(url, extraCredentials, primaryAuthentication)) {
                 return getQueryResults(response);
             } catch (IOException ie) {
                 throw new PrestoIOException("Unable to fetch more search or listing results (I/O error).", ie);
@@ -230,20 +230,21 @@ public class PrestoHttpClient implements PrestoClient {
 
     }
 
-    private Response get(String url, Map<String, String> extraCredentials) throws IOException {
+    private Response get(String url, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) throws IOException {
         Request.Builder request = new Request.Builder().url(url).method("GET", null);
-        return execute(request, extraCredentials);
+        return execute(request, extraCredentials, primaryAuthentication);
     }
 
-    private Response post(String url, String body, Map<String, String> extraCredentials) throws IOException {
+    private Response post(String url, String body, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) throws IOException {
         RequestBody requestBody = RequestBody.create(null, body);
         Request.Builder request = new Request.Builder().url(url).method("POST", requestBody);
-        return execute(request, extraCredentials);
+        return execute(request, extraCredentials, primaryAuthentication);
     }
 
-    private Response execute(final Request.Builder request, Map<String, String> extraCredentials) throws IOException {
+    private Response execute(final Request.Builder request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) throws IOException {
         request.header("X-Presto-User", getUserNameForRequest());
         extraCredentials.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
+        primaryAuthentication.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
 
         if (!authenticator.requiresAuthentication()) {
             Request r = request.build();

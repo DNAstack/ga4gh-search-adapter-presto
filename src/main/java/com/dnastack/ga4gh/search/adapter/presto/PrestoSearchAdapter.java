@@ -200,13 +200,14 @@ public class PrestoSearchAdapter {
     // Perform the given query and gather ALL results, by following Presto's nextUrl links
     // The query should NOT contain any functions that would not be recognized by Presto.
     public TableData searchAll(String statement,
-                        HttpServletRequest request,
-                        Map<String, String> extraCredentials,
-                        DataModel dataModel) {
-        TableData tableData = search(statement, request, extraCredentials, dataModel);
+                               HttpServletRequest request,
+                               Map<String, String> extraCredentials,
+                               Map<String, String> primaryAuthentication,
+                               DataModel dataModel) {
+        TableData tableData = search(statement, request, extraCredentials, primaryAuthentication, dataModel);
         while (hasMore(tableData)) {
             log.debug("searchAll: Autoloading next page of data");
-            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
+            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials, primaryAuthentication);
             tableData.append(nextPage);
         }
         return tableData;
@@ -215,6 +216,7 @@ public class PrestoSearchAdapter {
     public TableData search(String query,
                             HttpServletRequest request,
                             Map<String, String> extraCredentials,
+                            Map<String, String> primaryAuthentication,
                             DataModel dataModel) {
 
         log.info("Received query: " + query + ".");
@@ -222,17 +224,17 @@ public class PrestoSearchAdapter {
         logAuditEvent("search", "query", Map.of(
             "query", Optional.ofNullable(rewrittenQuery).orElse("(undefined)")
         ));
-        JsonNode response = client.query(rewrittenQuery, extraCredentials);
+        JsonNode response = client.query(rewrittenQuery, extraCredentials, primaryAuthentication);
         QueryJob queryJob = createQueryJob(query, dataModel);
         TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJob.getId(), request);
         return tableData;
     }
 
-    public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
+    public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         logAuditEvent("search", "next-page", Map.of(
             "page", Optional.ofNullable(page).orElse("(undefined)")
         ));
-        JsonNode response = client.next(page, extraCredentials);
+        JsonNode response = client.next(page, extraCredentials, primaryAuthentication);
         TableData tableData = toTableData(NEXT_PAGE_SEARCH_TEMPLATE, response, queryJobId, request);
         populateTableSchemaIfAvailable(queryJobId, tableData);
         return tableData;
@@ -281,41 +283,41 @@ public class PrestoSearchAdapter {
         return catalogs.stream().map(catalog->getPageIndexEntryForCatalog(catalog, page[0]++, request)).collect(Collectors.toList());
     }
 
-    private TablesList getTables(String currentCatalog, String nextCatalog, HttpServletRequest request, Map<String, String> extraCredentials) {
+    private TablesList getTables(String currentCatalog, String nextCatalog, HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         PrestoCatalog prestoCatalog = new PrestoCatalog(this, throwableTransformer, getRefHost(), currentCatalog);
         Pagination nextPage = null;
         if (nextCatalog != null) {
             nextPage = new Pagination(null, getLinkToCatalog(nextCatalog, request), null);
         }
 
-        TablesList tablesList = prestoCatalog.getTablesList(nextPage, request, extraCredentials);
+        TablesList tablesList = prestoCatalog.getTablesList(nextPage, request, extraCredentials, primaryAuthentication);
 
         return tablesList;
     }
 
-    public TablesList getTables(HttpServletRequest request, Map<String, String> extraCredentials) {
+    public TablesList getTables(HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         logAuditEvent("table", "read", null);
-        Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
+        Set<String> catalogs = getPrestoCatalogs(request, extraCredentials, primaryAuthentication);
         if (catalogs == null || catalogs.isEmpty()) {
             return new TablesList(List.of(), null, null);
         }
         Iterator<String> catalogIt = catalogs.iterator();
 
-        TablesList tablesList = getTables(catalogIt.next(), catalogIt.hasNext() ? catalogIt.next() : null, request, extraCredentials);
+        TablesList tablesList = getTables(catalogIt.next(), catalogIt.hasNext() ? catalogIt.next() : null, request, extraCredentials, primaryAuthentication);
         tablesList.setIndex(getPageIndex(catalogs, request));
         return tablesList;
     }
 
-    public TablesList getTablesInCatalog(String catalog, HttpServletRequest request, Map<String, String> extraCredentials) {
+    public TablesList getTablesInCatalog(String catalog, HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         logAuditEvent("table", "in-catalog", Map.of(
             "catalog", Optional.ofNullable(catalog).orElse("(undefined)")
         ));
-        Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
+        Set<String> catalogs = getPrestoCatalogs(request, extraCredentials, primaryAuthentication);
         if (catalogs != null) {
             Iterator<String> catalogIt = catalogs.iterator();
             while (catalogIt.hasNext()) {
                 if (catalogIt.next().equals(catalog)) {
-                    return getTables(catalog, catalogIt.hasNext() ? catalogIt.next() : null, request, extraCredentials);
+                    return getTables(catalog, catalogIt.hasNext() ? catalogIt.next() : null, request, extraCredentials, primaryAuthentication);
                 }
             }
         }
@@ -326,13 +328,13 @@ public class PrestoSearchAdapter {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
+    public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         logAuditEvent("table", "data", Map.of(
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromTablesRegistry(tableName);
-        TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
+        TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, primaryAuthentication, dataModel);
 
         // Populate the dataModel only if there is tableData
         if (!tableData.getData().isEmpty()) {
@@ -342,7 +344,7 @@ public class PrestoSearchAdapter {
             if (dataModel == null && tableData.getDataModel() != null) {
                 dataModel = tableData.getDataModel();
                 dataModel.setId(getDataModelId(tableName));
-                attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
+                attachCommentsToDataModel(dataModel, tableName, request, extraCredentials, primaryAuthentication);
             } else {
                 tableData.setDataModel(dataModel);
             }
@@ -352,7 +354,8 @@ public class PrestoSearchAdapter {
 
     public TableInfo getTableInfo(String tableName,
                                   HttpServletRequest request,
-                                  Map<String, String> extraCredentials) {
+                                  Map<String, String> extraCredentials,
+                                  Map<String, String> primaryAuthentication) {
         logAuditEvent("table", "info", Map.of(
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
@@ -363,7 +366,7 @@ public class PrestoSearchAdapter {
 
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromTablesRegistry(tableName);
-        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
+        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, primaryAuthentication, dataModel);
 
         // If the dataModel is not available from tables-registry, use the one from tableData
         // Fill in the id & comments if the data model is ready
@@ -660,8 +663,8 @@ public class PrestoSearchAdapter {
      * @return A List of Strings, where each String is the name of the catalog.
      * @throws IOException If the query to enumerate the list of catalogs fails.
      */
-    private Set<String> getPrestoCatalogs(HttpServletRequest request, Map<String, String> extraCredentials) {
-        TableData catalogs = searchAll("select catalog_name FROM system.metadata.catalogs ORDER BY catalog_name", request, extraCredentials, null);
+    private Set<String> getPrestoCatalogs(HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
+        TableData catalogs = searchAll("select catalog_name FROM system.metadata.catalogs ORDER BY catalog_name", request, extraCredentials, primaryAuthentication,null);
         Set<String> catalogSet = new LinkedHashSet<>();
         for (Map<String, Object> row : catalogs.getData()) {
             String catalog = (String) row.get("catalog_name");
@@ -692,7 +695,8 @@ public class PrestoSearchAdapter {
     private void attachCommentsToDataModel(DataModel dataModel,
                                            String tableName,
                                            HttpServletRequest request,
-                                           Map<String, String> extraCredentials) {
+                                           Map<String, String> extraCredentials,
+                                           Map<String, String> primaryAuthentication) {
         if (dataModel == null) {
             return;
         }
@@ -703,7 +707,7 @@ public class PrestoSearchAdapter {
             return;
         }
 
-        TableData describeData = searchAll("DESCRIBE " + tableName, request, extraCredentials, null);
+        TableData describeData = searchAll("DESCRIBE " + tableName, request, extraCredentials, primaryAuthentication, null);
 
         for (Map<String, Object> describeRow : describeData.getData()) {
             final String columnName = (String) describeRow.get("Column");

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,12 +35,12 @@ public class SearchController {
     @RequestMapping(value = "/search", method = RequestMethod.POST)
     public TableData search(@RequestBody SearchRequest searchRequest,
                             HttpServletRequest request,
-                            @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+                            @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials,
+                            @RequestHeader(value = "X-Primary-Authentication", defaultValue = "") String accessToken) {
         TableData tableData = null;
-
         try {
             tableData = prestoSearchAdapter
-                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials), null);
+                .search(searchRequest.getSqlQuery(), request, parseCredentialsHeader(clientSuppliedCredentials), parseCredentials(accessToken), null);
         } catch (Exception ex) {
             throw new TableApiErrorException(ex, TableData::errorInstance);
         }
@@ -51,14 +52,14 @@ public class SearchController {
     @RequestMapping(value = "/search/**", method = RequestMethod.GET)
     public TableData getNextPaginatedResponse(@RequestParam("queryJobId") String queryJobId,
                                               HttpServletRequest request,
-                                              @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials) {
+                                              @RequestHeader(value = "GA4GH-Search-Authorization", defaultValue = "") List<String> clientSuppliedCredentials,
+                                              @RequestHeader(value = "X-Primary-Authentication", defaultValue = "") String accessToken) {
         String page = request.getRequestURI()
                              .split(request.getContextPath() + "/search/")[1];
         TableData tableData = null;
-
         try {
             tableData = prestoSearchAdapter
-                .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials));
+                .getNextSearchPage(page, queryJobId, request, parseCredentialsHeader(clientSuppliedCredentials), parseCredentials(accessToken));
         } catch (Exception ex) {
             throw new TableApiErrorException(ex, TableData::errorInstance);
         }
@@ -100,6 +101,14 @@ public class SearchController {
         return clientSuppliedCredentials.stream()
             .map(val -> val.split("=", 2))
             .collect(Collectors.toMap(kv -> kv[0], kv -> kv[1]));
+    }
+
+    public static Map<String, String> parseCredentials(String accessToken) {
+        Map<String, String> primaryAuthentication = new HashMap<>();
+        if(accessToken.length() > 0) {
+            primaryAuthentication.put("primary_authentication", accessToken);
+        }
+        return primaryAuthentication;
     }
 
 }

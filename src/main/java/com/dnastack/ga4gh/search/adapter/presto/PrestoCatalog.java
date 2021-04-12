@@ -52,9 +52,9 @@ public class PrestoCatalog {
         return "\"" + sqlIdentifier.replace("\"", "\"\"") + "\"";
     }
 
-    public TablesList getTablesList(Pagination nextPage, HttpServletRequest request, Map<String, String> extraCredentials) {
+    public TablesList getTablesList(Pagination nextPage, HttpServletRequest request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         try {
-            TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)), request, extraCredentials, null);
+            TableData tables = searchAdapter.searchAll(String.format(QUERY_TABLE_TEMPLATE, quote(catalogName)), request, extraCredentials, primaryAuthentication, null);
             List<TableInfo> tableInfoList = getTableInfoList(tables);
             return new TablesList(tableInfoList, null, nextPage);
         } catch (Throwable t) {

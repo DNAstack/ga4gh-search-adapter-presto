@@ -41,19 +41,19 @@ public class PrestoTelemetryClient implements PrestoClient {
         stateCache = CacheBuilder.newBuilder().expireAfterWrite(15, TimeUnit.MINUTES).build();
     }
 
-    public JsonNode query(String statement, Map<String, String> extraCredentials) {
+    public JsonNode query(String statement, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         queryCount.increment();
         long start = System.currentTimeMillis();
-        JsonNode jn = client.query(statement, extraCredentials);
+        JsonNode jn = client.query(statement, extraCredentials, primaryAuthentication);
         queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
         traceQueryPerformance(jn, start);
         return jn;
     }
 
-    public JsonNode next(String page, Map<String, String> extraCredentials) {
+    public JsonNode next(String page, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
         queryCount.increment();
         long start = System.currentTimeMillis();
-        JsonNode jsonNode = client.next(page, extraCredentials);
+        JsonNode jsonNode = client.next(page, extraCredentials, primaryAuthentication);
         queryLatency.record(System.currentTimeMillis() - start, TimeUnit.MILLISECONDS);
         traceQueryPerformance(jsonNode,start);
         return jsonNode;

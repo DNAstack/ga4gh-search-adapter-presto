@@ -16,7 +16,7 @@ public interface PrestoClient {
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
      */
-    JsonNode query(String statement, Map<String, String> extraCredentials);
+    JsonNode query(String statement, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication);
 
     /**
      * Fetches the given page of a running query from Presto (which may be empty, but contain a nextUri
@@ -27,5 +27,5 @@ public interface PrestoClient {
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
      */
-    JsonNode next(String page, Map<String, String> extraCredentials);
+    JsonNode next(String page, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication);
 }
