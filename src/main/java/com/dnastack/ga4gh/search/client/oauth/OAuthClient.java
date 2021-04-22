@@ -1,7 +1,7 @@
-package com.dnastack.ga4gh.search.client.tablesregistry;
+package com.dnastack.ga4gh.search.client.oauth;
 
-import com.dnastack.ga4gh.search.client.tablesregistry.model.AccessToken;
-import com.dnastack.ga4gh.search.client.tablesregistry.model.OAuthRequest;
+import com.dnastack.ga4gh.search.client.oauth.model.AccessToken;
+import com.dnastack.ga4gh.search.client.oauth.model.OAuthRequest;
 import feign.Headers;
 import feign.RequestLine;
 import org.springframework.http.MediaType;

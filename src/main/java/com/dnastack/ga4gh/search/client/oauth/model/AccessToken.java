@@ -1,12 +1,7 @@
-package com.dnastack.ga4gh.search.client.tablesregistry.model;
+package com.dnastack.ga4gh.search.client.oauth.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter

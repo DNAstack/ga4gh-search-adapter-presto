@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.client.tablesregistry;
+package com.dnastack.ga4gh.search.client.indexingservice;
 
 import com.dnastack.ga4gh.search.client.common.SimpleLogger;
 import com.dnastack.ga4gh.search.client.oauth.OAuthClientConfig;
@@ -17,7 +17,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.context.annotation.Bean;
@@ -27,44 +26,43 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Setter
 @Configuration
-@ConfigurationProperties("app.tables-registry")
-public class TablesRegistryClientConfig {
+@ConfigurationProperties("app.indexing-service")
+public class IndexingServiceClientConfig {
 
-    private Boolean skip;
     private String url;
 
     @Autowired
-    private OAuthClientConfig auth;
+    private OAuthClientConfig oAuthClient;
 
     @Autowired
     private SimpleLogger simpleLogger;
 
+
     private ObjectMapper mapper = new ObjectMapper()
             .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     private OAuthRequest getOAuthRequest() {
         OAuthRequest oAuthRequest = new OAuthRequest();
-        oAuthRequest.setClientId(auth.getClientId());
-        oAuthRequest.setClientSecret(auth.getClientSecret());
+        oAuthRequest.setClientId(oAuthClient.getClientId());
+        oAuthRequest.setClientSecret(oAuthClient.getClientSecret());
         oAuthRequest.setGrantType("client_credentials");
-        oAuthRequest.setAudience(auth.getAudience());
+        oAuthRequest.setAudience(oAuthClient.getAudience());
         return oAuthRequest;
     }
 
     private RequestInterceptor getRequestInterceptor() {
         return (template) -> {
-            AccessToken accessToken = auth.oAuthClient().getToken(getOAuthRequest());
+            AccessToken accessToken = oAuthClient.oAuthClient().getToken(getOAuthRequest());
             template.header("Authorization", "Bearer " + accessToken.getToken());
         };
     }
 
     @Bean
-    @ConditionalOnProperty(name = "app.tables-registry.url")
-    public TablesRegistryClient tablesRegistryClient() {
+    public IndexingServiceClient indexingServiceClient() {
         // TODO Refactor with OAuthClientFactory
-        if (url == null || auth == null) {
-            log.warn("The client for Table Registry is not defined.");
+        if (url == null || oAuthClient == null) {
+            log.warn("The client for Indexing Service is not defined.");
             return null;
         }
         return Feign.builder()
@@ -74,7 +72,7 @@ public class TablesRegistryClientConfig {
                     .logger(simpleLogger)
                     .logLevel(Logger.Level.BASIC)
                     .requestInterceptor(getRequestInterceptor())
-                    .target(TablesRegistryClient.class, url);
+                    .target(IndexingServiceClient.class, url);
 
     }
 }

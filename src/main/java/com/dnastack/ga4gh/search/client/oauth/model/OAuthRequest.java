@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.client.tablesregistry.model;
+package com.dnastack.ga4gh.search.client.oauth.model;
 
 import feign.form.FormProperty;
 import lombok.Data;

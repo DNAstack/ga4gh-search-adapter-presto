@@ -1,4 +1,4 @@
-package com.dnastack.ga4gh.search.client.tablesregistry;
+package com.dnastack.ga4gh.search.client.oauth;
 
 import com.dnastack.ga4gh.search.client.common.SimpleLogger;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -11,22 +11,17 @@ import feign.form.FormEncoder;
 import feign.jackson.JacksonDecoder;
 import feign.jackson.JacksonEncoder;
 import feign.okhttp.OkHttpClient;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Optional;
 
 @Slf4j
-@Getter
-@Setter
+@Data
 @Configuration
-@ConfigurationProperties(prefix = "app.tables-registry.auth")
 public class OAuthClientConfig {
     /**
      * The URI to use for authenticated service to service communication. This is expected to be an OIDC compliant token
@@ -46,17 +41,21 @@ public class OAuthClientConfig {
 
     String audience;
 
+    /*
+     * Requested resource
+     */
+    String resource;
+
     @Autowired
     SimpleLogger simpleLogger;
 
     Encoder encoder;
 
     private ObjectMapper mapper = new ObjectMapper()
-        .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     @Bean
-    @ConditionalOnProperty(name = "app.tables-registry.auth.authentication-uri")
     public OAuthClient oAuthClient() {
         return Optional
             .ofNullable(authenticationUri)
