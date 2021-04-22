@@ -31,6 +31,16 @@ app:
       # client-id: search-presto-public-client-credentials
       # client-secret: <kubernetes_secret>
       # audience: https://ga4gh-tables-registry.staging.dnastack.com
+  presto:
+    tables:
+      data-model-source: "indexing-service"
+  indexing-service:
+    url: http://localhost:8094
+    oauth-client:
+      authentication-uri: http://localhost:8081/oauth/token
+      client-id: ga4gh-search-adapter-presto
+      client-secret: dev-secret-never-use-in-prod
+      audience: ${app.indexing-service.url}
 
 presto:
   datasource:

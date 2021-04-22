@@ -6,9 +6,6 @@ import com.dnastack.audit.model.AuditedAction;
 import com.dnastack.audit.model.AuditedOutcome;
 import com.dnastack.audit.model.AuditedResource;
 import com.dnastack.ga4gh.search.ApplicationConfig;
-import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
-import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
-import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.repository.QueryJob;
 import com.dnastack.ga4gh.search.repository.QueryJobRepository;
@@ -22,8 +19,7 @@ import com.dnastack.ga4gh.search.model.TablesList;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.google.common.collect.Streams;
 import lombok.Getter;
@@ -60,32 +56,33 @@ public class PrestoSearchAdapter {
     private static final Pattern qualifiedNameMatcher =
             Pattern.compile("^\"?[^\"]+\"?\\.\"?[^\"]+\"?\\.\"?[^\"]+\"?$");
 
-    @Autowired
-    private PrestoClient client;
+    private final PrestoClient client;
+    private final ThrowableTransformer throwableTransformer;
+    private final QueryJobRepository queryJobRepository;
+    private final ApplicationConfig applicationConfig;
+    private final PrestoTableDataModelSource tableDataModelSource;
+    private final AuditEventLogger auditEventLogger;
 
     @Autowired
-    private ThrowableTransformer throwableTransformer;
+    public PrestoSearchAdapter(
+            PrestoClient client,
+            ThrowableTransformer throwableTransformer,
+            QueryJobRepository queryJobRepository,
+            ApplicationConfig applicationConfig,
+            PrestoTableDataModelSource tableDataModelSource,
+            AuditEventLogger auditEventLogger
+    ) {
+        this.client = client;
+        this.throwableTransformer = throwableTransformer;
+        this.queryJobRepository = queryJobRepository;
+        this.applicationConfig = applicationConfig;
+        this.tableDataModelSource = tableDataModelSource;
+        this.auditEventLogger = auditEventLogger;
+    }
 
-    @Autowired
-    private QueryJobRepository queryJobRepository;
-
-    @Autowired
-    private ApplicationConfig applicationConfig;
-
-    @Autowired (required = false)
-    private TablesRegistryClient tablesRegistryClient;
-
-    @Autowired
-    private OAuthClientConfig oAuthClientConfig;
-
-    @Autowired
-    private AuditEventLogger auditEventLogger;
 
     private boolean hasMore(TableData tableData) {
-        if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
-            return true;
-        }
-        return false;
+        return (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null);
     }
 
     // Pattern to match ga4gh_type two argument function
@@ -331,7 +328,7 @@ public class PrestoSearchAdapter {
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
-        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        DataModel dataModel = tableDataModelSource.getDataModel(tableName);
         TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
 
         // Populate the dataModel only if there is tableData
@@ -362,7 +359,7 @@ public class PrestoSearchAdapter {
         }
 
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
-        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        DataModel dataModel = tableDataModelSource.getDataModel(tableName);
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
 
         // If the dataModel is not available from tables-registry, use the one from tableData
@@ -718,21 +715,6 @@ public class PrestoSearchAdapter {
     private URI getDataModelId(String tableName) {
         String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
         return URI.create(String.format("%s/table/%s/info", refHost, tableName));
-    }
-
-    private DataModel getDataModelFromTablesRegistry(String tableName) {
-        if (tablesRegistryClient == null) {
-            return null;
-        }
-
-        ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
-                oAuthClientConfig.getClientId(), tableName);
-
-        if (registryEntry == null || registryEntry.getTableCollections().isEmpty()) {
-            return null;
-        }
-
-        return registryEntry.getTableCollections().get(0).getTableSchema();
     }
 
     private void populateTableSchemaIfAvailable(String queryJobId, TableData tableData) {
