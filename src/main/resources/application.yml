@@ -22,25 +22,30 @@ app:
     documentation-url:
     contact-url:
     version:
-  # Un-comment the following section of tables-registry if you would like to enable the flow of fetching the table schema from tables-registry
-  # Get the staging secret corresponding to client-id from kubernetes or create your own if pointing to local wallet
-  # tables-registry:
-    # url: https://ga4gh-tables-registry.staging.dnastack.com
-    # auth:
-      # authentication-uri: https://wallet.staging.dnastack.com/oauth/token
-      # client-id: search-presto-public-client-credentials
-      # client-secret: <kubernetes_secret>
-      # audience: https://ga4gh-tables-registry.staging.dnastack.com
-  presto:
-    tables:
-      data-model-source: "indexing-service"
-  indexing-service:
-    url: http://localhost:8094
-    oauth-client:
-      authentication-uri: http://localhost:8081/oauth/token
-      client-id: ga4gh-search-adapter-presto
-      client-secret: dev-secret-never-use-in-prod
-      audience: ${app.indexing-service.url}
+#   Un-comment the following sections of tables-registry and presto if you would like to enable the flow of fetching the table schema from tables-registry
+#   Get the staging secret corresponding to client-id from kubernetes or create your own if pointing to local wallet
+#  presto:
+#    tables:
+#      data-model-source: "tables-registry"
+#  tables-registry:
+#    url: https://ga4gh-tables-registry.staging.dnastack.com
+#    auth:
+#      authentication-uri: https://wallet.staging.dnastack.com/oauth/token
+#      client-id: search-presto-public-client-credentials
+#      client-secret: <kubernetes_secret>
+#      audience: https://ga4gh-tables-registry.staging.dnastack.com
+#   Un-comment the following sections of indexing-service and presto if you would like to enable the flow of fetching the table schema from indexing-service
+#   Get the staging secret corresponding to client-id from kubernetes or create your own if pointing to local wallet
+#  presto:
+#    tables:
+#      data-model-source: "indexing-service"
+#  indexing-service:
+#    url: http://localhost:8094
+#    oauth-client:
+#      authentication-uri: http://localhost:8081/oauth/token
+#      client-id: ga4gh-search-adapter-presto
+#      client-secret: dev-secret-never-use-in-prod
+#      audience: ${app.indexing-service.url}
 
 presto:
   datasource:
