@@ -18,6 +18,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
@@ -44,13 +45,15 @@ public class PrestoHttpClient implements PrestoClient {
     private final Tracer tracer;
     private final ObjectMapper objectMapper = new ObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final boolean sendAccessTokenToPresto;
 
-    public PrestoHttpClient(Tracer tracer,OkHttpClient httpClient,String prestoServerUrl, ServiceAccountAuthenticator accountAuthenticator) {
+    public PrestoHttpClient(Tracer tracer, OkHttpClient httpClient, String prestoServerUrl, ServiceAccountAuthenticator accountAuthenticator, boolean sendAccessTokenToPresto) {
         this.prestoServer = prestoServerUrl;
         this.prestoSearchEndpoint = prestoServerUrl + "/v1/statement";
         this.authenticator = accountAuthenticator;
         this.tracer = tracer;
         this.httpClient = httpClient;
+        this.sendAccessTokenToPresto = sendAccessTokenToPresto;
     }
 
     public JsonNode query(String statement, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) {
@@ -244,7 +247,9 @@ public class PrestoHttpClient implements PrestoClient {
     private Response execute(final Request.Builder request, Map<String, String> extraCredentials, Map<String, String> primaryAuthentication) throws IOException {
         request.header("X-Presto-User", getUserNameForRequest());
         extraCredentials.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
-        primaryAuthentication.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
+        if(sendAccessTokenToPresto) {
+            primaryAuthentication.forEach((k, v) -> request.addHeader("X-Presto-Extra-Credential", k + "=" + v));
+        }
 
         if (!authenticator.requiresAuthentication()) {
             Request r = request.build();

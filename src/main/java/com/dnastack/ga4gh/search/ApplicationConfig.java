@@ -62,6 +62,7 @@ public class ApplicationConfig {
     private final String corsUrls;
     private final Monitor monitor;
     private final Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter;
+    private final boolean sendAccessTokenToPresto;
 
     @Autowired
     public ApplicationConfig(
@@ -69,13 +70,15 @@ public class ApplicationConfig {
             Converter<Jwt, ? extends AbstractAuthenticationToken> jwtScopesConverter,
             @Value("${cors.urls}") String corsUrls,
             @Value("${presto.hidden-catalogs}") Set<String> hiddenCatalogs,
-            @Value("${presto.datasource.url}") String prestoDatasourceUrl
+            @Value("${presto.datasource.url}") String prestoDatasourceUrl,
+            @Value("${app.send-access-token-presto}")  boolean sendAccessTokenToPresto
     ) {
         this.monitor = monitor;
         this.jwtScopesConverter = jwtScopesConverter;
         this.corsUrls = corsUrls;
         this.hiddenCatalogs = hiddenCatalogs;
         this.prestoDatasourceUrl = prestoDatasourceUrl;
+        this.sendAccessTokenToPresto = sendAccessTokenToPresto;
     }
 
     @Bean
@@ -95,7 +98,7 @@ public class ApplicationConfig {
 
     @Bean
     public PrestoClient getPrestoClient(OkHttpClient httpClient,Tracer tracer, ServiceAccountAuthenticator accountAuthenticator) {
-        return new PrestoTelemetryClient(new PrestoHttpClient(tracer,httpClient,prestoDatasourceUrl, accountAuthenticator));
+        return new PrestoTelemetryClient(new PrestoHttpClient(tracer,httpClient,prestoDatasourceUrl, accountAuthenticator, sendAccessTokenToPresto));
     }
 
     @Bean

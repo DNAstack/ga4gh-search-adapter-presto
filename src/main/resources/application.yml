@@ -15,6 +15,7 @@ cors:
 
 app:
   url: http://localhost:${server.port}
+  send-access-token-presto: false # send access token to presto
   service-info:
     id:
     name: "GA4GH Discovery Search API"
