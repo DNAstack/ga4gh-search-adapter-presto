@@ -13,6 +13,7 @@ public interface PrestoClient {
      *
      * @param statement        the SQL statement to execute.
      * @param extraCredentials The extra X-Presto-Extra-Credentials to include in the request.
+     * @param primaryAuthentication Credentials from client to pass to presto as X-Presto-Extra-Credentials
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
      */
@@ -24,6 +25,7 @@ public interface PrestoClient {
      *
      * @param page             the next page token returned by Presto in a previous call to {@link #query(String, Map)} or to this method.
      * @param extraCredentials The extra X-Presto-Extra-Credentials to include in the request.
+     * @param primaryAuthentication Credentials from client to pass to presto as X-Presto-Extra-Credentials
      * @return The first JSON response from Presto that's either a partial result (even with 0 rows), or a final result.
      * Never null.
      */
