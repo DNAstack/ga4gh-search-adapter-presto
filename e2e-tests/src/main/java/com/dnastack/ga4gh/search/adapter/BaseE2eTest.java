@@ -1,21 +1,63 @@
 package com.dnastack.ga4gh.search.adapter;
 
 import com.dnastack.ga4gh.search.adapter.matchers.IsUrl;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.restassured.RestAssured;
+import io.restassured.builder.RequestSpecBuilder;
+import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
+import io.restassured.mapper.ObjectMapperType;
+import io.restassured.path.json.JsonPath;
+import io.restassured.specification.RequestSpecification;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
+import static io.restassured.RestAssured.given;
 import static org.junit.Assert.fail;
 
 @Slf4j
-public class BaseE2eTest {
+public abstract class BaseE2eTest {
+    protected static final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    protected static Boolean useSSL;
+    protected static RestAssuredConfig config;
+    protected static String walletClientId = optionalEnv("E2E_WALLET_CLIENT_ID", "ga4gh-search-adapter-presto-e2e-test");
+    protected static String walletClientSecret = optionalEnv("E2E_WALLET_CLIENT_SECRET", "dev-secret-never-use-in-prod");
+    protected static String searchAdapterAudience = optionalEnv("E2E_WALLET_AUDIENCE", null);
 
-    static Boolean useSSL;
-    static RestAssuredConfig config;
+    protected List<Runnable> cleanupOperations = new LinkedList<>();
+
+    @After
+    public void runAdditionalCleanupOperations() {
+        Collections.reverse(cleanupOperations);
+        for (int i = 0, n = cleanupOperations.size(); i < n; i++) {
+            try {
+                cleanupOperations.get(i).run();
+            } catch (Exception e) {
+                log.warn("Cleanup operation " + i + "/" + n + " failed. Continuing with subsequent cleanups.", e);
+            }
+        }
+        cleanupOperations = new LinkedList<>();
+    }
+
+    /**
+     * Adds an operation to the cleanupOperations list which is then executed after a test is run. Should be used if
+     * your test creates any test data, so that it is reset between test runs and doesn't end up affecting another test.
+     *
+     * @param runnable the lambda expression to cleanup the test data that was created by a test.
+     */
+    protected void afterThisTest(Runnable runnable) {
+        cleanupOperations.add(runnable);
+    }
 
     @BeforeClass
     public static void setupRestAssured() {
@@ -31,6 +73,16 @@ public class BaseE2eTest {
         } catch (URISyntaxException use) {
             throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));
         }
+    }
+
+    @BeforeClass
+    public static void setupObjectMapper() {
+        config = RestAssuredConfig.config()
+            .objectMapperConfig(
+                ObjectMapperConfig.objectMapperConfig()
+                    .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
+                    .jackson2ObjectMapperFactory((cls, charset) -> objectMapper)
+            );
     }
 
     protected static String requiredEnv(String name) {
@@ -61,4 +113,31 @@ public class BaseE2eTest {
         return val;
     }
 
+    static String getToken(String audience, String... scopes) {
+        RequestSpecification specification = new RequestSpecBuilder().setBaseUri(optionalEnv("E2E_WALLET_TOKEN_URI", "http://localhost:8081/oauth/token"))
+            .build();
+
+        //@formatter:off
+        RequestSpecification requestSpecification = given(specification)
+            .config(config)
+            .log().uri()
+            .auth().basic(walletClientId, walletClientSecret)
+            .formParam("grant_type", "client_credentials")
+            .formParam("client_id", walletClientId)
+            .formParam("client_secret", walletClientSecret)
+            .formParam("resource", audience + "/");
+        if (scopes.length > 0) {
+            requestSpecification.formParam("scope", String.join(" ", scopes));
+        }
+        JsonPath tokenResponse = requestSpecification
+            .when()
+            .post()
+            .then()
+            .log().ifValidationFails()
+            .statusCode(200)
+            .extract().jsonPath();
+        //@formatter:on
+
+        return tokenResponse.getString("access_token");
+    }
 }

@@ -13,6 +13,12 @@ server:
 cors:
   urls: http://localhost:8089
 
+oauth-client-factory:
+  default-config:
+    token-uri: http://localhost:8081/oauth/token
+    client-id: ga4gh-search-adapter-presto
+    client-secret: dev-secret-never-use-in-prod
+
 app:
   url: http://localhost:${server.port}
   service-info:
@@ -31,6 +37,11 @@ app:
       # client-id: search-presto-public-client-credentials
       # client-secret: <kubernetes_secret>
       # audience: https://ga4gh-tables-registry.staging.dnastack.com
+  indexing-service:
+    enabled: false
+    base-uri: http://localhost:8094
+    oauth-client:
+      resource: "${app.indexing-service.base-uri}"
 
 presto:
   datasource:
@@ -84,6 +95,7 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
   datasource:
     url: jdbc:postgresql://127.0.0.1/ga4ghsearchadapterpresto
     username: ga4ghsearchadapterpresto
@@ -102,6 +114,8 @@ management:
       logging-monitor:
         enabled: true
       environment: local
+      stackdriver:
+        enabled: false
 ---
 
 spring:

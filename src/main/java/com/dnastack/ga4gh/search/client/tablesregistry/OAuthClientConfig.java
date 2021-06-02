@@ -27,6 +27,7 @@ import java.util.Optional;
 @Setter
 @Configuration
 @ConfigurationProperties(prefix = "app.tables-registry.auth")
+@Deprecated(since = "2021-06-01 per #177369206")
 public class OAuthClientConfig {
     /**
      * The URI to use for authenticated service to service communication. This is expected to be an OIDC compliant token

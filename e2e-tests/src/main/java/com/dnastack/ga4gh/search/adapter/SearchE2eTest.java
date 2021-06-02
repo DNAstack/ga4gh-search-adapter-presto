@@ -128,18 +128,18 @@ public class SearchE2eTest extends BaseE2eTest {
 
     private static final int MAX_REAUTH_ATTEMPTS = 10;
 
-    private static String prestoTestUri;  // MUST be in format jdbc:presto://host:port
-    private static String prestoTestUser; // optional
-    private static String prestoTestPass; // optional
-    private static String prestoAudience; // optional
-    private static String prestoScopes;   // optional
+    private static String prestoTestUri = optionalEnv("E2E_PRESTO_JDBCURI", "jdbc:presto://localhost:8091");;  // MUST be in format jdbc:presto://host:port
+    private static String prestoTestUser = optionalEnv("E2E_PRESTO_USERNAME", null);; // optional
+    private static String prestoTestPass = optionalEnv("E2E_PRESTO_PASSWORD", null);; // optional
+    private static String prestoAudience = optionalEnv("E2E_PRESTO_AUDIENCE", null);; // optional
+    private static String prestoScopes = optionalEnv("E2E_PRESTO_SCOPES", "full_access");;   // optional
 
-    private static String inMemoryCatalog; // test catalog name
-    private static String inMemorySchema; // test schema name
+    // test catalog name
+    private static String inMemoryCatalog = optionalEnv("E2E_INMEMORY_TESTCATALOG", "memory"); //memory;
 
-    private static String walletClientId; // client id and secret used to get access tokens for a) search adapter b) presto
-    private static String walletClientSecret;
-    private static String searchAdapterAudience;
+    // test schema name
+    private static String inMemorySchema = optionalEnv("E2E_INMEMORY_TESTSCHEMA", "default"); //default;
+
 
     private static boolean globalMethodSecurityEnabled;
     private static boolean scopeCheckingEnabled;
@@ -158,24 +158,6 @@ public class SearchE2eTest extends BaseE2eTest {
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        walletClientId = optionalEnv("E2E_WALLET_CLIENT_ID", null);
-        walletClientSecret = optionalEnv("E2E_WALLET_CLIENT_SECRET", null);
-        searchAdapterAudience = optionalEnv("E2E_WALLET_AUDIENCE", null);
-        ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        config = RestAssuredConfig.config()
-            .objectMapperConfig(
-                ObjectMapperConfig.objectMapperConfig()
-                    .defaultObjectMapperType(ObjectMapperType.JACKSON_2)
-                    .jackson2ObjectMapperFactory((cls, charset) -> objectMapper));
-
-        inMemoryCatalog = optionalEnv("E2E_INMEMORY_TESTCATALOG", "memory"); //memory
-        inMemorySchema = optionalEnv("E2E_INMEMORY_TESTSCHEMA", "default"); //default
-        prestoTestUri = optionalEnv("E2E_PRESTO_JDBCURI", "jdbc:presto://localhost:8091");
-        prestoTestUser = optionalEnv("E2E_PRESTO_USERNAME", null);
-        prestoTestPass = optionalEnv("E2E_PRESTO_PASSWORD", null);
-        prestoAudience = optionalEnv("E2E_PRESTO_AUDIENCE", null);
-        prestoScopes = optionalEnv("E2E_PRESTO_SCOPES", "full_access");
-
         globalMethodSecurityEnabled = Boolean.parseBoolean(optionalEnv("E2E_GLOBAL_METHOD_SECURITY_ENABLED", "false"));
         scopeCheckingEnabled = Boolean.parseBoolean(optionalEnv("E2E_SCOPE_CHECKING_ENABLED", "false"));
 
@@ -233,7 +215,7 @@ public class SearchE2eTest extends BaseE2eTest {
     private static String prestoJsonTestTable;
     private static String unqualifiedPaginationTestTable; //just the table name (no catalog or schema)
 
-    private static void setupTestTables() throws IOException {
+    private static void setupTestTables() {
         String randomFactor = RandomStringUtils.randomAlphanumeric(16);
         List<String> queries = new LinkedList<>();
 
@@ -327,7 +309,7 @@ public class SearchE2eTest extends BaseE2eTest {
         extraCredentials.clear();
     }
 
-    private static String getFullyQualifiedTestTableName(String tableName) {
+    static String getFullyQualifiedTestTableName(String tableName) {
         return inMemoryCatalog + "." + inMemorySchema + "." + tableName;
     }
 
@@ -964,13 +946,13 @@ public class SearchE2eTest extends BaseE2eTest {
 
     static RequestSpecification givenAuthenticatedRequest(String... scopes) {
         RequestSpecification req = given()
-            .config(SearchE2eTest.config)
+            .config(config)
             .log().method()
             .log().uri();
 
         // add auth if configured
-        if (SearchE2eTest.walletClientId != null && SearchE2eTest.walletClientSecret != null) {
-            String accessToken = SearchE2eTest.getToken(searchAdapterAudience, scopes);
+        if (walletClientId != null && walletClientSecret != null && searchAdapterAudience != null) {
+            String accessToken = getToken(searchAdapterAudience, scopes);
             req.auth().oauth2(accessToken);
             if (Boolean.parseBoolean(optionalEnv("E2E_LOG_TOKENS", "false"))) {
                 log.info("Using access token {}", accessToken);
@@ -987,34 +969,6 @@ public class SearchE2eTest extends BaseE2eTest {
         ListTableResponse listTableResponse = searchApiGetRequest("/tables", 200, ListTableResponse.class);
         assertThat(listTableResponse.getTables(), hasSize(greaterThan(0)));
         return listTableResponse.getTables().get(0).getName();
-    }
-
-    static String getToken(String audience, String... scopes) {
-        RequestSpecification specification = new RequestSpecBuilder().setBaseUri(requiredEnv("E2E_WALLET_TOKEN_URI"))
-            .build();
-
-        //@formatter:off
-        RequestSpecification requestSpecification = given(specification)
-            .config(config)
-            .log().uri()
-            .auth().basic(walletClientId, walletClientSecret)
-            .formParam("grant_type", "client_credentials")
-            .formParam("client_id", walletClientId)
-            .formParam("client_secret", walletClientSecret)
-            .formParam("resource", audience + "/");
-        if (scopes.length > 0) {
-            requestSpecification.formParam("scope", String.join(" ", scopes));
-        }
-        JsonPath tokenResponse = requestSpecification
-            .when()
-            .post()
-            .then()
-            .log().ifValidationFails()
-            .statusCode(200)
-            .extract().jsonPath();
-        //@formatter:on
-
-        return tokenResponse.getString("access_token");
     }
 
 }

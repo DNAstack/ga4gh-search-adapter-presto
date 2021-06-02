@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Configuration;
 @Setter
 @Configuration
 @ConfigurationProperties("app.tables-registry")
+@Deprecated(since = "2021-06-01 per #177369206")
 public class TablesRegistryClientConfig {
 
     private Boolean skip;
@@ -77,5 +78,11 @@ public class TablesRegistryClientConfig {
                     .requestInterceptor(getRequestInterceptor())
                     .target(TablesRegistryClient.class, url);
 
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = "app.tables-registry.url")
+    public TablesRegistryDataModelSupplier tablesRegistryDataModelSupplier(TablesRegistryClient client, OAuthClientConfig config) {
+        return new TablesRegistryDataModelSupplier(client, config);
     }
 }

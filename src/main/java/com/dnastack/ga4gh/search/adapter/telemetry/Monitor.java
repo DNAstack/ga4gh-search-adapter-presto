@@ -79,7 +79,6 @@ public class Monitor {
             return;
         }
 
-        String environment = null;
         if (config.getStackDriver() != null) {
             StackdriverConfig stackdriverConfig = configureStackDriver(config.getStackDriver());
             registry = StackdriverMeterRegistry.builder(stackdriverConfig).build();

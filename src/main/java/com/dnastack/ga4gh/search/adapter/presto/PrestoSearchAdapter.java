@@ -6,6 +6,7 @@ import com.dnastack.audit.model.AuditedAction;
 import com.dnastack.audit.model.AuditedOutcome;
 import com.dnastack.audit.model.AuditedResource;
 import com.dnastack.ga4gh.search.ApplicationConfig;
+import com.dnastack.ga4gh.search.DataModelSupplier;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
 import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
@@ -72,7 +73,7 @@ public class PrestoSearchAdapter {
     @Autowired
     private ApplicationConfig applicationConfig;
 
-    @Autowired (required = false)
+    @Autowired(required = false)
     private TablesRegistryClient tablesRegistryClient;
 
     @Autowired
@@ -80,6 +81,9 @@ public class PrestoSearchAdapter {
 
     @Autowired
     private AuditEventLogger auditEventLogger;
+
+    @Autowired(required = false)
+    private DataModelSupplier dataModelSupplier;
 
     private boolean hasMore(TableData tableData) {
         if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
@@ -331,7 +335,7 @@ public class PrestoSearchAdapter {
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
-        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        DataModel dataModel = getDataModelFromSupplier(tableName);
         TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
 
         // Populate the dataModel only if there is tableData
@@ -362,7 +366,7 @@ public class PrestoSearchAdapter {
         }
 
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
-        DataModel dataModel = getDataModelFromTablesRegistry(tableName);
+        DataModel dataModel = getDataModelFromSupplier(tableName);
         TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
 
         // If the dataModel is not available from tables-registry, use the one from tableData
@@ -720,19 +724,12 @@ public class PrestoSearchAdapter {
         return URI.create(String.format("%s/table/%s/info", refHost, tableName));
     }
 
-    private DataModel getDataModelFromTablesRegistry(String tableName) {
-        if (tablesRegistryClient == null) {
+    private DataModel getDataModelFromSupplier(String tableName) {
+        if (dataModelSupplier == null) {
             return null;
         }
 
-        ListTableRegistryEntry registryEntry = tablesRegistryClient.getTableRegistryEntry(
-                oAuthClientConfig.getClientId(), tableName);
-
-        if (registryEntry == null || registryEntry.getTableCollections().isEmpty()) {
-            return null;
-        }
-
-        return registryEntry.getTableCollections().get(0).getTableSchema();
+        return dataModelSupplier.supply(tableName);
     }
 
     private void populateTableSchemaIfAvailable(String queryJobId, TableData tableData) {

@@ -32,7 +32,7 @@ import static java.util.Objects.requireNonNull;
 @Slf4j
 public class PrestoHttpClient implements PrestoClient {
 
-    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {
+    private static final TypeReference<Map<String, String>> MAP_TYPE_REFERENCE = new TypeReference<>() {
     };
 
     private static final String DEFAULT_PRESTO_USER_NAME = "ga4gh-search-adapter-presto";
