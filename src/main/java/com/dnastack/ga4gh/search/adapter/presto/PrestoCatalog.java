@@ -18,7 +18,12 @@ import java.util.stream.Collectors;
 public class PrestoCatalog {
     private final PrestoSearchAdapter searchAdapter;
     private final ThrowableTransformer throwableTransformer;
-    private final String refHost;
+
+    /**
+     * This is a URL scheme + host + port + path prefix. Never ends with "/".
+     */
+    private final String callbackBaseUrl;
+
     private final String catalogName;
 
     private static final String QUERY_TABLE_TEMPLATE =
@@ -31,7 +36,7 @@ public class PrestoCatalog {
         String schema = (String) row.get("table_schema");
         String table = (String) row.get("table_name");
         String qualifiedTableName = catalogName + "." + schema + "." + table;
-        String ref = String.format("%s/table/%s/info", refHost, qualifiedTableName);
+        String ref = String.format("%s/table/%s/info", callbackBaseUrl, qualifiedTableName);
         log.trace("Got table "+qualifiedTableName);
         return new TableInfo(qualifiedTableName, null, DataModel.builder().ref(ref).build(), null);
     }

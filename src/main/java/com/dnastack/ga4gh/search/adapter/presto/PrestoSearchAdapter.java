@@ -9,7 +9,6 @@ import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.DataModelSupplier;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
 import com.dnastack.ga4gh.search.client.tablesregistry.TablesRegistryClient;
-import com.dnastack.ga4gh.search.client.tablesregistry.model.ListTableRegistryEntry;
 import com.dnastack.ga4gh.search.adapter.presto.exception.*;
 import com.dnastack.ga4gh.search.repository.QueryJob;
 import com.dnastack.ga4gh.search.repository.QueryJobRepository;
@@ -223,7 +222,7 @@ public class PrestoSearchAdapter {
 
         log.info("Received query: " + query + ".");
         String rewrittenQuery = rewriteQuery(query, "ga4gh_type", 0);
-        logAuditEvent("search", "query", Map.of(
+        logAuditEvent(request, "search", "query", Map.of(
             "query", Optional.ofNullable(rewrittenQuery).orElse("(undefined)")
         ));
         JsonNode response = client.query(rewrittenQuery, extraCredentials);
@@ -233,7 +232,7 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getNextSearchPage(String page, String queryJobId, HttpServletRequest request, Map<String, String> extraCredentials) {
-        logAuditEvent("search", "next-page", Map.of(
+        logAuditEvent(request, "search", "next-page", Map.of(
             "page", Optional.ofNullable(page).orElse("(undefined)")
         ));
         JsonNode response = client.next(page, extraCredentials);
@@ -262,9 +261,7 @@ public class PrestoSearchAdapter {
     }
 
     private URI getLinkToCatalog(String catalog, HttpServletRequest request) {
-        return ServletUriComponentsBuilder.fromContextPath(request)
-                                   .path(String.format(NEXT_PAGE_CATALOG_TEMPLATE, catalog))
-                                   .build().toUri();
+        return URI.create(callbackBaseUrl(request) + String.format(NEXT_PAGE_CATALOG_TEMPLATE, catalog));
     }
 
     private PageIndexEntry getPageIndexEntryForCatalog(String catalog, int page, HttpServletRequest request) {
@@ -276,17 +273,13 @@ public class PrestoSearchAdapter {
                              .build();
     }
 
-    private String getRefHost() {
-        return ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
-    }
-
     private List<PageIndexEntry> getPageIndex(Set<String> catalogs, HttpServletRequest request) {
         final int[] page = {0};
         return catalogs.stream().map(catalog->getPageIndexEntryForCatalog(catalog, page[0]++, request)).collect(Collectors.toList());
     }
 
     private TablesList getTables(String currentCatalog, String nextCatalog, HttpServletRequest request, Map<String, String> extraCredentials) {
-        PrestoCatalog prestoCatalog = new PrestoCatalog(this, throwableTransformer, getRefHost(), currentCatalog);
+        PrestoCatalog prestoCatalog = new PrestoCatalog(this, throwableTransformer, callbackBaseUrl(request), currentCatalog);
         Pagination nextPage = null;
         if (nextCatalog != null) {
             nextPage = new Pagination(null, getLinkToCatalog(nextCatalog, request), null);
@@ -298,7 +291,7 @@ public class PrestoSearchAdapter {
     }
 
     public TablesList getTables(HttpServletRequest request, Map<String, String> extraCredentials) {
-        logAuditEvent("table", "read", null);
+        logAuditEvent(request, "table", "read", null);
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
         if (catalogs == null || catalogs.isEmpty()) {
             return new TablesList(List.of(), null, null);
@@ -311,7 +304,7 @@ public class PrestoSearchAdapter {
     }
 
     public TablesList getTablesInCatalog(String catalog, HttpServletRequest request, Map<String, String> extraCredentials) {
-        logAuditEvent("table", "in-catalog", Map.of(
+        logAuditEvent(request, "table", "in-catalog", Map.of(
             "catalog", Optional.ofNullable(catalog).orElse("(undefined)")
         ));
         Set<String> catalogs = getPrestoCatalogs(request, extraCredentials);
@@ -331,7 +324,7 @@ public class PrestoSearchAdapter {
     }
 
     public TableData getTableData(String tableName, HttpServletRequest request, Map<String, String> extraCredentials) {
-        logAuditEvent("table", "data", Map.of(
+        logAuditEvent(request, "table", "data", Map.of(
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
@@ -345,7 +338,7 @@ public class PrestoSearchAdapter {
             // Fill in the id & comments if the data model is ready
             if (dataModel == null && tableData.getDataModel() != null) {
                 dataModel = tableData.getDataModel();
-                dataModel.setId(getDataModelId(tableName));
+                dataModel.setId(getDataModelId(tableName, request));
                 attachCommentsToDataModel(dataModel, tableName, request, extraCredentials);
             } else {
                 tableData.setDataModel(dataModel);
@@ -357,7 +350,7 @@ public class PrestoSearchAdapter {
     public TableInfo getTableInfo(String tableName,
                                   HttpServletRequest request,
                                   Map<String, String> extraCredentials) {
-        logAuditEvent("table", "info", Map.of(
+        logAuditEvent(request, "table", "info", Map.of(
             "table", Optional.ofNullable(tableName).orElse("(undefined)")
         ));
         if (!isValidPrestoName(tableName)) {
@@ -373,7 +366,7 @@ public class PrestoSearchAdapter {
         // Fill in the id & comments if the data model is ready
         if (dataModel == null && tableData.getDataModel() != null) {
             dataModel = tableData.getDataModel();
-            dataModel.setId(getDataModelId(tableName));
+            dataModel.setId(getDataModelId(tableName, request));
         }
 
         return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
@@ -462,58 +455,69 @@ public class PrestoSearchAdapter {
             final var rawPrestoResponseUri = prestoResponse.get("nextUri").asText();
             final var localForwardedPath = String.format(template, URI.create(rawPrestoResponseUri).getPath());
 
-            final var forwardedPath = Optional.ofNullable(request.getHeader("X-Forwarded-Prefix"))
-                .flatMap(prefix -> {
-                    if (prefix.endsWith("/")) {
-                        prefix = prefix.substring(0, prefix.length() - 1);
-                    }
-
-                    return Optional.of(prefix + localForwardedPath);
-                })
-                .orElse(localForwardedPath);
-
+            nextPageUri = URI.create(callbackBaseUrl(request) + localForwardedPath);
             prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(rawPrestoResponseUri).build().toUri();
-            nextPageUri = ServletUriComponentsBuilder.fromContextPath(request)
-                .path(forwardedPath)
-                .build()
-                .toUri()
-            ;
-            log.info("Generating pagination as " + nextPageUri);
-
-            // In case that, for some reason, ServletUriComponentsBuilder does not use the X-Forwarded headers, this
-            // blocks will reconstruct the URL until we can figure out what happens.
-            final var forwardedProtocol = request.getHeader("X-Forwarded-Proto");
-            final var forwardedHost = request.getHeader("X-Forwarded-Host");
-            final var forwardedPort = request.getHeader("X-Forwarded-Port");
-            log.info("Forwarded headers: protocol={}, host={}, port={}", forwardedProtocol, forwardedHost, forwardedPort);
-            if (forwardedHost != null && forwardedPort != null && forwardedProtocol != null) {
-                final var forwardedUriBuilder = ServletUriComponentsBuilder.fromContextPath(request)
-                    .host(forwardedHost)
-                    .scheme(forwardedProtocol)
-                    .path(forwardedPath);
-                if ((forwardedProtocol.equals("https") && !forwardedPort.equals("443")) || (forwardedProtocol.equals("http") && !forwardedPort.equals("80"))) {
-                    forwardedUriBuilder.port(Integer.parseInt(forwardedPort));
-                }
-                final URI forwardedUri = forwardedUriBuilder.build().toUri();
-                log.info("Forwarded URI: {}", forwardedUri);
-                if (!nextPageUri.toString().equals(forwardedUri.toString())) {
-                    // This is temporary to debug the x-forwarded headers issue.
-                    // FIXME Remove this after the investigation.
-                    request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
-                        if (List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
-                            log.info("generatePagination: Request Header: {} => [obscured]", headerName);
-                        } else {
-                            log.info("generatePagination: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
-                        }
-                    });
-
-                    log.warn("As the expected forwarded URI, {}, is different from the generated next page URI, {}, the next page URL is now being referred to the expected one.", forwardedUri, nextPageUri);
-                    nextPageUri = forwardedUri;
-                }
-            }
         }
 
         return new Pagination(queryJobId, nextPageUri, prestoNextPageUri);
+    }
+
+    /**
+     * Returns the absolute base URL that the original caller (who may be behind an HTTP proxy) should use to reach
+     * the root resource of this server. The returned URL string will be of the form {@code https://example.com:1234/forwarded/prefix}.
+     * It will always have a protocol and host. It will have a port if the port is not the default for the protocol.
+     * It may or may not have a path (depending on X-Forwarded-Prefix) and it will never end with a slash.
+     *
+     * @param request
+     * @return
+     */
+    private String callbackBaseUrl(HttpServletRequest request) {
+
+        if (log.isDebugEnabled()) {
+            request.getHeaderNames().asIterator().forEachRemaining(headerName -> {
+                if (List.of("authorization", "cookie").contains(headerName.toLowerCase())) {
+                    log.debug("callbackBaseUrl: Request Header: {} => [obscured]", headerName);
+                } else {
+                    log.debug("callbackBaseUrl: Request Header: {} => [{}]", headerName, request.getHeader(headerName));
+                }
+            });
+        }
+
+        final var forwardedProtocol = request.getHeader("X-Forwarded-Proto");
+        final var forwardedHost = request.getHeader("X-Forwarded-Host");
+        final var forwardedPort = request.getHeader("X-Forwarded-Port");
+        final var forwardedPrefix = request.getHeader("X-Forwarded-Prefix");
+        log.info("Forwarded headers: protocol={}, host={}, port={}, prefix={}", forwardedProtocol, forwardedHost, forwardedPort, forwardedPrefix);
+
+        ServletUriComponentsBuilder urlBuilder = ServletUriComponentsBuilder.fromContextPath(request);
+        if (forwardedProtocol != null) {
+            urlBuilder.scheme(forwardedProtocol);
+        }
+        if (forwardedHost != null) {
+            urlBuilder.host(forwardedHost);
+        }
+        if (forwardedPort != null) {
+            // we need to eliminate the default port numbers because of Wallet pickiness
+            String scheme = urlBuilder.build().getScheme();
+            if ((scheme.equals("https") && !forwardedPort.equals("443")) ||
+                    (scheme.equals("http") && !forwardedPort.equals("80"))) {
+                urlBuilder.port(Integer.parseInt(forwardedPort));
+            }
+        }
+        if (forwardedPrefix != null) {
+            urlBuilder.path(stripTrailingSlashes(forwardedPrefix));
+        }
+
+        String result = urlBuilder.build().toUriString();
+        log.info("Final callback URL: " + result);
+        return result;
+    }
+
+    private static String stripTrailingSlashes(String str) {
+        while (str.endsWith("/")) {
+            str = str.substring(0, str.length() - 1);
+        }
+        return str;
     }
 
     private static <T, K, U> Collector<T, ?, Map<K,U>> toSortedMap(Function<? super T, ? extends K> keyMapper,
@@ -719,8 +723,8 @@ public class PrestoSearchAdapter {
         }
     }
 
-    private URI getDataModelId(String tableName) {
-        String refHost = ServletUriComponentsBuilder.fromCurrentContextPath().toUriString();
+    private URI getDataModelId(String tableName, HttpServletRequest request) {
+        String refHost = callbackBaseUrl(request);
         return URI.create(String.format("%s/table/%s/info", refHost, tableName));
     }
 
@@ -761,12 +765,12 @@ public class PrestoSearchAdapter {
         }
     }
 
-    private void logAuditEvent(String action, String outcome, Map<String, Object> extraArguments) {
+    private void logAuditEvent(HttpServletRequest request, String action, String outcome, Map<String, Object> extraArguments) {
         auditEventLogger.log(
             AuditEventBody.AuditEventBodyBuilder.builder()
                 .action(new AuditedAction(action))
                 .outcome(new AuditedOutcome(outcome))
-                .resource(new AuditedResource(ServletUriComponentsBuilder.fromCurrentRequest().toUriString()))
+                .resource(new AuditedResource(callbackBaseUrl(request) + request.getPathInfo()))
                 .extraArguments(extraArguments));
     }
 }
