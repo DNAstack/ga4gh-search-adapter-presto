@@ -12,13 +12,14 @@ import java.net.URI;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import static com.dnastack.ga4gh.search.adapter.SearchE2eTest.getFullyQualifiedTestTableName;
 import static com.dnastack.ga4gh.search.adapter.SearchE2eTest.getTestDatabaseConnection;
 import static io.restassured.RestAssured.given;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.Matchers.equalTo;
@@ -37,8 +38,7 @@ public class SchemaTestWithLibraryTest extends BaseE2eTest {
     public void getTableInfo_should_returnTableAndSchema() throws JsonProcessingException {
         final String indexingServiceBearerToken = getToken(INS_BASE_URI, "ins:library:write");
 
-        final String mockSchemaReferenceUrl = "http://search-e2e-test.dnastack.com/schema/this-does-not-exist.json";
-        final String shortTableName = "libTest_" + RandomStringUtils.randomAlphanumeric(8);
+        final String shortTableName = ("libTest_" + RandomStringUtils.randomAlphanumeric(8)).toLowerCase();
         final String fullTableName = getFullyQualifiedTestTableName(shortTableName);
         createTestTable(fullTableName);
         afterThisTest(() -> deleteTable(fullTableName));
@@ -70,7 +70,7 @@ public class SchemaTestWithLibraryTest extends BaseE2eTest {
                     .preferredName(fullTableName) // private String preferredName
                     .aliases(List.of()) // private List<String> aliases
                     .preferredColumnNames(Map.of()) // private Map<String, String> preferredColumnNames
-                    .jsonSchema(objectMapper.writeValueAsString(Map.of("$ref", mockSchemaReferenceUrl))) // private String jsonSchema
+                    .jsonSchema(objectMapper.writeValueAsString(Map.of("$comment", "This is the custom schema from library"))) // private String jsonSchema
                     .size(123L) // private Long size
                     .sizeUnit("row") // private String sizeUnit
                     .dataSourceUrl("https://search-e2e-test.dnastack.com") // private String dataSourceUrl
@@ -97,29 +97,37 @@ public class SchemaTestWithLibraryTest extends BaseE2eTest {
             .when()
             .get("/table/" + fullTableName + "/info")
             .then()
+            .log().ifValidationFails()
             .statusCode(200)
             .body("name", equalTo(fullTableName))
             .body("data_model.$id", nullValue())
-            .body("data_model.$ref", equalTo(mockSchemaReferenceUrl))
+            .body("data_model.$comment", equalTo("This is the custom schema from library"))
             .body("data_model.properties", nullValue());
     }
 
     private static void createTestTable(String tableName) {
         final List<String> queries = List.of(
+            // Create a table.
+            // Note: at this stage, the search adapter can't figure out the schema of the table.
             String.format(
                 // language=PostgreSQL
                 "CREATE TABLE %s (id varchar(36), name varchar(255), age int)",
                 tableName
             ),
+            // Insert the data.
             String.format(
                 // language=PostgreSQL
                 "INSERT INTO %s (id, name, age) VALUES ('abc123', 'Foo Bar', 123)",
                 tableName
-            )
+            ),
+            // Verify the table creation.
+            // language=PostgreSQL
+            String.format("SELECT * FROM %s", tableName)
         );
 
         try (Connection conn = getTestDatabaseConnection()) {
             queries.forEach(query -> {
+                log.info("Execute: {}", query);
                 try {
                     conn.createStatement().execute(query);
                 } catch (SQLException se) {

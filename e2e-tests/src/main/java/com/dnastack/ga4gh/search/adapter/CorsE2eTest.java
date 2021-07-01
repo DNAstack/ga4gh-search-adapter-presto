@@ -23,8 +23,6 @@ public class CorsE2eTest extends BaseE2eTest {
         for (String origin : allowedCorsOrigins()) {
             // @formatter:off
             given()
-                .log().method()
-                .log().uri()
                 .header("access-control-request-method", "GET")
                 .header("origin", origin)
             .when()

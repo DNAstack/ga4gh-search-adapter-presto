@@ -6,9 +6,6 @@ endpoint:
 
 server:
   port: 8089
-  tomcat:
-    remote-ip-header: "x-forwarded-for"
-    protocol-header: "x-forwarded-proto"
 
 cors:
   urls: http://localhost:8089

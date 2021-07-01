@@ -17,8 +17,6 @@ public class ActuatorE2eTest extends BaseE2eTest {
 
         // @formatter:off
         given()
-            .log().method()
-            .log().uri()
         .when()
             .get("/actuator/info")
         .then()
@@ -51,8 +49,6 @@ public class ActuatorE2eTest extends BaseE2eTest {
                         "threaddump")
                 .forEach(endpoint -> {
                             given()
-                                .log().method()
-                                .log().uri()
                             .when()
                                 .get("/actuator/" + endpoint)
                             .then()

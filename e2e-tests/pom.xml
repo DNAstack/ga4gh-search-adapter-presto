@@ -25,6 +25,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
+			<version>1.18.20</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -70,7 +71,14 @@
 			<artifactId>assertj-core</artifactId>
 			<version>3.17.2</version>
 		</dependency>
-<!--		<dependency>-->
+
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>4.1.0</version>
+		</dependency>
+
+		<!--		<dependency>-->
 <!--			<groupId>org.postgresql</groupId>-->
 <!--			<artifactId>postgresql</artifactId>-->
 <!--			<version>42.2.14</version>-->

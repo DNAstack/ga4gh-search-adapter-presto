@@ -946,9 +946,7 @@ public class SearchE2eTest extends BaseE2eTest {
 
     static RequestSpecification givenAuthenticatedRequest(String... scopes) {
         RequestSpecification req = given()
-            .config(config)
-            .log().method()
-            .log().uri();
+            .config(config);
 
         // add auth if configured
         if (walletClientId != null && walletClientSecret != null && searchAdapterAudience != null) {

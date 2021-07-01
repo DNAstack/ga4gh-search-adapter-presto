@@ -18,6 +18,7 @@ public class LibraryItem {
     private String type;
     private String dataSourceName;
     private String dataSourceType;
+    private String sourceKey;
     private String name;
     private String description;
     private String preferredName;

@@ -452,8 +452,9 @@ public class PrestoSearchAdapter {
         URI nextPageUri = null;
         URI prestoNextPageUri = null;
         if (prestoResponse.hasNonNull("nextUri")) {
-            final var rawPrestoResponseUri = prestoResponse.get("nextUri").asText();
-            final var localForwardedPath = String.format(template, URI.create(rawPrestoResponseUri).getPath());
+            final String rawPrestoResponseUri = prestoResponse.get("nextUri").asText();
+            final String rawPrestoRelayedPath = URI.create(rawPrestoResponseUri).getPath().replaceFirst("^/+", "");
+            final String localForwardedPath = String.format(template, rawPrestoRelayedPath);
 
             nextPageUri = URI.create(callbackBaseUrl(request) + localForwardedPath);
             prestoNextPageUri = ServletUriComponentsBuilder.fromHttpUrl(rawPrestoResponseUri).build().toUri();

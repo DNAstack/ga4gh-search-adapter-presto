@@ -7,8 +7,13 @@ import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.config.ObjectMapperConfig;
 import io.restassured.config.RestAssuredConfig;
+import io.restassured.filter.Filter;
+import io.restassured.filter.FilterContext;
 import io.restassured.mapper.ObjectMapperType;
 import io.restassured.path.json.JsonPath;
+import io.restassured.response.Response;
+import io.restassured.specification.FilterableRequestSpecification;
+import io.restassured.specification.FilterableResponseSpecification;
 import io.restassured.specification.RequestSpecification;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.After;
@@ -21,8 +26,10 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 import static io.restassured.RestAssured.given;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.junit.Assert.fail;
 
 @Slf4j
@@ -62,6 +69,7 @@ public abstract class BaseE2eTest {
     @BeforeClass
     public static void setupRestAssured() {
         RestAssured.baseURI = requiredEnv("E2E_BASE_URI");
+        RestAssured.replaceFiltersWith(new TraceLoggingFilter());
         try {
             if (new URI(RestAssured.baseURI).getHost().equalsIgnoreCase("localhost")) {
                 log.info("E2E BASE URI is at localhost, allowing localhost to occur within URLs of JSON responses.");
@@ -72,6 +80,36 @@ public abstract class BaseE2eTest {
             }
         } catch (URISyntaxException use) {
             throw new RuntimeException(String.format("Error initializing tests -- E2E_BASE_URI (%s) is invalid", RestAssured.baseURI));
+        }
+    }
+
+    private static class TraceLoggingFilter implements Filter {
+
+        private static final Random random = new Random();
+
+        @Override
+        public Response filter(FilterableRequestSpecification requestSpec, FilterableResponseSpecification responseSpec, FilterContext ctx) {
+            String traceId = String.format("%016x", random.nextLong());
+            requestSpec.replaceHeader("X-B3-TraceId", traceId);
+            requestSpec.replaceHeader("X-B3-SpanId", traceId);
+            log.info(">>> [{}] {} {}", traceId, requestSpec.getMethod(), requestSpec.getURI());
+
+            long sendTime = System.currentTimeMillis();
+            try {
+                Response response = ctx.next(requestSpec, responseSpec);
+
+                log.info("<<< [{}] {} {} ({}ms)",
+                    traceId,
+                    isBlank(response.getStatusLine()) ? "(no response status)" : response.getStatusLine().trim(),
+                    isBlank(response.getContentType()) ? "(no content type)" : response.getContentType(),
+                    response.getTime());
+                return response;
+            } catch (final Exception e) {
+                long elapsedTime = System.currentTimeMillis() - sendTime;
+                // logging e.toString() here rather than whole exception because the test runner will log the rethrown exception
+                log.info("<<< [{}] {} ({}ms)", traceId, e.toString(), elapsedTime);
+                throw e;
+            }
         }
     }
 
@@ -120,7 +158,6 @@ public abstract class BaseE2eTest {
         //@formatter:off
         RequestSpecification requestSpecification = given(specification)
             .config(config)
-            .log().uri()
             .auth().basic(walletClientId, walletClientSecret)
             .formParam("grant_type", "client_credentials")
             .formParam("client_id", walletClientId)
