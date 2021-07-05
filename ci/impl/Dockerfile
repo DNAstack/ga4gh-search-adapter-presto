@@ -35,4 +35,4 @@ ARG APP_VERSION
 
 COPY --from=0 /build/target/ga4gh-discovery-search-service-*.jar /app.jar
 EXPOSE 8080
-ENTRYPOINT ["java","-jar", "app.jar"]
+ENTRYPOINT ["java","-jar", "app.jar", "-XX:MaxRAMPercentage=90"]
