@@ -203,14 +203,36 @@ public class PrestoSearchAdapter {
     // Perform the given query and gather ALL results, by following Presto's nextUrl links
     // The query should NOT contain any functions that would not be recognized by Presto.
     public TableData searchAll(String statement,
-                        HttpServletRequest request,
-                        Map<String, String> extraCredentials,
-                        DataModel dataModel) {
+                               HttpServletRequest request,
+                               Map<String, String> extraCredentials,
+                               DataModel dataModel) {
+        log.debug("searchAll: Query: {}", statement);
         TableData tableData = search(statement, request, extraCredentials, dataModel);
         while (hasMore(tableData)) {
             log.debug("searchAll: Autoloading next page of data");
             TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
+            log.debug("searchAll: nextPage.size(): {}", nextPage.getData().size());
             tableData.append(nextPage);
+        }
+        return tableData;
+    }
+
+    // Perform the given query and gather ALL results, by following Presto's nextUrl links
+    // The query should NOT contain any functions that would not be recognized by Presto.
+    public TableData searchUntilHavingFirstRow(String statement,
+                                               HttpServletRequest request,
+                                               Map<String, String> extraCredentials,
+                                               DataModel dataModel) {
+        log.debug("searchUntilHavingFirstRow: Query: {}", statement);
+        TableData tableData = search(statement, request, extraCredentials, dataModel);
+        while (hasMore(tableData)) {
+            log.debug("searchUntilHavingFirstRow: Autoloading next page of data");
+            TableData nextPage = getNextSearchPage(tableData.getPagination().getPrestoNextPageUrl().getPath(), null, request, extraCredentials);
+            log.debug("searchUntilHavingFirstRow: nextPage.size(): {}", nextPage.getData().size());
+            tableData.append(nextPage);
+            if (!nextPage.getData().isEmpty()) {
+                break;
+            }
         }
         return tableData;
     }
@@ -360,13 +382,17 @@ public class PrestoSearchAdapter {
 
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromSupplier(tableName);
-        TableData tableData = searchAll("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
+        TableData tableData = searchUntilHavingFirstRow("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
 
         // If the dataModel is not available from tables-registry, use the one from tableData
         // Fill in the id & comments if the data model is ready
         if (dataModel == null && tableData.getDataModel() != null) {
             dataModel = tableData.getDataModel();
             dataModel.setId(getDataModelId(tableName, request));
+        }
+
+        if (dataModel == null) {
+            throw new RuntimeException("No data model defined or cannot determine the data model");
         }
 
         return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
