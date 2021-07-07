@@ -29,6 +29,7 @@ import com.google.common.collect.Streams;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -351,7 +352,10 @@ public class PrestoSearchAdapter {
         ));
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromSupplier(tableName);
-        TableData tableData = search("SELECT * FROM " + tableName, request, extraCredentials, dataModel);
+        //Add quotes to tableName in the query. Table name can be of the format <catalog_name>.<datasource_name>.tableName
+        //So if the tableName has two dots in it, then everything after the third dot, should come within quotes.
+        String validTableName = getTableNameInCorrectFormat(tableName);
+        TableData tableData = search("SELECT * FROM " + validTableName, request, extraCredentials, dataModel);
 
         // Populate the dataModel only if there is tableData
         if (!tableData.getData().isEmpty()) {
@@ -382,7 +386,11 @@ public class PrestoSearchAdapter {
 
         // Get table JSON schema from tables registry if one exists for this table (for tables from presto-public)
         DataModel dataModel = getDataModelFromSupplier(tableName);
-        TableData tableData = searchUntilHavingFirstRow("SELECT * FROM " + tableName + " LIMIT 1", request, extraCredentials, dataModel);
+
+        //Add quotes to tableName in the query. Table name can be of the format <catalog_name>.<datasource_name>.tableName
+        //So if the tableName has two dots in it, then everything after the third dot, should come within quotes.
+        String validTableName = getTableNameInCorrectFormat(tableName);
+        TableData tableData = searchAll("SELECT * FROM " + validTableName + " LIMIT 1", request, extraCredentials, dataModel);
 
         // If the dataModel is not available from tables-registry, use the one from tableData
         // Fill in the id & comments if the data model is ready
@@ -396,6 +404,21 @@ public class PrestoSearchAdapter {
         }
 
         return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
+    }
+
+    private String getTableNameInCorrectFormat(String tableName) {
+        String validTableName = tableName;
+        if (StringUtils.countMatches(tableName, ".") >= 1 ) {
+            int lastIndex = tableName.lastIndexOf('.');
+            String catalogAndSchema = tableName.substring(0, lastIndex + 1);
+            String table = tableName.substring(lastIndex + 1);
+            //If the table name doesn't starts with or ends with quotes then add quotes
+            if (!table.startsWith("\"") || !table.endsWith("\"")) {
+                table = "\"" + table + "\"";
+            }
+            validTableName = catalogAndSchema + table;
+        }
+        return validTableName;
     }
 
     private boolean isValidPrestoName(String tableName) {
