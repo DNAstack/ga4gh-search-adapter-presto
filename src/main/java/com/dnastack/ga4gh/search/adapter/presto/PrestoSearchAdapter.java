@@ -418,15 +418,22 @@ public class PrestoSearchAdapter {
 
     private String getTableNameInCorrectFormat(String tableName) {
         String validTableName = tableName;
-        if (StringUtils.countMatches(tableName, ".") >= 1 ) {
-            int lastIndex = tableName.lastIndexOf('.');
-            String catalogAndSchema = tableName.substring(0, lastIndex + 1);
-            String table = tableName.substring(lastIndex + 1);
+        if (StringUtils.countMatches(tableName, ".") >= 2 ) {
+
+            // If there are two or more dots, then quote the entire part after the second dot(assuming that this will be the table name).
+            int secondIndex = StringUtils.ordinalIndexOf(tableName, ".", 2);
+
+            //Everything before second catalog name will be catalog(+schema)
+            String catalogAndSchema = tableName.substring(0, secondIndex + 1);
+            String table = tableName.substring(secondIndex + 1);
+
             //If the table name doesn't starts with or ends with quotes then add quotes
             if (!table.startsWith("\"") || !table.endsWith("\"")) {
                 table = "\"" + table + "\"";
             }
             validTableName = catalogAndSchema + table;
+        } else {
+            log.warn("Table name {} has less than 2 dots in it.", tableName);
         }
         return validTableName;
     }
