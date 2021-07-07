@@ -45,4 +45,10 @@ public class DataModel {
     public void setAdditionalProperty(String key, Object value) {
         additionalProperties.put(key, value);
     }
+
+    @JsonIgnore
+    public boolean isUsable() {
+        return (properties != null && !properties.isEmpty())
+            || (ref != null && !ref.isEmpty());
+    }
 }

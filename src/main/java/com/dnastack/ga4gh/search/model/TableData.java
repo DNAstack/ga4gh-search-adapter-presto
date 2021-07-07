@@ -51,7 +51,7 @@ public class TableData {
         if (tableData.getData() != null) {
             this.data = concat(this.data, tableData.getData());
         }
-        if (tableData.getDataModel() != null) {
+        if (tableData.getDataModel() != null && tableData.getDataModel().isUsable()) {
             this.dataModel = tableData.getDataModel();
         }
         this.pagination = tableData.getPagination();

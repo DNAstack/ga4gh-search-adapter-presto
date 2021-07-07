@@ -215,6 +215,13 @@ public class PrestoSearchAdapter {
             log.debug("searchAll: nextPage.size(): {}", nextPage.getData().size());
             tableData.append(nextPage);
         }
+
+        if (tableData.getDataModel() == null) {
+            throw new DataModelNotDefinedException("The data model cannot be determined.");
+        } else if (!tableData.getDataModel().isUsable()) {
+            throw new DataModelNotDefinedException("The data model is not usable.");
+        }
+
         return tableData;
     }
 
@@ -235,6 +242,13 @@ public class PrestoSearchAdapter {
                 break;
             }
         }
+
+        if (tableData.getDataModel() == null) {
+            throw new DataModelNotDefinedException("The data model cannot be determined.");
+        } else if (!tableData.getDataModel().isUsable()) {
+            throw new DataModelNotDefinedException("The data model is not usable.");
+        }
+
         return tableData;
     }
 
@@ -399,10 +413,6 @@ public class PrestoSearchAdapter {
             dataModel.setId(getDataModelId(tableName, request));
         }
 
-        if (dataModel == null) {
-            throw new RuntimeException("No data model defined or cannot determine the data model");
-        }
-
         return new TableInfo(tableName, dataModel.getDescription(), dataModel, null);
     }
 
@@ -448,6 +458,28 @@ public class PrestoSearchAdapter {
             ObjectMapper objectMapper = new ObjectMapper();
             try {
                 PrestoError prestoError = objectMapper.readValue(prestoResponse.get("error").toString(), PrestoError.class);
+                log.error("Presto Error: State: {}", prestoResponse.get("stats").get("state"));
+                log.error("Presto Error: Message: {}", prestoResponse.get("error").get("message"));
+                log.error(
+                    "Presto Error: Error: {} ({}): {}",
+                    prestoResponse.get("error").get("errorType"),
+                    prestoResponse.get("error").get("errorCode"),
+                    prestoResponse.get("error").get("errorName")
+                );
+
+                final var stack = new ArrayList<String>();
+                for (var it = prestoResponse.get("error").get("failureInfo").get("stack").iterator(); it.hasNext();) {
+                    stack.add(it.next().asText());
+                }
+
+                log.error(
+                    "Presto Error: Original Trace: {}: {}\n\tat {}",
+                    prestoResponse.get("error").get("failureInfo").get("type"),
+                    prestoResponse.get("error").get("failureInfo").get("message"),
+                    String.join("\n\tat ", stack)
+                );
+
+                log.error("\n\tat {}", String.join("\n\tat ", stack));
                 if (prestoError.getErrorName().equals("CATALOG_NOT_FOUND")) {
                     throw new PrestoNoSuchCatalogException(prestoError);
                 } else if (prestoError.getErrorName().equals("SCHEMA_NOT_FOUND")) {
