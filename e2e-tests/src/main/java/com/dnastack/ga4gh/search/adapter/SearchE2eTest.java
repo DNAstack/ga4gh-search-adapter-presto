@@ -508,9 +508,11 @@ public class SearchE2eTest extends BaseE2eTest {
 
         //assert that the nth page has next url equal to the n+1st index.
         for (int i = 1; i < Math.min(MAX_PAGES_TO_TRAVERSE, pageIndex.size() - 1); ++i) {
+            log.info("Follow-up: Page {}: Start", i);
             currentPage = searchApiGetRequest(currentPage.getPagination().getNextPageUrl().toString(),
                 200,
                 ListTableResponse.class);
+            log.info("Follow-up: Page {}: currentPage: {}", i, currentPage);
             //all pages with index < pageIndex.size() - 1 should have a non null valid next url.
             assertThat(currentPage.getPagination().getNextPageUrl(), not(nullValue()));
             if (i == (pageIndex.size() - 1)) {
@@ -518,6 +520,7 @@ public class SearchE2eTest extends BaseE2eTest {
             } else {
                 assertThat(currentPage.getPagination().getNextPageUrl(), is(pageIndex.get(i + 1).getUrl()));
             }
+            log.info("Follow-up: Page {}: End", i);
         }
         if (pageIndex.size() > MAX_PAGES_TO_TRAVERSE) {
             log.info("next page trail did not end after " + MAX_PAGES_TO_TRAVERSE + " requests, but was consistent with page index over that range.");

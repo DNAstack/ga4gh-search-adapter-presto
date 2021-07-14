@@ -188,7 +188,7 @@ public class ApplicationConfig {
                     .collect(Collectors.toUnmodifiableList());
         }
 
-        @ConditionalOnProperty(name="app.auth.token-issuers")
+        @ConditionalOnExpression("'${app.auth.authorization-type}' == 'bearer'")
         @Bean
         public PermissionChecker permissionChecker(
             List<IssuerInfo> allowedIssuers,
