@@ -1,10 +1,9 @@
 package com.dnastack.ga4gh.search.adapter.presto;
 
+import brave.Tracer;
+import brave.propagation.TraceContext;
 import com.dnastack.audit.logger.AuditEventLogger;
-import com.dnastack.audit.model.AuditEventBody;
-import com.dnastack.audit.model.AuditedAction;
-import com.dnastack.audit.model.AuditedOutcome;
-import com.dnastack.audit.model.AuditedResource;
+import com.dnastack.audit.model.*;
 import com.dnastack.ga4gh.search.ApplicationConfig;
 import com.dnastack.ga4gh.search.DataModelSupplier;
 import com.dnastack.ga4gh.search.client.tablesregistry.OAuthClientConfig;
@@ -30,6 +29,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.annotation.Obsolete;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -73,17 +73,14 @@ public class PrestoSearchAdapter {
     @Autowired
     private ApplicationConfig applicationConfig;
 
-    @Autowired(required = false)
-    private TablesRegistryClient tablesRegistryClient;
-
-    @Autowired
-    private OAuthClientConfig oAuthClientConfig;
-
     @Autowired
     private AuditEventLogger auditEventLogger;
 
     @Autowired(required = false)
     private DataModelSupplier dataModelSupplier;
+
+    @Autowired
+    private Tracer tracer;
 
     private boolean hasMore(TableData tableData) {
         if (tableData.getPagination() != null && tableData.getPagination().getNextPageUrl() != null) {
@@ -518,6 +515,17 @@ public class PrestoSearchAdapter {
         if (queryJobId != null) {
             applyResponseTransforms(queryJobId, tableData);
         }
+
+        if (tableData.getData().isEmpty()) {
+            log.warn("No data listed");
+        } else {
+            if (tableData.getDataModel() == null) {
+                throw new DataModelNotDefinedException("The data model is null as it cannot be derived from Presto.");
+            } else if (!tableData.getDataModel().isUsable()) {
+                throw new DataModelNotDefinedException("The data model is not usable. (object = " + tableData.getDataModel() + ")");
+            }
+        }
+
         return tableData;
     }
 
@@ -855,11 +863,20 @@ public class PrestoSearchAdapter {
     }
 
     private void logAuditEvent(HttpServletRequest request, String action, String outcome, Map<String, Object> extraArguments) {
+        final TraceContext context = tracer.currentSpan().context();
         auditEventLogger.log(
-            AuditEventBody.AuditEventBodyBuilder.builder()
+            AuditEventBody.builder()
                 .action(new AuditedAction(action))
                 .outcome(new AuditedOutcome(outcome))
+                .context(
+                    AuditedContext.builder()
+                        .traceId(context.traceIdString())
+                        .spanId(context.spanIdString())
+                        .build()
+                )
                 .resource(new AuditedResource(callbackBaseUrl(request) + request.getPathInfo()))
-                .extraArguments(extraArguments));
+                .extraArguments(extraArguments)
+                .build()
+        );
     }
 }

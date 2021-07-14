@@ -1,8 +1,7 @@
 package com.dnastack.ga4gh.search;
 
 import brave.Tracer;
-import com.dnastack.auth.JwtTokenParser;
-import com.dnastack.auth.JwtTokenParserFactory;
+import brave.Tracing;
 import com.dnastack.auth.PermissionChecker;
 import com.dnastack.auth.PermissionCheckerFactory;
 import com.dnastack.auth.keyresolver.CachingIssuerPubKeyJwksResolver;
@@ -16,15 +15,6 @@ import com.dnastack.ga4gh.search.adapter.security.DelegatingJwtDecoder;
 import com.dnastack.ga4gh.search.adapter.security.ServiceAccountAuthenticator;
 import com.dnastack.ga4gh.search.adapter.telemetry.Monitor;
 import com.dnastack.ga4gh.search.adapter.telemetry.PrestoTelemetryClient;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwsHeader;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
@@ -32,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -43,6 +34,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -192,21 +188,35 @@ public class ApplicationConfig {
                     .collect(Collectors.toUnmodifiableList());
         }
 
+        @ConditionalOnProperty(name="app.auth.token-issuers")
         @Bean
-        public PermissionChecker permissionChecker(List<IssuerInfo> allowedIssuers) {
-            return PermissionCheckerFactory.create(allowedIssuers);
+        public PermissionChecker permissionChecker(
+            List<IssuerInfo> allowedIssuers,
+            @Value("${app.url}") String policyEvaluationRequester,
+            @Value("${app.auth.token-issuers[0].issuer-uri}") String walletUrl,
+            Tracing tracing
+        ) {
+            String policyEvaluationUrl = stripTrailingSlashes(walletUrl) + "/policies/evaluations";
+            return PermissionCheckerFactory.create(allowedIssuers, policyEvaluationRequester, policyEvaluationUrl, tracing);
+        }
+
+        private String stripTrailingSlashes(String url) {
+            String slashlessUrl = url;
+            while (slashlessUrl.endsWith("/")) {
+                slashlessUrl = slashlessUrl.substring(0, slashlessUrl.length() - 1);
+            }
+            return slashlessUrl;
         }
 
         @Bean
-        public JwtDecoder jwtDecoder(List<IssuerInfo> allowedIssuers, PermissionChecker permissionChecker) {
-            return (jwtToken) -> {
-                permissionChecker.checkPermissions(jwtToken);
-                final JwtTokenParser jwtTokenParser = JwtTokenParserFactory.create(allowedIssuers);
-                final Jws<Claims> jws = jwtTokenParser.parseTokenClaims(jwtToken);
-                final JwsHeader headers = jws.getHeader();
-                final Claims claims = jws.getBody();
-                return new Jwt(jwtToken, claims.getIssuedAt().toInstant(), claims.getExpiration().toInstant(), headers, claims);
-            };
+        public JwtDecoder jwtDecoder(AuthConfig authConfig) {
+            List<AuthConfig.IssuerConfig> issuers = authConfig.getTokenIssuers();
+
+            if (issuers == null || issuers.isEmpty()) {
+                throw new IllegalArgumentException("At least one token issuer must be defined");
+            }
+            issuers = new ArrayList<>(issuers);
+            return new DelegatingJwtDecoder(issuers);
         }
     }
 

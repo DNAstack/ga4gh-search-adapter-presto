@@ -803,15 +803,12 @@ public class SearchE2eTest extends BaseE2eTest {
             fail("This method handles auth challenges and retries on 401. You can't use it when you want a 401 response.");
         }
 
-        Response response = getResponse(method, path, body);
-
-        if (response.getStatusCode() == expectedStatus) {
-            return response.then().log().ifValidationFails(LogDetail.ALL).extract().as(responseType);
-        } else {
-            response.then().log().headers();
-            throw new AssertionError("Unexpected response status " + response.getStatusCode() + " (sent " + method + " " + path + ", expecting " + expectedStatus + " with a body that maps to " + responseType
-                .getName() + ")." + " Actual response headers: " + response.headers() + "; body: " + response.asString());
-        }
+        return getResponse(method, path, body)
+            .then()
+            .log().ifValidationFails()
+            .statusCode(expectedStatus)
+            .extract()
+            .as(responseType);
     }
 
     /**
