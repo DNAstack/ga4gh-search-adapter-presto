@@ -56,7 +56,7 @@ info:
 
 logging:
   level:
-    com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient: DEBUG # logs queries when search fails
+    com.dnastack.ga4gh.search.adapter.presto.PrestoHttpClient: INFO # logs queries when search fails
     # Reduced the log messages produced by p6spy by default.
     p6spy: WARN
 
