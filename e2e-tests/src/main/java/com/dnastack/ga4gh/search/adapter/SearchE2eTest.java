@@ -857,6 +857,7 @@ public class SearchE2eTest extends BaseE2eTest {
                     .contentType(ContentType.JSON)
                     .body(body);
             }
+            log.info("Request path = {}", path);
             Response response = requestSpec.request(method, path);
 
             if (response.getStatusCode() == 401) {
