@@ -1,5 +1,7 @@
 # Intro
 
+## This implementation has been superceded by https://github.com/DNAstack/data-connect-trino. The standard as implemented here is obsolete.
+
 An implementation of the [GA4GH Discovery Search API](https://github.com/ga4gh-discovery/ga4gh-discovery-search), on top of
 [PrestoSQL](https://prestosql.io). This software enables users to enumerate and query data surfaced by an instance of PrestoSQL
 in a manner compliant with the GA4GH Discovery Search specification, and receive responses compliant with the 
